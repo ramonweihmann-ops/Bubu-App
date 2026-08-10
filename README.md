@@ -88,6 +88,20 @@ in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
+## Aktionen
+
+Befristete Zeiträume, die nur gemeinsam starten — über dieselbe Abstimmung wie alles andere:
+
+- **Doppelte Punkte** auf Quests, wahlweise für alle oder nur für einen Raum
+  („+100 % auf Küche, diese Woche“)
+- **Rabatt** auf Belohnungen, in Prozent
+
+Der Faktor greift beim **Melden** bzw. beim **Stellen des Antrags** — dort friert der Wert ein.
+Wer während der Aktion meldet, behält den erhöhten Wert, auch wenn erst danach bestätigt wird;
+wer vorher gemeldet hat, bekommt nichts nachträglich. Damit bleibt die Grundregel unangetastet:
+der Preis steht fest, bevor gearbeitet wird — und niemand hat einen Grund, Meldungen
+zurückzuhalten.
+
 ## Benachrichtigungen
 
 Jede Entscheidung erreicht die andere Person auf zwei Wegen:

@@ -247,6 +247,38 @@ const zuPruefen = () => [
 const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
 const offeneAbstimmungen = () => S.abstimmungen.filter((a) => a.status === "offen");
 
+/* ------------------------------------------------------------------ Aktionen */
+
+const laufendeAktionen = () => {
+  const jetzt = new Date().toISOString().slice(0, 19).replace("T", " ");
+  return (S.aktionen || []).filter((a) => a.beginn <= jetzt && a.ende > jetzt);
+};
+
+function restzeit(ende) {
+  const bis = new Date(ende.replace(" ", "T") + "Z").getTime();
+  const std = Math.max(0, Math.round((bis - Date.now()) / 3600000));
+  if (std < 1) return "läuft aus";
+  if (std < 24) return `noch ${std} Std.`;
+  const tage = Math.round(std / 24);
+  return `noch ${tage} ${tage === 1 ? "Tag" : "Tage"}`;
+}
+
+function aktionsBanner(nur = null) {
+  const liste = laufendeAktionen().filter((a) => !nur || a.art === nur);
+  if (!liste.length) return "";
+  return liste.map((a) => `
+    <div class="card alert" style="gap:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:var(--accent);flex:none">${icon("i-heart", 20)}</span>
+        <span style="flex:1;font-size:14.5px;font-weight:700">
+          ${a.art === "quest_bonus"
+            ? `+${a.prozent} % Punkte${a.kategorie ? ` auf ${esc(a.kategorie)}` : " auf alles"}`
+            : `${a.prozent} % Rabatt auf Belohnungen`}</span>
+        <span class="chip wait">${restzeit(a.ende)}</span>
+      </div>
+    </div>`).join("");
+}
+
 /* ------------------------------------------------------------------ Start */
 
 function schirmStart() {
@@ -273,6 +305,8 @@ function schirmStart() {
           <span class="pts">${S.partner.punkte}</span><span class="unit">Punkte</span>
         </div>
       </div>
+
+      ${aktionsBanner()}
 
       ${offen.length ? `
       <div class="card alert">
@@ -311,6 +345,16 @@ function schirmStart() {
       </div>` : ""}
 
       ${abst.length ? `
+      ${aktionsBanner()}
+
+      <p class="section-label">Aktionen</p>
+      <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
+        <span class="grow"><span class="t">Aktion starten</span>
+          <span class="m">Doppelte Punkte oder Rabatt — befristet, nur gemeinsam</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
+
       <p class="section-label">Offene Abstimmungen</p>
       ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
 
@@ -334,7 +378,9 @@ function schirmStart() {
 function schirmQuests() {
   const gemeldet = new Set(meineOffenen().map((m) => m.quest_id));
   const kategorien = ["Alle", ...new Set(S.quests.map((q) => q.category))];
-  const liste = S.quests.filter((q) => filter === "Alle" || q.category === filter);
+  const liste = S.quests
+    .filter((q) => filter === "Alle" || q.category === filter)
+    .sort((a, b) => (b.punkte_jetzt ?? b.points) - (a.punkte_jetzt ?? a.points) || a.name.localeCompare(b.name, "de"));
 
   return `
     <div class="appbar">
@@ -342,6 +388,7 @@ function schirmQuests() {
       <button class="iconbtn" data-sheet="neu" aria-label="Quest vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${aktionsBanner("quest_bonus")}
       <div class="filters">
         ${kategorien.map((k) => `<button data-filter="${esc(k)}" aria-pressed="${filter === k}">${esc(k)}</button>`).join("")}
       </div>
@@ -351,7 +398,9 @@ function schirmQuests() {
             <span class="t">${esc(q.name)}</span>
             <span class="m">${esc(q.category)}${gemeldet.has(q.id) ? ` · wartet auf ${esc(S.partner.name.split(" ")[0])}` : ""}</span>
           </span>
-          ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>' : `<span class="pts-pill">${q.points}</span>`}
+          ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
+            : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${q.punkte_jetzt}</span>`
+            : `<span class="pts-pill">${q.points}</span>`}
         </button>`).join("")}
       <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:6px 0 0">
         Punktwert ändern oder löschen? Lange auf eine Quest tippen.
@@ -445,15 +494,19 @@ function schirmBelohnungen() {
         <span class="n">Punkte an ${esc(S.partner.name.split(" ")[0])} übertragen<br>
           <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
       </button>
+      ${aktionsBanner("belohnung_rabatt")}
       <p class="section-label">Einlösbar</p>
       <div class="rewards">
         ${S.belohnungen.map((b) => {
-          const zuTeuer = b.cost > S.ich.punkte;
+          const zuTeuer = b.kosten_jetzt > S.ich.punkte;
           return `
           <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
             <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
             <span class="n">${esc(b.name)}</span>
-            <span class="c">${zuTeuer ? `${S.ich.punkte} von ${b.cost} Punkten` : `${b.cost} Punkte`}</span>
+            <span class="c">${zuTeuer
+              ? `${S.ich.punkte} von ${b.kosten_jetzt} Punkten`
+              : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${b.kosten_jetzt} Punkte`
+              : `${b.cost} Punkte`}</span>
           </button>`;
         }).join("")}
       </div>
@@ -483,7 +536,11 @@ function abstimmungKarte(a) {
           ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
       </div>
       <div class="change">
-        ${a.art === "delete_quest" || a.art === "delete_reward"
+        ${a.art === "neue_aktion"
+          ? `<span class="new">${a.titel.startsWith("Rabatt") ? `${a.neu} % Rabatt` : `+${a.neu} % Punkte`}</span>
+             <span style="color:var(--ink-2);font-weight:400">${a.raum ? `· ${esc(a.raum)}` : "· alles"}
+             ${a.tage ? `· ${a.tage === 1 ? "heute" : a.tage + " Tage"}` : ""}</span>`
+          : a.art === "delete_quest" || a.art === "delete_reward"
           ? `<span class="old">${a.alt} Punkte</span>→<span class="new">löschen</span>`
           : (a.alt !== null && a.alt !== undefined
               ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
@@ -514,6 +571,16 @@ function schirmWir() {
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
     </div>
     <div class="body">
+      ${aktionsBanner()}
+
+      <p class="section-label">Aktionen</p>
+      <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
+        <span class="grow"><span class="t">Aktion starten</span>
+          <span class="m">Doppelte Punkte oder Rabatt — befristet, nur gemeinsam</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
+
       <p class="section-label">Offene Abstimmungen</p>
       ${offen.length ? offen.map(abstimmungKarte).join("") : `
         <div class="card flat" style="font-size:13px;color:var(--ink-2)">
@@ -593,13 +660,16 @@ function sheetZu() {
 scrim.addEventListener("click", (ev) => { if (ev.target === scrim) sheetZu(); });
 
 function sheetMelden(quest) {
+  const punkte = quest.punkte_jetzt ?? quest.points;
   sheet(`
     <div class="grabber"></div>
     <h3>Erledigt melden</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
-      <span class="pts-pill">${quest.points} Punkte</span>
+      <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${punkte} Punkte</span>
     </div>
+    ${quest.bonus ? `<div class="note">${icon("i-heart", 16)}<span>+${quest.bonus} % Aktion läuft —
+      der Wert friert beim Melden ein und bleibt, auch wenn erst später bestätigt wird.</span></div>` : ""}
     <div class="field">
       <label>Wie oft</label>
       <div class="stepper">
@@ -607,31 +677,34 @@ function sheetMelden(quest) {
         <span class="val" id="menge">1</span>
         <button data-menge="1" aria-label="mehr">+</button>
         <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">
-          = <b style="color:var(--accent)" id="summe">${quest.points}</b> Punkte</span>
+          = <b style="color:var(--accent)" id="summe">${punkte}</b> Punkte</span>
       </div>
     </div>
     <div class="field"><label>Notiz für ${esc(S.partner.name.split(" ")[0])}</label>
       <textarea id="notiz" placeholder="optional"></textarea></div>
     <div class="note">${icon("i-info", 16)}<span>Die Punkte werden erst gutgeschrieben, wenn
       ${esc(S.partner.name.split(" ")[0])} bestätigt. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
-    <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${quest.points}">
+    <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${punkte}">
       Zur Bestätigung senden</button>`);
 }
 
 function sheetAntrag(belohnung) {
-  const fehlt = belohnung.cost > S.ich.punkte;
+  const kosten = belohnung.kosten_jetzt ?? belohnung.cost;
+  const fehlt = kosten > S.ich.punkte;
   sheet(`
     <div class="grabber"></div>
     <h3>Antrag stellen</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
-      <span class="pts-pill">−${belohnung.cost}</span>
+      <span class="pts-pill">${belohnung.rabatt ? `<s style="opacity:.55">−${belohnung.cost}</s> ` : ""}−${kosten}</span>
     </div>
+    ${belohnung.rabatt ? `<div class="note">${icon("i-heart", 16)}<span>Rabatt von ${belohnung.rabatt} % läuft —
+      der Preis friert beim Absenden ein, auch wenn erst später entschieden wird.</span></div>` : ""}
     <div class="field"><label>Wunschtermin</label><input id="termin" placeholder="z. B. heute Abend"></div>
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
     <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
       <span>Konto nach Einlösung</span>
-      <span><b>${S.ich.punkte}</b> → <b style="color:var(--accent)">${S.ich.punkte - belohnung.cost}</b></span>
+      <span><b>${S.ich.punkte}</b> → <b style="color:var(--accent)">${S.ich.punkte - kosten}</b></span>
     </div>
     <div class="note">${icon("i-info", 16)}<span>${fehlt
       ? "Dir fehlen noch Punkte — der Antrag lässt sich erst genehmigen, wenn du sie hast."
@@ -717,6 +790,49 @@ function sheetLoeschen(art, eintrag) {
       Bereits gebuchte Punkte und der Verlauf bleiben unangetastet.</span></div>
     <button class="btn primary block" data-senden="loeschen" data-art="${art}" data-id="${eintrag.id}">
       Zur Abstimmung geben</button>`);
+}
+
+function sheetAktion() {
+  const kategorien = [...new Set(S.quests.map((q) => q.category))];
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Aktion starten</h3>
+    <div class="btnrow" id="aktionsart">
+      <button class="btn dark" data-art-wahl="quest_bonus">Doppelte Punkte</button>
+      <button class="btn ghost" data-art-wahl="belohnung_rabatt">Rabatt</button>
+    </div>
+
+    <div class="field">
+      <label id="prozent-label">Wie viel mehr Punkte</label>
+      <div class="stepper">
+        <button data-menge="-25" aria-label="weniger">−</button>
+        <span class="val" id="menge">100</span>
+        <button data-menge="25" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">Prozent</span>
+      </div>
+    </div>
+
+    <div class="field" id="raum-feld">
+      <label>Wofür</label>
+      <select id="raum">
+        <option value="">Alle Quests</option>
+        ${kategorien.map((k) => `<option value="${esc(k)}">Nur ${esc(k)}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Wie lange</label>
+      <div class="btnrow" id="dauer">
+        <button class="btn dark" data-dauer-wahl="heute">Heute</button>
+        <button class="btn ghost" data-dauer-wahl="wochenende">2 Tage</button>
+        <button class="btn ghost" data-dauer-wahl="woche">1 Woche</button>
+      </div>
+    </div>
+
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum jetzt?"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Aktionen starten nur gemeinsam.
+      ${esc(S.partner.name.split(" ")[0])} muss zustimmen — danach läuft sie sofort.</span></div>
+    <button class="btn primary block" data-senden="aktion">Zur Abstimmung geben</button>`);
 }
 
 function sheetNeueBelohnung() {
@@ -809,7 +925,7 @@ document.addEventListener("pointercancel", () => { clearTimeout(druckTimer); });
 document.addEventListener("pointermove", () => { clearTimeout(druckTimer); });
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -833,6 +949,7 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
+    if (art === "aktion") { sheetAktion(); return; }
     if (scrim.hasAttribute("data-open")) return;
     if (art === "melden") {
       const quest = S.quests.find((q) => q.id === el.dataset.id);
@@ -847,11 +964,30 @@ document.addEventListener("click", async (ev) => {
     return;
   }
 
+  // Aktions-Sheet: Art und Dauer umschalten
+  if (el.dataset.artWahl) {
+    scrim.querySelectorAll("[data-art-wahl]").forEach((b) => {
+      b.className = "btn " + (b === el ? "dark" : "ghost");
+    });
+    const rabatt = el.dataset.artWahl === "belohnung_rabatt";
+    document.getElementById("raum-feld").style.display = rabatt ? "none" : "";
+    document.getElementById("prozent-label").textContent = rabatt ? "Wie viel Rabatt" : "Wie viel mehr Punkte";
+    document.getElementById("menge").textContent = rabatt ? 25 : 100;
+    return;
+  }
+  if (el.dataset.dauerWahl) {
+    scrim.querySelectorAll("[data-dauer-wahl]").forEach((b) => {
+      b.className = "btn " + (b === el ? "dark" : "ghost");
+    });
+    return;
+  }
+
   // Stepper
   if (el.dataset.menge) {
     const feld = document.getElementById("menge");
     const summe = document.getElementById("summe");
-    const neu = Math.max(1, Number(feld.textContent) + Number(el.dataset.menge));
+    const schritt = Number(el.dataset.menge);
+    const neu = Math.max(Math.abs(schritt) === 25 ? 25 : 1, Number(feld.textContent) + schritt);
     feld.textContent = neu;
     if (summe) {
       const proStueck = Number(document.querySelector("[data-senden='melden']")?.dataset.punkte || 0);
@@ -895,6 +1031,21 @@ document.addEventListener("click", async (ev) => {
       await api("proposals", { art: "new_quest", wert: zahl("menge"), name: wert("qname"), kategorie: wert("qkat"), grund: wert("grund") });
       sheetZu(); ansicht = "wir"; await laden();
       toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "aktion") {
+      const gewaehlt = scrim.querySelector("[data-art-wahl].dark")?.dataset.artWahl || "quest_bonus";
+      const dauer = scrim.querySelector("[data-dauer-wahl].dark")?.dataset.dauerWahl || "heute";
+      await api("proposals", {
+        art: "neue_aktion",
+        aktionsart: gewaehlt,
+        prozent: zahl("menge"),
+        kategorie: gewaehlt === "quest_bonus" ? wert("raum") : "",
+        dauer,
+        grund: wert("grund")
+      });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Aktion steht zur Abstimmung.");
       return;
     }
     if (el.dataset.senden === "neue-belohnung") {

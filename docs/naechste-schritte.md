@@ -24,7 +24,7 @@ Linear ist ehrlicher, gewichtet fühlt sich lebendiger an.
 
 ---
 
-## 2. Rabatte auf Belohnungen
+## 2. Rabatte auf Belohnungen ✓ gebaut
 
 **Was:** Zeiträume, in denen Belohnungen günstiger sind. Ein Rabatttag oder eine Rabattwoche
 kann von jedem eingeworfen werden — gelten tut sie erst, wenn beide zustimmen.
@@ -37,12 +37,12 @@ kann von jedem eingeworfen werden — gelten tut sie erst, wenn beide zustimmen.
   Wer im Rabatt beantragt, behält den Rabattpreis, auch wenn erst danach entschieden wird.
 - In der Liste sichtbar: durchgestrichener alter Preis, daneben der neue, dazu die Restlaufzeit
 
-**Offen:** Rabatt in Prozent oder als fester Abzug. Prozent passt besser zu Belohnungen
-zwischen 2 und 15 Punkten.
+**Entschieden:** Prozent, weil ein fester Abzug bei Belohnungen zwischen 2 und 15 Punkten
+sehr ungleich wirkt. Höchstens 90 %, darüber wäre es geschenkt.
 
 ---
 
-## 3. Doppelte Punkte auf Quests
+## 3. Doppelte Punkte auf Quests ✓ gebaut
 
 **Was:** Zeiträume, in denen Quests mehr bringen. Wie beim Rabatt nur gemeinsam zu starten.
 
@@ -55,8 +55,8 @@ nachträglich.
 Aktion zu warten — oder umgekehrt Streit darüber, was noch „reinzählt“. Mit dem Einfrieren
 zum Zeitpunkt der Meldung ist die Regel in einem Satz erklärbar und nicht angreifbar.
 
-**Offen:** Ob eine Aktion für alle Quests gilt oder nur für eine Kategorie
-(„diese Woche doppelte Punkte auf alles in der Küche“).
+**Entschieden:** Eine Aktion kann auf eine Kategorie begrenzt werden — „diese Woche doppelte
+Punkte auf alles in der Küche“. Ohne Auswahl gilt sie für alle Quests.
 
 ---
 

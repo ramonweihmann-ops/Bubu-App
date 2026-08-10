@@ -474,6 +474,26 @@ async function partnerVon(env, ich) {
   return treffer?.user_id || null;
 }
 __name(partnerVon, "partnerVon");
+var DAUERN = { heute: 1, wochenende: 2, woche: 7 };
+async function laufendeAktionen(env, paarId) {
+  const treffer = await env.DB.prepare(
+    `select * from aktionen where couple_id = ?1 and beginn <= datetime('now') and ende > datetime('now')`
+  ).bind(paarId).all();
+  return treffer.results;
+}
+__name(laufendeAktionen, "laufendeAktionen");
+function questWert(quest, aktionen) {
+  const bonus = aktionen.find((a) => a.art === "quest_bonus" && (!a.kategorie || a.kategorie === quest.category));
+  if (!bonus) return { wert: quest.points, aktion: null };
+  return { wert: Math.round(quest.points * (100 + bonus.prozent) / 100), aktion: bonus };
+}
+__name(questWert, "questWert");
+function belohnungWert(belohnung, aktionen) {
+  const rabatt = aktionen.find((a) => a.art === "belohnung_rabatt");
+  if (!rabatt) return { wert: belohnung.cost, aktion: null };
+  return { wert: Math.max(1, Math.round(belohnung.cost * (100 - rabatt.prozent) / 100)), aktion: rabatt };
+}
+__name(belohnungWert, "belohnungWert");
 async function zustand(env, ich) {
   if (!ich.couple_id) {
     const eigener = await env.DB.prepare(
@@ -487,7 +507,7 @@ async function zustand(env, ich) {
     };
   }
   const paar = ich.couple_id;
-  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse] = await Promise.all([
+  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen] = await Promise.all([
     env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1`).bind(paar).all(),
     env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
@@ -511,8 +531,12 @@ async function zustand(env, ich) {
     env.DB.prepare(`select id, member_id, delta, reason, created_at from ledger
                        where couple_id = ?1 order by created_at desc limit 40`).bind(paar).all(),
     env.DB.prepare(`select id, art, titel, text, punkte, created_at from ereignisse
-                       where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all()
+                       where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all(),
+    env.DB.prepare(`select id, art, prozent, kategorie, beginn, ende from aktionen
+                       where couple_id = ?1 and ende > datetime('now') order by beginn`).bind(paar).all()
   ]);
+  const jetzt = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace("T", " ");
+  const laufend = aktionen.results.filter((a) => a.beginn <= jetzt && a.ende > jetzt);
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
   const mit = personen.results.map((p) => ({
     id: p.id,
@@ -531,8 +555,15 @@ async function zustand(env, ich) {
     code: partner ? null : (await env.DB.prepare("select pair_code from couples where id = ?1").bind(paar).first())?.pair_code,
     ich: mein,
     partner,
-    quests: quests.results,
-    belohnungen: belohnungen.results,
+    quests: quests.results.map((q) => {
+      const { wert, aktion } = questWert(q, laufend);
+      return { ...q, punkte_jetzt: wert, bonus: aktion ? aktion.prozent : 0 };
+    }),
+    belohnungen: belohnungen.results.map((b) => {
+      const { wert, aktion } = belohnungWert(b, laufend);
+      return { ...b, kosten_jetzt: wert, rabatt: aktion ? aktion.prozent : 0 };
+    }),
+    aktionen: aktionen.results,
     meldungen: meldungen.results,
     antraege: antraege.results,
     uebertragungen: uebertragungen.results,
@@ -544,6 +575,8 @@ async function zustand(env, ich) {
       neu: p.new_value,
       grund: p.reason,
       von: p.created_by,
+      raum: p.category,
+      tage: p.kind === "neue_aktion" ? JSON.parse(p.payload || "{}").tage || null : null,
       status: p.status,
       meine: stimmenJe[p.id]?.[ich.id],
       ihre: partner ? stimmenJe[p.id]?.[partner.id] : void 0
@@ -555,18 +588,21 @@ async function zustand(env, ich) {
 __name(zustand, "zustand");
 async function melden(env, ich, { questId, anzahl = 1, notiz = "" }) {
   const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
-  const ergebnis = await env.DB.prepare(
+  const quest = await env.DB.prepare(
+    "select id, name, points, category from quests where id = ?1 and couple_id = ?2 and active = 1"
+  ).bind(questId, ich.couple_id).first();
+  if (!quest) throw new Fehler("Diese Quest gibt es nicht");
+  const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));
+  await env.DB.prepare(
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
-     select ?1, ?2, q.id, ?3, ?4, q.points, ?5 from quests q where q.id = ?6 and q.couple_id = ?2`
-  ).bind(id(), ich.couple_id, ich.id, menge, String(notiz).slice(0, 300), questId).run();
-  if (!ergebnis.meta.changes) throw new Fehler("Diese Quest gibt es nicht");
-  const quest = await env.DB.prepare("select name, points from quests where id = ?1").bind(questId).first();
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(id(), ich.couple_id, quest.id, ich.id, menge, wert, String(notiz).slice(0, 300)).run();
   const partner = await partnerVon(env, ich);
   if (partner) {
     await melde(env, ich.couple_id, partner, {
       art: "info",
       titel: `${vorname(ich.name)} hat etwas erledigt`,
-      text: `${quest.name}${menge > 1 ? ` (${menge}\xD7)` : ""} \u2014 ${menge * quest.points} Punkte warten auf deine Best\xE4tigung.`
+      text: `${quest.name}${menge > 1 ? ` (${menge}\xD7)` : ""} \u2014 ${menge * wert} Punkte warten auf deine Best\xE4tigung.`
     });
   }
   return { ok: true };
@@ -601,18 +637,29 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
 }
 __name(meldungEntscheiden, "meldungEntscheiden");
 async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }) {
-  const ergebnis = await env.DB.prepare(
+  const belohnung = await env.DB.prepare(
+    "select id, name, cost from rewards where id = ?1 and couple_id = ?2 and active = 1"
+  ).bind(rewardId, ich.couple_id).first();
+  if (!belohnung) throw new Fehler("Diese Belohnung gibt es nicht");
+  const { wert } = belohnungWert(belohnung, await laufendeAktionen(env, ich.couple_id));
+  await env.DB.prepare(
     `insert into requests (id, couple_id, reward_id, requested_by, cost, wish_date, message)
-     select ?1, ?2, b.id, ?3, b.cost, ?4, ?5 from rewards b where b.id = ?6 and b.couple_id = ?2`
-  ).bind(id(), ich.couple_id, ich.id, String(termin).slice(0, 60), String(nachricht).slice(0, 300), rewardId).run();
-  if (!ergebnis.meta.changes) throw new Fehler("Diese Belohnung gibt es nicht");
-  const belohnung = await env.DB.prepare("select name, cost from rewards where id = ?1").bind(rewardId).first();
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(
+    id(),
+    ich.couple_id,
+    belohnung.id,
+    ich.id,
+    wert,
+    String(termin).slice(0, 60),
+    String(nachricht).slice(0, 300)
+  ).run();
   const partner = await partnerVon(env, ich);
   if (partner) {
     await melde(env, ich.couple_id, partner, {
       art: "info",
       titel: `${vorname(ich.name)} m\xF6chte etwas einl\xF6sen`,
-      text: `${belohnung.name} \u2014 ${belohnung.cost} Punkte. Du entscheidest.`
+      text: `${belohnung.name} \u2014 ${wert} Punkte. Du entscheidest.`
     });
   }
   return { ok: true };
@@ -721,9 +768,11 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
   return { ok: true };
 }
 __name(uebertragungEntscheiden, "uebertragungEntscheiden");
-async function vorschlagen(env, ich, { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "" }) {
-  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward"];
+async function vorschlagen(env, ich, daten) {
+  const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "" } = daten;
+  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward", "neue_aktion"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
+  if (art === "neue_aktion") return aktionVorschlagen(env, ich, daten);
   const loeschen = art === "delete_quest" || art === "delete_reward";
   const neu = loeschen ? 0 : Math.floor(Number(wert));
   if (!loeschen && !(neu > 0)) throw new Fehler("Der Wert muss gr\xF6\xDFer als null sein");
@@ -800,6 +849,50 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
   return { ok: true, status, wert: vorschlag.new_value };
 }
 __name(abstimmen, "abstimmen");
+async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = "", dauer = "heute", grund = "" }) {
+  if (!["quest_bonus", "belohnung_rabatt"].includes(aktionsart)) throw new Fehler("Unbekannte Art von Aktion");
+  const wert = Math.floor(Number(prozent));
+  if (!(wert > 0 && wert <= 400)) throw new Fehler("Der Prozentwert passt nicht");
+  if (aktionsart === "belohnung_rabatt" && wert > 90) throw new Fehler("Mehr als 90 % Rabatt w\xE4re geschenkt");
+  const tage = DAUERN[dauer];
+  if (!tage) throw new Fehler("Unbekannter Zeitraum");
+  const raum = aktionsart === "quest_bonus" ? String(kategorie).slice(0, 40) : "";
+  const laufend = await env.DB.prepare(
+    `select 1 as da from aktionen where couple_id = ?1 and art = ?2 and ende > datetime('now')`
+  ).bind(ich.couple_id, aktionsart).first();
+  if (laufend) throw new Fehler("Dazu l\xE4uft schon eine Aktion");
+  const offen = await env.DB.prepare(
+    "select 1 as da from proposals where couple_id = ?1 and kind = 'neue_aktion' and status = 'offen'"
+  ).bind(ich.couple_id).first();
+  if (offen) throw new Fehler("Ein Vorschlag f\xFCr eine Aktion steht noch zur Abstimmung");
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, new_value, name, category, reason, payload, created_by)
+       values (?1, ?2, 'neue_aktion', ?3, ?4, ?5, ?6, ?7, ?8)`
+    ).bind(
+      vorschlag,
+      ich.couple_id,
+      wert,
+      aktionsart === "quest_bonus" ? "Doppelte Punkte" : "Rabatt auf Belohnungen",
+      raum || null,
+      String(grund).slice(0, 300),
+      JSON.stringify({ aktionsart, prozent: wert, kategorie: raum, tage }),
+      ich.id
+    ),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)").bind(vorschlag, ich.id)
+  ]);
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} schl\xE4gt eine Aktion vor`,
+      text: aktionsart === "quest_bonus" ? `+${wert} % Punkte${raum ? ` auf ${raum}` : ""} \u2014 deine Stimme fehlt.` : `${wert} % Rabatt auf Belohnungen \u2014 deine Stimme fehlt.`
+    });
+  }
+  return { ok: true };
+}
+__name(aktionVorschlagen, "aktionVorschlagen");
 async function auszaehlen(env, vorschlag) {
   const stimmen = await env.DB.prepare(
     "select answer from proposal_votes where proposal_id = ?1"
@@ -820,7 +913,8 @@ async function auszaehlen(env, vorschlag) {
     new_reward: env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)").bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.new_value),
     // Nie hart löschen: der Verlauf soll lesbar bleiben.
     delete_quest: env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2").bind(vorschlag.target_id, vorschlag.couple_id),
-    delete_reward: env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2").bind(vorschlag.target_id, vorschlag.couple_id)
+    delete_reward: env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2").bind(vorschlag.target_id, vorschlag.couple_id),
+    neue_aktion: aktionAnlegen(env, vorschlag)
   }[vorschlag.kind];
   await env.DB.batch([
     anwenden,
@@ -829,6 +923,22 @@ async function auszaehlen(env, vorschlag) {
   return "bestaetigt";
 }
 __name(auszaehlen, "auszaehlen");
+function aktionAnlegen(env, vorschlag) {
+  const daten = JSON.parse(vorschlag.payload || "{}");
+  const tage = DAUERN[Object.keys(DAUERN).find((k) => DAUERN[k] === daten.tage)] || daten.tage || 1;
+  return env.DB.prepare(
+    `insert into aktionen (id, couple_id, art, prozent, kategorie, beginn, ende, created_by)
+     values (?1, ?2, ?3, ?4, ?5, datetime('now'), datetime('now', '+${Number(tage)} days'), ?6)`
+  ).bind(
+    id(),
+    vorschlag.couple_id,
+    daten.aktionsart,
+    daten.prozent,
+    daten.kategorie || null,
+    vorschlag.created_by
+  );
+}
+__name(aktionAnlegen, "aktionAnlegen");
 async function ausgabe(env, ich) {
   if (!ich.couple_id) return { hinweis: "Noch kein Paar verbunden" };
   const paar = ich.couple_id;
@@ -909,7 +1019,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-xZ1xbb/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-b57eHY/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -941,7 +1051,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-xZ1xbb/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-b57eHY/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
