@@ -88,6 +88,16 @@ in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
+## Auswertung
+
+Punkte je Tag der letzten zwei Wochen als Balken, beide Personen nebeneinander, dazu
+Hochrechnungen auf Woche und Monat aus dem Schnitt der letzten sieben Tage. Gezählt wird nur,
+was durch **bestätigte Quests** hereinkam — Übertragungen und Einlösungen sind Bewegungen,
+kein Verdienst.
+
+Der Tag beginnt dort, wo die Person wohnt: die App schickt ihren Zeitversatz mit, damit eine
+Meldung um 23 Uhr nicht auf den Folgetag rutscht.
+
 ## Aktionen
 
 Befristete Zeiträume, die nur gemeinsam starten — über dieselbe Abstimmung wie alles andere:

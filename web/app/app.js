@@ -168,7 +168,8 @@ function zeichne() {
 
   const inhalt = {
     start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
-    belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf
+    belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
+    statistik: schirmStatistik
   }[ansicht] || schirmStart;
 
   app.innerHTML = inhalt() + `
@@ -357,6 +358,13 @@ function schirmStart() {
 
       <p class="section-label">Offene Abstimmungen</p>
       ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
+
+      <button class="rowlink" data-go="statistik">
+        <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
+        <span class="grow"><span class="t">Auswertung</span>
+          <span class="m">Punkte je Tag, Wochen- und Monatsprognose</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
 
       <p class="section-label">Letzte Aktivität</p>
       ${S.verlauf.length ? `
@@ -610,6 +618,180 @@ function schirmWir() {
           <span class="m">Kompletter Stand als Datei</span></span><span style="color:var(--ink-3)">›</span>
       </button>
       <button class="btn text block" data-abmelden>Abmelden</button>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Auswertung */
+
+let statistik = null;
+
+async function statistikLaden() {
+  statistik = await api(`statistik?versatz=${-new Date().getTimezoneOffset()}`);
+}
+
+const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+/** Gruppiertes Balkendiagramm: je Tag zwei schmale Balken. */
+function diagramm(tage) {
+  const breite = 340, hoehe = 150, links = 22, unten = 20, oben = 12;
+  const feldB = (breite - links) / tage.length;
+  const balkenB = Math.min(7, (feldB - 4) / 2);
+  const hoechst = Math.max(4, ...tage.map((t) => Math.max(t.ich, t.partner)));
+  const skala = (w) => (hoehe - oben - unten) * (w / hoechst);
+
+  const linien = [0, 0.5, 1].map((f) => {
+    const y = oben + (hoehe - oben - unten) * (1 - f);
+    return `<line class="gitter" x1="${links}" y1="${y}" x2="${breite}" y2="${y}"/>
+            <text class="achse" x="0" y="${y + 3}">${Math.round(hoechst * f)}</text>`;
+  }).join("");
+
+  const balken = tage.map((t, i) => {
+    const x = links + i * feldB + (feldB - balkenB * 2 - 2) / 2;
+    const boden = hoehe - unten;
+    const stueck = (wert, versatz, farbe, wer) => {
+      if (!wert) return "";
+      const h = Math.max(2, skala(wert));
+      return `<rect class="balken" data-tag="${t.tag}" data-wer="${wer}" data-wert="${wert}"
+        x="${(x + versatz).toFixed(1)}" y="${(boden - h).toFixed(1)}"
+        width="${balkenB.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${farbe}"/>`;
+    };
+    const datum = new Date(t.tag + "T12:00:00Z");
+    const zeigen = i === tage.length - 1 || i % 3 === 0;
+    return stueck(t.ich, 0, "var(--reihe-ich)", "ich")
+         + stueck(t.partner, balkenB + 2, "var(--reihe-partner)", "partner")
+         + (zeigen ? `<text class="achse" text-anchor="middle"
+              x="${(x + balkenB).toFixed(1)}" y="${hoehe - 6}">${WOCHENTAGE[datum.getUTCDay()]}</text>` : "");
+  }).join("");
+
+  // Höchstwert direkt beschriften statt jeden Balken
+  const spitze = tage.reduce((b, t, i) => (Math.max(t.ich, t.partner) > Math.max(b.t.ich, b.t.partner) ? { t, i } : b), { t: tage[0], i: 0 });
+  const spitzeWert = Math.max(spitze.t.ich, spitze.t.partner);
+  const spitzeX = links + spitze.i * feldB + feldB / 2;
+  const beschriftung = spitzeWert > 0
+    ? `<text class="wert" text-anchor="middle" x="${spitzeX.toFixed(1)}"
+         y="${(hoehe - unten - skala(spitzeWert) - 5).toFixed(1)}">${spitzeWert}</text>`
+    : "";
+
+  return `<svg class="diagramm" viewBox="0 0 ${breite} ${hoehe}" role="img"
+            aria-label="Punkte je Tag der letzten zwei Wochen">
+    ${linien}${balken}${beschriftung}
+  </svg>`;
+}
+
+function prognoseKarte(titel, zahlen, offen, einheit) {
+  const mehr = zahlen.prognose - zahlen.bisher;
+  return `
+    <div class="card">
+      <span class="section-label" style="margin:0">${titel}</span>
+      <div class="prognose">
+        <span class="jetzt">
+          <span class="hero-zahl">${zahlen.bisher}</span>
+          <div class="hero-zusatz">bisher</div>
+        </span>
+        <span class="pfeil" aria-hidden="true" style="font-size:20px;font-weight:700">→</span>
+        <span class="ziel">
+          <span class="hero-zahl" style="color:var(--reihe-ich);font-size:34px">${zahlen.prognose}</span>
+          <div class="hero-zusatz">Hochrechnung</div>
+        </span>
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-2)">
+        ${offen > 0
+          ? `Noch ${offen} ${einheit === "woche" ? (offen === 1 ? "Tag" : "Tage") : (offen === 1 ? "Tag" : "Tage")} —
+             bei deinem Schnitt kämen ${mehr} Punkte dazu.`
+          : "Der Zeitraum ist durch."}
+        ${einheit === "monat" && zahlen.vormonat
+          ? `<br>Vormonat: <b>${zahlen.vormonat}</b> Punkte.` : ""}
+      </div>
+    </div>`;
+}
+
+function schirmStatistik() {
+  if (!statistik) {
+    return `
+      <div class="appbar">
+        <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+        <div><div class="title">Auswertung</div><div class="sub">wird geladen …</div></div>
+      </div>
+      <div class="body"><div class="lader"><img src="/logo.webp" alt="" width="110"></div></div>`;
+  }
+
+  const zwei = statistik.tage.slice(-14);
+  const meins = statistik.ich;
+  const meinName = S.ich.name.split(" ")[0];
+  const partnerName = S.partner.name.split(" ")[0];
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Auswertung</div><div class="sub">Punkte aus bestätigten Quests</div></div>
+      <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
+    </div>
+    <div class="body">
+      <div class="card">
+        <span class="section-label" style="margin:0">Letzte zwei Wochen</span>
+        <div class="legende">
+          <span><i style="background:var(--reihe-ich)"></i>${esc(meinName)}</span>
+          <span><i style="background:var(--reihe-partner)"></i>${esc(partnerName)}</span>
+        </div>
+        ${diagramm(zwei)}
+        <div id="diagramm-hinweis" style="font-size:12.5px;color:var(--ink-2);min-height:18px">
+          Tippe auf einen Balken für den einzelnen Tag.
+        </div>
+        <details class="tabelle">
+          <summary>Als Tabelle anzeigen</summary>
+          <table class="tabellenansicht">
+            <thead><tr><th>Tag</th><th>${esc(meinName)}</th><th>${esc(partnerName)}</th></tr></thead>
+            <tbody>
+              ${zwei.slice().reverse().filter((t) => t.ich || t.partner).map((t) => `
+                <tr><td>${t.tag.slice(8)}.${t.tag.slice(5, 7)}.</td><td>${t.ich}</td><td>${t.partner}</td></tr>`).join("")
+                || '<tr><td colspan="3" style="text-align:left;color:var(--ink-3)">Noch keine Punkte in diesem Zeitraum.</td></tr>'}
+            </tbody>
+          </table>
+        </details>
+      </div>
+
+      ${prognoseKarte("Diese Woche", meins.woche, statistik.tageOffen, "woche")}
+      ${prognoseKarte("Dieser Monat", meins.monat, statistik.monatOffen, "monat")}
+
+      <p class="section-label">Deine Zahlen</p>
+      <div class="kennzahlen">
+        <div class="kennzahl">
+          <span class="k">Schnitt pro Tag</span>
+          <span class="v">${meins.schnitt}</span>
+          <span class="z">letzte sieben Tage</span>
+        </div>
+        <div class="kennzahl">
+          <span class="k">Serie</span>
+          <span class="v">${meins.serie}</span>
+          <span class="z">${meins.serie === 1 ? "Tag" : "Tage"} in Folge</span>
+        </div>
+        <div class="kennzahl">
+          <span class="k">Bester Tag</span>
+          <span class="v">${meins.bester ? meins.bester.punkte : "–"}</span>
+          <span class="z">${meins.bester ? `am ${meins.bester.tag.slice(8)}.${meins.bester.tag.slice(5, 7)}.` : "noch keiner"}</span>
+        </div>
+        <div class="kennzahl">
+          <span class="k" style="display:flex;align-items:center;gap:6px">
+            <i style="width:9px;height:9px;border-radius:2px;background:var(--reihe-partner);display:block"></i>
+            ${esc(partnerName)} diese Woche</span>
+          <span class="v">${statistik.partner ? statistik.partner.woche.bisher : 0}</span>
+          <span class="z">du: ${meins.woche.bisher}</span>
+        </div>
+      </div>
+
+      ${statistik.naechsteBelohnung ? `
+      <div class="card flat">
+        <span class="section-label" style="margin:0">Nächstes Ziel</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="flex:1;font-size:14.5px;font-weight:700">${esc(statistik.naechsteBelohnung.name)}</span>
+          <span class="pts-pill">noch ${statistik.naechsteBelohnung.fehlt}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2)">
+          Bei ${meins.schnitt} Punkten am Tag in
+          ${meins.schnitt > 0 ? Math.ceil(statistik.naechsteBelohnung.fehlt / meins.schnitt) : "…"}
+          ${meins.schnitt > 0 && Math.ceil(statistik.naechsteBelohnung.fehlt / meins.schnitt) === 1 ? "Tag" : "Tagen"} drin.
+        </div>
+      </div>` : ""}
     </div>`;
 }
 
@@ -929,7 +1111,15 @@ document.addEventListener("click", async (ev) => {
   if (!el) return;
 
   // Navigation & Anzeige
-  if (el.dataset.go) { ansicht = el.dataset.go; sheetZu(); zeichne(); return; }
+  if (el.dataset.go) {
+    ansicht = el.dataset.go;
+    sheetZu();
+    zeichne();
+    if (ansicht === "statistik") {
+      statistikLaden().then(zeichne).catch((f) => toast(f.message, true));
+    }
+    return;
+  }
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
 
   if (el.dataset.sheet) {
@@ -1156,6 +1346,30 @@ document.addEventListener("click", async (ev) => {
   } finally {
     el.disabled = false;
   }
+});
+
+/* ------------------------------------------------------------------ Diagramm antippen */
+
+document.addEventListener("click", (ev) => {
+  const balken = ev.target.closest("rect.balken");
+  const hinweis = document.getElementById("diagramm-hinweis");
+  if (!hinweis) return;
+
+  if (!balken) {
+    document.querySelectorAll("rect.balken[data-aus]").forEach((r) => r.removeAttribute("data-aus"));
+    hinweis.textContent = "Tippe auf einen Balken für den einzelnen Tag.";
+    return;
+  }
+
+  const tag = balken.dataset.tag;
+  document.querySelectorAll("rect.balken").forEach((r) => {
+    r.toggleAttribute("data-aus", r.dataset.tag !== tag);
+  });
+
+  const eintrag = statistik.tage.find((t) => t.tag === tag);
+  const datum = new Date(tag + "T12:00:00Z");
+  hinweis.innerHTML = `<b>${WOCHENTAGE[datum.getUTCDay()]}, ${tag.slice(8)}.${tag.slice(5, 7)}.</b> — `
+    + `${esc(S.ich.name.split(" ")[0])} ${eintrag.ich}, ${esc(S.partner.name.split(" ")[0])} ${eintrag.partner} Punkte`;
 });
 
 /* ------------------------------------------------------------------ Benachrichtigungen */

@@ -220,6 +220,48 @@ body {
   min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px;
 }
 
+/* ---------- Auswertung ---------- */
+/* Zwei Reihen, geprüfte Palette: das hellere Geschwister des Navy und das Marken-Rot. */
+:root { --reihe-ich: #2f6fd0; --reihe-partner: #ec0f06; --gitter: #e8edf6; }
+
+.hero-zahl {
+  font-family: var(--font-display); font-weight: 800; font-size: 52px; letter-spacing: -.045em;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.hero-zusatz { font-size: 13.5px; color: var(--ink-2); }
+
+.legende { display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); flex-wrap: wrap; }
+.legende span { display: inline-flex; align-items: center; gap: 7px; }
+.legende i { width: 11px; height: 11px; border-radius: 3px; display: block; }
+
+.diagramm { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.diagramm .gitter { stroke: var(--gitter); stroke-width: 1; }
+.diagramm .achse { font-family: var(--font-data); font-size: 9px; fill: var(--ink-3); }
+.diagramm .wert { font-family: var(--font-data); font-size: 10px; font-weight: 700; fill: var(--ink); }
+.diagramm rect.balken { transition: opacity .12s; }
+.diagramm rect.balken[data-aus] { opacity: .25; }
+
+.kennzahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kennzahl {
+  border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.kennzahl .k { font-family: var(--font-data); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.kennzahl .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.kennzahl .z { font-size: 11.5px; color: var(--ink-2); }
+
+.prognose { display: flex; align-items: flex-end; gap: 14px; }
+.prognose .jetzt { flex: 1; }
+.prognose .pfeil { color: var(--ink-3); padding-bottom: 6px; }
+.prognose .ziel { text-align: right; }
+.prognose .ziel .v { color: var(--reihe-ich); }
+
+.tabellenansicht { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.tabellenansicht th, .tabellenansicht td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+.tabellenansicht th:first-child, .tabellenansicht td:first-child { text-align: left; font-family: var(--font-data); font-size: 11px; }
+.tabellenansicht th { font-family: var(--font-data); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 400; }
+details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointer; padding: 6px 0; }
+
 /* ---------- Overlays ---------- */
 .scrim {
   position: fixed; inset: 0; background: rgba(21, 44, 79, .5); display: none;

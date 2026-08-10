@@ -46,6 +46,7 @@ export async function handleApi(request, env, url) {
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
     if (pfad === "export") return json(await ausgabe(env, ich));
+    if (pfad === "statistik") return json(await statistik(env, ich, url.searchParams.get("versatz")));
     if (pfad === "push/key") return json({ schluessel: (await vapid(env)).oeffentlich });
     if (pfad === "push/subscribe") return json(await geraetMerken(env, ich, koerper));
     if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
@@ -720,6 +721,122 @@ function aktionAnlegen(env, vorschlag) {
      values (?1, ?2, ?3, ?4, ?5, datetime('now'), datetime('now', '+${Number(tage)} days'), ?6)`
   ).bind(id(), vorschlag.couple_id, daten.aktionsart, daten.prozent,
          daten.kategorie || null, vorschlag.created_by);
+}
+
+/* ------------------------------------------------------------------ Auswertung */
+
+const TAG = 86400000;
+const alsTag = (d) => d.toISOString().slice(0, 10);
+
+/**
+ * Punkte je Tag, dazu Hochrechnungen auf Woche und Monat.
+ *
+ * Gezählt wird nur, was durch bestätigte Quests hereinkam — Übertragungen,
+ * Einlösungen und der Anfangsbestand aus der Tabelle sind Bewegungen, kein Verdienst.
+ * Sonst stünde am ersten Tag ein Balken von 88 und alles andere verschwände daneben.
+ */
+async function statistik(env, ich, versatzRoh) {
+  if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
+
+  // Der Tag beginnt dort, wo die Person wohnt — nicht in Greenwich.
+  const versatz = Math.max(-840, Math.min(840, Number(versatzRoh) || 0));
+  const schieben = `${versatz >= 0 ? "+" : ""}${versatz} minutes`;
+
+  const zeilen = await env.DB.prepare(
+    `select date(created_at, ?2) as tag, member_id, sum(delta) as punkte
+       from ledger
+      where couple_id = ?1 and source_type = 'claim' and delta > 0
+        and created_at >= datetime('now', '-70 days')
+      group by tag, member_id`
+  ).bind(ich.couple_id, schieben).all();
+
+  const partner = await partnerVon(env, ich);
+  const proTag = new Map();
+  for (const z of zeilen.results) {
+    if (!proTag.has(z.tag)) proTag.set(z.tag, {});
+    proTag.get(z.tag)[z.member_id] = z.punkte;
+  }
+
+  const heuteLokal = new Date(Date.now() + versatz * 60000);
+  const heute = alsTag(heuteLokal);
+
+  const tage = [];
+  for (let i = 27; i >= 0; i--) {
+    const tag = alsTag(new Date(heuteLokal.getTime() - i * TAG));
+    const werte = proTag.get(tag) || {};
+    tage.push({ tag, ich: werte[ich.id] || 0, partner: partner ? (werte[partner] || 0) : 0 });
+  }
+
+  const summe = (liste, feld) => liste.reduce((n, t) => n + t[feld], 0);
+
+  // Woche ab Montag
+  const wochentag = (heuteLokal.getUTCDay() + 6) % 7;
+  const wocheAb = alsTag(new Date(heuteLokal.getTime() - wochentag * TAG));
+  const diese = tage.filter((t) => t.tag >= wocheAb);
+  const tageOffen = 6 - wochentag;
+
+  // Monat
+  const monatAb = heute.slice(0, 8) + "01";
+  const dieserMonat = tage.filter((t) => t.tag >= monatAb);
+  const tageImMonat = new Date(Date.UTC(heuteLokal.getUTCFullYear(), heuteLokal.getUTCMonth() + 1, 0)).getUTCDate();
+  const monatOffen = tageImMonat - Number(heute.slice(8, 10));
+
+  // Vormonat vollständig, dafür reichen die 70 Tage aus der Abfrage
+  const vorMonatEnde = new Date(Date.UTC(heuteLokal.getUTCFullYear(), heuteLokal.getUTCMonth(), 0));
+  const vorMonatAb = alsTag(new Date(Date.UTC(vorMonatEnde.getUTCFullYear(), vorMonatEnde.getUTCMonth(), 1)));
+  const vorMonat = { ich: 0, partner: 0 };
+  for (const [tag, werte] of proTag) {
+    if (tag >= vorMonatAb && tag <= alsTag(vorMonatEnde)) {
+      vorMonat.ich += werte[ich.id] || 0;
+      if (partner) vorMonat.partner += werte[partner] || 0;
+    }
+  }
+
+  const letzte7 = tage.slice(-7);
+  const schnitt = (feld) => summe(letzte7, feld) / 7;
+
+  const kennzahlen = (feld) => {
+    const bester = tage.reduce((b, t) => (t[feld] > (b?.[feld] ?? -1) ? t : b), null);
+    let serie = 0;
+    for (let i = tage.length - 1; i >= 0; i--) {
+      if (tage[i][feld] > 0) serie++;
+      else if (i < tage.length - 1) break;      // der heutige Tag darf noch leer sein
+    }
+    return {
+      woche: { bisher: summe(diese, feld), prognose: Math.round(summe(diese, feld) + schnitt(feld) * tageOffen) },
+      monat: {
+        bisher: summe(dieserMonat, feld),
+        prognose: Math.round(summe(dieserMonat, feld) + schnitt(feld) * monatOffen),
+        vormonat: vorMonat[feld]
+      },
+      schnitt: Math.round(schnitt(feld) * 10) / 10,
+      bester: bester && bester[feld] > 0 ? { tag: bester.tag, punkte: bester[feld] } : null,
+      serie
+    };
+  };
+
+  // Was als Nächstes drin wäre
+  const laufend = await laufendeAktionen(env, ich.couple_id);
+  const belohnungen = await env.DB.prepare(
+    "select name, cost from rewards where couple_id = ?1 and active = 1"
+  ).bind(ich.couple_id).all();
+  const stand = await env.DB.prepare(
+    "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
+  ).bind(ich.id).first();
+
+  const naechste = belohnungen.results
+    .map((b) => ({ name: b.name, kosten: belohnungWert(b, laufend).wert }))
+    .filter((b) => b.kosten > stand.punkte)
+    .sort((a, b) => a.kosten - b.kosten)[0] || null;
+
+  return {
+    tage,
+    tageOffen,
+    monatOffen,
+    ich: kennzahlen("ich"),
+    partner: partner ? kennzahlen("partner") : null,
+    naechsteBelohnung: naechste ? { ...naechste, fehlt: naechste.kosten - stand.punkte } : null
+  };
 }
 
 /* ------------------------------------------------------------------ Sicherung */

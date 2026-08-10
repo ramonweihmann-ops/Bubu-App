@@ -4,7 +4,7 @@ Drei Ideen aus dem Gespräch, noch nicht gebaut. Reihenfolge offen.
 
 ---
 
-## 1. Dashboard mit Verlauf und Prognose
+## 1. Dashboard mit Verlauf und Prognose ✓ gebaut
 
 **Was:** Sehen, wie viele Punkte an welchem Tag zusammengekommen sind, dazu eine Hochrechnung
 auf die Woche und den Monat — damit man ein Ziel vor Augen hat.
@@ -19,8 +19,13 @@ auf die Woche und den Monat — damit man ein Ziel vor Augen hat.
 **Datenlage:** Alles schon vorhanden — das Konto rechnet ohnehin aus jeder einzelnen Buchung.
 Es braucht nur eine Abfrage, die nach Tag gruppiert, und einen zweiten Blick auf `ledger`.
 
-**Offen:** Ob die Prognose stur linear rechnet oder die letzten sieben Tage stärker gewichtet.
-Linear ist ehrlicher, gewichtet fühlt sich lebendiger an.
+**Entschieden:** Hochgerechnet wird aus dem Schnitt der **letzten sieben Tage** — nicht aus dem
+gesamten Verlauf. Das reagiert auf eine gute oder faule Woche, statt sie in einem Mittel über
+Monate verschwinden zu lassen, und ist in einem Satz erklärbar.
+
+**Gezählt wird nur, was durch bestätigte Quests hereinkam.** Übertragungen, Einlösungen und der
+Anfangsbestand aus der Tabelle sind Bewegungen, kein Verdienst — sonst stünde am ersten Tag ein
+Balken von 88 und alles daneben verschwände.
 
 ---
 
