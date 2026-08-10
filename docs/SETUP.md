@@ -184,169 +184,28 @@ Die Startdaten aus eurer Tabelle kommen beim Pairing automatisch dazu; der Lauf 
 
 ## 5. Google-Login einrichten
 
-Der fummeligste Teil der Einrichtung — danach nie wieder. Plane 15 Minuten ein.
-Google nennt die Dinge an drei Stellen unterschiedlich, deshalb hier jeder Klick einzeln.
+Damit ihr euch ohne eigenes Passwort anmelden könnt.
 
-**Was am Ende passieren soll:** Ihr tippt in der App auf „Mit Google anmelden“, seht das
-bekannte Google-Fenster mit eurem Konto, tippt drauf — und seid drin. Kein Passwort, keine
-Registrierung, kein Bestätigungsmail.
+Google hat die Oberfläche auf die **Google Auth Platform** umgestellt — Seitenleiste mit
+*Branding · Zielgruppe · Clients · Datenzugriff*. Weil das ausführlich erklärt gehört, steht
+es in einer eigenen Anleitung:
 
-**Kostet das etwas? Nein.** „Anmelden mit Google“ ist dauerhaft kostenlos, ohne Kontingent und
-ohne Gebühr pro Anmeldung. Ein Google-Cloud-Projekt anzulegen kostet ebenfalls nichts, und ein
-Zahlungsmittel wird dafür nicht verlangt. Kosten entstehen bei Google Cloud nur, wenn man
-zusätzliche Dienste bucht (Karten, Übersetzung, Speicher) — davon nutzen wir nichts.
+**→ [Google-Login einrichten](./google-login.md)** — jeder Klick einzeln, mit Fehlertabelle.
 
----
+Kurzfassung dessen, was dabei herauskommt:
 
-### 5.1 Projekt anlegen
-
-Ein „Projekt“ ist bei Google nur eine Schublade für Einstellungen. Es hat nichts mit Servern
-oder Kosten zu tun.
-
-1. [console.cloud.google.com](https://console.cloud.google.com/) öffnen und mit dem
-   Google-Konto anmelden, dem die App gehören soll (sinnvollerweise deins).
-2. Beim allerersten Besuch fragt Google nach Land und Nutzungsbedingungen — bestätigen.
-3. Oben in der blauen Leiste, direkt rechts neben „Google Cloud“, ist die **Projektauswahl**
-   (steht „Projekt auswählen“ oder ein Projektname). Anklicken.
-4. Im Fenster oben rechts auf **Neues Projekt**.
-5. Ausfüllen:
-   - **Projektname:** `Haus-Quest`
-   - **Speicherort / Organisation:** „Keine Organisation“ stehen lassen
-6. **Erstellen**, ein paar Sekunden warten.
-7. **Wichtig:** Nach dem Anlegen oben in der Projektauswahl prüfen, dass wirklich
-   `Haus-Quest` ausgewählt ist und nicht ein anderes Projekt. Alles Folgende landet sonst
-   an der falschen Stelle — der häufigste Fehler in dieser Anleitung.
-
----
-
-### 5.2 Zustimmungsbildschirm
-
-Das ist das Fenster, das ihr beim Anmelden seht: „Haus-Quest möchte auf dein Google-Konto
-zugreifen“. Google will vorher wissen, wer dahintersteckt und was die App abfragt.
-
-Zu finden über das **Navigationsmenü** (drei waagerechte Striche, ganz links oben) →
-**APIs und Dienste** → **OAuth-Zustimmungsbildschirm**. Je nachdem, wie neu die Oberfläche
-in deinem Konto ist, heißt der Punkt auch **Google Auth Platform** → **Branding**.
-
-**Schritt 1 — Zielgruppe (User Type)**
-
-Zwei Auswahlmöglichkeiten:
-
-| Auswahl | Bedeutung |
+| Was | Wert |
 | --- | --- |
-| **Intern** | Nur für Google-Workspace-Konten derselben Firma. Steht bei privaten Konten meist gar nicht zur Wahl. |
-| **Extern** ← **das nehmen wir** | Jedes Google-Konto kann sich anmelden — beschränkt auf die, die du als Testnutzer einträgst. |
+| App-Name | `Haus-Quest` |
+| Autorisierte Domain | `haus-quest.com` |
+| Nutzertyp | Extern, Status *Testen*, eure zwei Adressen als Testnutzer |
+| Bereiche | `openid`, `userinfo.email`, `userinfo.profile` — alle nicht sensibel |
+| Client-Typ | Webanwendung |
+| JavaScript-Quellen | `https://haus-quest.com`, `http://localhost:8787` |
+| Weiterleitungs-URIs | `https://haus-quest.com/api/auth/callback`, `http://localhost:8787/api/auth/callback` |
 
-**Extern** auswählen → **Erstellen**.
-
-**Schritt 2 — App-Informationen**
-
-| Feld | Was eintragen | Warum |
-| --- | --- | --- |
-| **App-Name** | `Haus-Quest` | Genau dieser Text steht später im Anmeldefenster. Änderbar, aber jede Änderung kann eine erneute Prüfung auslösen — nimm gleich den endgültigen Namen. |
-| **Support-E-Mail für Nutzer** | Deine Adresse (Auswahlliste) | Wird im Anmeldefenster als Kontakt angezeigt. |
-| **App-Logo** | Kannst du leer lassen | Ein Logo ist hübsch, löst aber eine Markenprüfung durch Google aus, die Tage dauert. **Lass es zunächst weg** — nachrüsten geht jederzeit. |
-| **Startseite der App** | `https://haus-quest.com` | Optional, aber sinnvoll. |
-| **Datenschutzerklärung** | leer lassen | Erst nötig, wenn ihr die App veröffentlicht oder verkauft. |
-| **Nutzungsbedingungen** | leer lassen | Dito. |
-| **Autorisierte Domains** | `haus-quest.com` (über **+ Domain hinzufügen**) | Ohne diesen Eintrag verweigert Google später die Weiterleitung. |
-| **Kontakt-E-Mail des Entwicklers** | Deine Adresse | Hierhin schreibt Google, falls es Probleme gibt. |
-
-**Speichern und fortfahren.**
-
-**Schritt 3 — Bereiche (Scopes)**
-
-„Bereiche“ ist Googles Wort für: Worauf darf die App zugreifen? Hier **nichts hinzufügen** und
-einfach **Speichern und fortfahren** klicken.
-
-Der Grund: Die drei Angaben, die wir brauchen — Name, E-Mail-Adresse und Profilbild — gelten
-bei Google als Basisdaten (`openid`, `email`, `profile`) und werden automatisch mitgegeben.
-Sie zählen ausdrücklich **nicht** als „sensibel“ oder „eingeschränkt“. Genau deshalb braucht
-die App keine aufwendige Google-Überprüfung. Würdest du hier etwa Kalender- oder
-Kontaktzugriff hinzufügen, sähe das ganz anders aus.
-
-**Schritt 4 — Testnutzer**
-
-**+ Nutzer hinzufügen** und **beide Google-Adressen** eintragen — deine und die von Crusty.
-Genau die Adressen, mit denen ihr euch später anmeldet.
-
-> Wer hier nicht eingetragen ist, bekommt beim Anmeldeversuch die Meldung
-> „Zugriff blockiert: Haus-Quest hat den Google-Überprüfungsprozess nicht abgeschlossen“.
-> Das ist kein Fehler, sondern genau der gewünschte Schutz: Fremde kommen nicht hinein.
-
-**Speichern und fortfahren** → **Zurück zum Dashboard**.
-
-**Zum Status „Testing“**
-
-Die App steht jetzt auf **Testing**. Was das bedeutet:
-
-- Nur eingetragene Testnutzer können sich anmelden (maximal 100 — ihr braucht 2).
-- Beim ersten Anmelden zeigt Google einen Warnhinweis, dass die App nicht überprüft ist.
-  Über **Erweitert** → **Weiter zu Haus-Quest (unsicher)** kommt ihr durch. Der Hinweis ist
-  richtig — die App *ist* ungeprüft, weil sie privat ist — und er erscheint nur beim ersten Mal.
-- Es gibt eine bekannte Eigenheit: Im Testmodus laufen Googles Sitzungsschlüssel nach sieben
-  Tagen ab. **Für uns spielt das keine Rolle**, weil wir Google nur für die Anmeldung selbst
-  benutzen und danach eine eigene Sitzung führen. Ihr bleibt angemeldet, bis ihr euch abmeldet.
-
-Bei einem späteren Verkauf stellst du auf **In Produktion** um. Weil wir nur Basisdaten
-abfragen, entfällt dann die aufwendige Prüfung; der Warnhinweis verschwindet.
-
----
-
-### 5.3 Zugangsdaten erzeugen
-
-Jetzt der eigentliche Schlüssel — Google muss wissen, welche Adresse zu dieser App gehört.
-
-1. **APIs und Dienste** → **Anmeldedaten**
-2. Oben **+ Anmeldedaten erstellen** → **OAuth-Client-ID**
-3. **Anwendungstyp:** `Webanwendung`
-   (nicht „Android“ — auch wenn die App auf Android landet. Die Anmeldung passiert im Browser,
-   und für Google ist das eine Webanwendung. Der falsche Typ ist der zweithäufigste Fehler hier.)
-4. **Name:** `Haus-Quest Web` — nur für deine Übersicht, sieht sonst niemand.
-5. **Autorisierte JavaScript-Quellen** → **+ URI hinzufügen**, einzeln:
-   ```
-   https://haus-quest.com
-   ```
-   ```
-   http://localhost:8787
-   ```
-6. **Autorisierte Weiterleitungs-URIs** → **+ URI hinzufügen**, einzeln:
-   ```
-   https://haus-quest.com/api/auth/callback
-   ```
-   ```
-   http://localhost:8787/api/auth/callback
-   ```
-7. **Erstellen**
-
-Achte penibel auf die Schreibweise: kein Schrägstrich am Ende, `https` bei der Domain und
-`http` bei localhost, keine Leerzeichen. Weicht auch nur ein Zeichen ab, meldet Google beim
-Anmelden `redirect_uri_mismatch`. Der localhost-Eintrag ist fürs Entwickeln — ohne ihn kann
-ich die Anmeldung nicht testen, bevor sie live geht.
-
-Es erscheint ein Fenster mit **Client-ID** und **Client-Schlüssel**. Beides lässt sich später
-unter **Anmeldedaten** wieder aufrufen, du kannst also nichts verlieren.
-
----
-
-### 5.4 Schlüssel hinterlegen
-
-| Wert | Wohin |
-| --- | --- |
-| **Client-ID** (endet auf `.apps.googleusercontent.com`) | Kannst du mir schicken — die steht ohnehin im Quelltext jeder Anmeldeseite und ist kein Geheimnis. |
-| **Client-Schlüssel** (beginnt mit `GOCSPX-`) | GitHub → Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**. **Name:** `GOOGLE_CLIENT_SECRET`, **Secret:** der Schlüssel. Nicht in den Chat. |
-
----
-
-### 5.5 Wenn etwas klemmt
-
-| Meldung | Ursache | Lösung |
-| --- | --- | --- |
-| `redirect_uri_mismatch` | Die Weiterleitungs-URI stimmt nicht zeichengenau | Eintrag in 5.3 Schritt 6 prüfen — Tippfehler, Schrägstrich am Ende, `http` statt `https` |
-| „Zugriff blockiert: … Überprüfungsprozess nicht abgeschlossen“ | Die Adresse ist nicht als Testnutzer eingetragen | In 5.2 Schritt 4 ergänzen |
-| „Diese App ist nicht überprüft“ | Normal im Testmodus | **Erweitert** → **Weiter zu Haus-Quest** |
-| `invalid_client` | Client-ID oder Schlüssel falsch übernommen | Beides unter **Anmeldedaten** neu kopieren |
-| Einstellungen sind verschwunden | Falsches Projekt ausgewählt | Oben in der Projektauswahl auf `Haus-Quest` wechseln |
+Die **Client-ID** schickst du mir, den **Client-Schlüssel** legst du als GitHub-Secret
+`GOOGLE_CLIENT_SECRET` ab. Kosten: keine, dauerhaft.
 
 ---
 
