@@ -213,7 +213,16 @@ var id = /* @__PURE__ */ __name(() => crypto.randomUUID(), "id");
 async function handleApi(request, env, url) {
   const pfad = url.pathname.replace(/^\/api\//, "");
   const ich = await angemeldet(request, env);
-  if (pfad === "health") return json({ ok: true, zeit: (/* @__PURE__ */ new Date()).toISOString() });
+  if (pfad === "health") {
+    return json({
+      ok: true,
+      zeit: (/* @__PURE__ */ new Date()).toISOString(),
+      clientId: env.GOOGLE_CLIENT_ID ? env.GOOGLE_CLIENT_ID.split("-")[0] + "-\u2026" : null,
+      clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET),
+      clientSchluesselLaenge: env.GOOGLE_CLIENT_SECRET ? String(env.GOOGLE_CLIENT_SECRET).length : 0,
+      clientSchluesselPraefix: env.GOOGLE_CLIENT_SECRET ? String(env.GOOGLE_CLIENT_SECRET).slice(0, 7) : null
+    });
+  }
   if (!ich) return json({ fehler: "Nicht angemeldet", angemeldet: false }, 401);
   const koerper = request.method === "POST" ? await request.json().catch(() => ({})) : {};
   const teile = pfad.split("/");
