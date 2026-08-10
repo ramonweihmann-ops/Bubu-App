@@ -144,11 +144,31 @@ dafür brauchst du kein Secret.
 ### 4.2 Schlüssel für die automatische Veröffentlichung
 
 1. Cloudflare → **My Profile** → **API Tokens** → **Create Token**
-2. Vorlage **Edit Cloudflare Workers** verwenden
-3. Bei den Berechtigungen zusätzlich **D1 → Edit** hinzufügen
-4. Token erstellen und **einmal kopieren** — er wird nur einmal angezeigt
-5. Auf GitHub hinterlegen: Repo → **Settings** → **Secrets and variables** → **Actions** →
-   **New repository secret**, Name `CLOUDFLARE_API_TOKEN`
+2. Vorlage **Edit Cloudflare Workers** → **Use template**
+3. Die Vorlage bringt das Meiste mit. Ergänze in der Liste **Permissions**:
+
+   | Bereich | Recht |
+   | --- | --- |
+   | Account · Workers Scripts | Edit |
+   | Account · Workers KV Storage | Edit |
+   | Account · D1 | Edit |
+   | Account · Account Settings | Read |
+   | Zone · Workers Routes | Edit |
+   | User · User Details | Read |
+   | User · Memberships | Read |
+
+4. **Account Resources:** `Include` → dein Konto auswählen
+5. **Zone Resources:** `Include` → `Specific zone` → `haus-quest.com` auswählen
+6. **Continue to summary** → **Create Token** → Wert **einmal kopieren**
+7. Auf GitHub hinterlegen: Repo → **Settings** → **Secrets and variables** → **Actions** →
+   **New repository secret**
+   - **Name:** `CLOUDFLARE_API_TOKEN`
+   - **Secret:** der kopierte Wert
+
+Die beiden Auswahllisten in Schritt 4 und 5 sind die übliche Stolperstelle: Bleiben sie leer,
+kann das Token zwar den Kontonamen lesen, aber nichts veröffentlichen. Die Fehlermeldung
+lautet dann `Authentication error [code: 10000]` — sie klingt nach falschem Schlüssel, meint
+aber fehlende Rechte.
 
 Ab da gilt: Ich pushe, GitHub veröffentlicht, wenige Sekunden später ist es live.
 Den Zugang entziehst du jederzeit, indem du das Token bei Cloudflare löschst.
