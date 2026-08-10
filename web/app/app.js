@@ -303,7 +303,7 @@ function schirmQuests() {
           ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>' : `<span class="pts-pill">${q.points}</span>`}
         </button>`).join("")}
       <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:6px 0 0">
-        Punktwert ändern? Lange auf eine Quest tippen.
+        Punktwert ändern oder löschen? Lange auf eine Quest tippen.
       </p>
     </div>`;
 }
@@ -383,8 +383,11 @@ function schirmPruefen() {
 
 function schirmBelohnungen() {
   return `
-    <div class="appbar"><div><div class="title">Belohnungen</div>
-      <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Punkte</div></div></div>
+    <div class="appbar">
+      <div><div class="title">Belohnungen</div>
+        <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Punkte</div></div>
+      <button class="iconbtn" data-sheet="neue-belohnung" aria-label="Belohnung vorschlagen">${icon("i-plus", 18)}</button>
+    </div>
     <div class="body">
       <button class="reward wide" data-sheet="transfer" style="background:var(--tint);border-color:transparent">
         <span class="ico" style="background:var(--bg)">${icon("i-swap", 18)}</span>
@@ -407,6 +410,9 @@ function schirmBelohnungen() {
         Jede Einlösung geht als Antrag an ${esc(S.partner.name.split(" ")[0])}.
         Erst mit Zustimmung werden die Punkte abgebucht.
       </p>
+      <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:2px 0 0">
+        Kosten ändern oder löschen? Lange auf eine Belohnung tippen.
+      </p>
     </div>`;
 }
 
@@ -426,8 +432,11 @@ function abstimmungKarte(a) {
           ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
       </div>
       <div class="change">
-        ${a.alt !== null && a.alt !== undefined ? `<span class="old">${a.alt} Punkte</span>→` : "<span>Punktwert</span>"}
-        <span class="new">${a.neu} Punkte</span>
+        ${a.art === "delete_quest" || a.art === "delete_reward"
+          ? `<span class="old">${a.alt} Punkte</span>→<span class="new">löschen</span>`
+          : (a.alt !== null && a.alt !== undefined
+              ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
+              : `<span>Punktwert</span><span class="new">${a.neu} Punkte</span>`)}
       </div>
       ${a.grund ? `<div class="why">${esc(kurz(a.von))}: „${esc(a.grund)}“</div>` : ""}
       <div class="stance">
@@ -439,7 +448,7 @@ function abstimmungKarte(a) {
         <button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zustimmen</button>
         <button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>
       </div>` : ""}
-      ${entschieden && !angenommen ? '<div style="font-size:12px;color:var(--ink-3)">Der alte Wert gilt weiter.</div>' : ""}
+      ${entschieden && !angenommen ? '<div style="font-size:12px;color:var(--ink-3)">Der alte Stand gilt weiter.</div>' : ""}
     </div>`;
 }
 
@@ -624,6 +633,81 @@ function sheetNeu() {
     <button class="btn primary block" data-senden="neu">Zur Abstimmung geben</button>`);
 }
 
+function sheetMenue(art, eintrag) {
+  const istQuest = art === "quest";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(eintrag.name)}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:13px;color:var(--ink-2)">${istQuest ? "Quest" : "Belohnung"}</span>
+      <span class="pts-pill">${istQuest ? eintrag.points : eintrag.cost} Punkte</span>
+    </div>
+    <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
+      ${istQuest ? "Punktwert ändern" : "Kosten ändern"}</button>
+    <button class="btn ghost block" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}"
+      style="color:var(--accent);border-color:var(--accent)">
+      ${istQuest ? "Quest löschen" : "Belohnung löschen"}</button>
+    <div class="note">${icon("i-vote", 16)}<span>Beides geht nur gemeinsam:
+      ${esc(S.partner.name.split(" ")[0])} muss zustimmen.</span></div>`);
+}
+
+function sheetLoeschen(art, eintrag) {
+  const istQuest = art === "quest";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${istQuest ? "Quest löschen" : "Belohnung löschen"}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(eintrag.name)}</span>
+      <span class="pts-pill">${istQuest ? eintrag.points : eintrag.cost}</span>
+    </div>
+    <div class="field"><label>Begründung</label>
+      <textarea id="grund" placeholder="Warum braucht ihr das nicht mehr?"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Der Eintrag verschwindet nur aus der Liste.
+      Bereits gebuchte Punkte und der Verlauf bleiben unangetastet.</span></div>
+    <button class="btn primary block" data-senden="loeschen" data-art="${art}" data-id="${eintrag.id}">
+      Zur Abstimmung geben</button>`);
+}
+
+function sheetNeueBelohnung() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Belohnung vorschlagen</h3>
+    <div class="field"><label>Name</label><input id="bname" placeholder="z. B. Frühstück ans Bett"></div>
+    <div class="field">
+      <label>Kosten in Punkten</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">5</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Neue Belohnungen gehen in die Abstimmung.
+      Übernommen wird der Vorschlag erst, wenn ${esc(S.partner.name.split(" ")[0])} zustimmt.</span></div>
+    <button class="btn primary block" data-senden="neue-belohnung">Zur Abstimmung geben</button>`);
+}
+
+function sheetKosten(belohnung) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Kosten ändern</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
+      <span class="pts-pill">jetzt ${belohnung.cost}</span>
+    </div>
+    <div class="field">
+      <label>Neue Kosten</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">${belohnung.cost}</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt der alte Wert nicht mehr?"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn beide zustimmen — und nie rückwirkend.</span></div>
+    <button class="btn primary block" data-senden="kosten" data-id="${belohnung.id}">Zur Abstimmung geben</button>`);
+}
+
 function sheetPunktwert(quest) {
   sheet(`
     <div class="grabber"></div>
@@ -649,22 +733,32 @@ function sheetPunktwert(quest) {
 /* ------------------------------------------------------------------ Bedienung */
 
 let druckTimer = null;
+let langGedrueckt = false;
 
 document.addEventListener("pointerdown", (ev) => {
-  const zeile = ev.target.closest("[data-sheet='melden'][data-id]");
-  if (!zeile) return;
+  const quest = ev.target.closest("[data-sheet='melden'][data-id]");
+  const belohnung = ev.target.closest("[data-sheet='antrag'][data-id]");
+  const ziel = quest || belohnung;
+  if (!ziel || scrim.hasAttribute("data-open")) return;
   druckTimer = setTimeout(() => {
     druckTimer = null;
-    const quest = S.quests.find((q) => q.id === zeile.dataset.id);
-    if (quest) { if (navigator.vibrate) navigator.vibrate(12); sheetPunktwert(quest); }
-  }, 550);
+    langGedrueckt = true;
+    if (navigator.vibrate) navigator.vibrate(12);
+    if (quest) {
+      const q = S.quests.find((x) => x.id === quest.dataset.id);
+      if (q) sheetMenue("quest", q);
+    } else {
+      const b = S.belohnungen.find((x) => x.id === belohnung.dataset.id);
+      if (b) sheetMenue("belohnung", b);
+    }
+  }, 500);
 });
 document.addEventListener("pointerup", () => { clearTimeout(druckTimer); });
 document.addEventListener("pointercancel", () => { clearTimeout(druckTimer); });
 document.addEventListener("pointermove", () => { clearTimeout(druckTimer); });
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -672,8 +766,23 @@ document.addEventListener("click", async (ev) => {
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
 
   if (el.dataset.sheet) {
-    if (scrim.hasAttribute("data-open")) return;
     const art = el.dataset.sheet;
+    // Nach langem Drücken ist das Menü schon offen — der Klick danach darf nichts auslösen.
+    if (langGedrueckt && (art === "melden" || art === "antrag")) { langGedrueckt = false; return; }
+    langGedrueckt = false;
+
+    if (art === "punktwert" || art === "kosten" || art === "loeschen") {
+      const liste = art === "kosten" || el.dataset.art === "belohnung" ? S.belohnungen : S.quests;
+      const eintrag = liste.find((x) => x.id === el.dataset.id);
+      if (!eintrag) return;
+      sheetZu();
+      if (art === "punktwert") sheetPunktwert(eintrag);
+      else if (art === "kosten") sheetKosten(eintrag);
+      else sheetLoeschen(el.dataset.art, eintrag);
+      return;
+    }
+    if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
+    if (scrim.hasAttribute("data-open")) return;
     if (art === "melden") {
       const quest = S.quests.find((q) => q.id === el.dataset.id);
       if (quest) sheetMelden(quest);
@@ -735,6 +844,26 @@ document.addEventListener("click", async (ev) => {
       await api("proposals", { art: "new_quest", wert: zahl("menge"), name: wert("qname"), kategorie: wert("qkat"), grund: wert("grund") });
       sheetZu(); ansicht = "wir"; await laden();
       toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "neue-belohnung") {
+      if (!wert("bname")) throw new Error("Ein Name fehlt");
+      await api("proposals", { art: "new_reward", wert: zahl("menge"), name: wert("bname"), grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "kosten") {
+      await api("proposals", { art: "reward_cost", zielId: el.dataset.id, wert: zahl("menge"), grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "loeschen") {
+      const art = el.dataset.art === "quest" ? "delete_quest" : "delete_reward";
+      await api("proposals", { art, zielId: el.dataset.id, grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Löschen steht zur Abstimmung.");
       return;
     }
     if (el.dataset.senden === "punktwert") {
@@ -799,6 +928,15 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
+    if (el.hasAttribute("data-bleiben")) { sheetZu(); return; }
+
+    if (el.hasAttribute("data-schliessen-app")) {
+      sheetZu();
+      // Zwei Schritte zurück: über den Wächter hinaus und aus der App heraus.
+      history.go(-2);
+      return;
+    }
+
     if (el.hasAttribute("data-abmelden")) {
       await fetch("/api/auth/logout", { method: "POST" });
       location.href = "/";
@@ -811,8 +949,51 @@ document.addEventListener("click", async (ev) => {
   }
 });
 
+/* ------------------------------------------------------------------ Zurück-Taste */
+//
+// Zurück soll in der App bleiben: erst Overlays schließen, dann aufs Dashboard,
+// und erst wenn man dort noch einmal drückt, wird nach dem Schließen gefragt.
+// Dafür liegt immer genau ein zusätzlicher Eintrag im Verlauf, den das
+// Zurückdrücken aufbraucht und den wir danach neu setzen.
+
+function waechterSetzen() {
+  history.pushState({ hq: true }, "");
+}
+
+function frageSchliessen() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>App schließen?</h3>
+    <p style="margin:0;font-size:14.5px;color:var(--ink-2)">
+      Du bist auf der Startseite. Zurück führt von hier aus aus der App heraus.</p>
+    <button class="btn ghost block" data-bleiben>In der App bleiben</button>
+    <button class="btn primary block" data-schliessen-app>App schließen</button>`);
+}
+
+window.addEventListener("popstate", () => {
+  if (celebrate.hasAttribute("data-open")) {
+    celebrate.removeAttribute("data-open");
+    waechterSetzen();
+    return;
+  }
+  if (scrim.hasAttribute("data-open")) {
+    sheetZu();
+    waechterSetzen();
+    return;
+  }
+  if (ansicht !== "start") {
+    ansicht = "start";
+    zeichne();
+    waechterSetzen();
+    return;
+  }
+  frageSchliessen();
+  waechterSetzen();
+});
+
 /* ------------------------------------------------------------------ Start */
 
+waechterSetzen();
 laden();
 
 // Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen.

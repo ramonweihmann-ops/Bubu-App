@@ -218,8 +218,8 @@ async function zustand(env, ich) {
     abstimmungen: vorschlaege.results.map((p) => ({
       id: p.id,
       art: p.kind,
-      titel: p.kind === "quest_points" ? p.quest_name
-           : p.kind === "reward_cost" ? p.belohnung_name
+      titel: p.kind === "quest_points" || p.kind === "delete_quest" ? p.quest_name
+           : p.kind === "reward_cost" || p.kind === "delete_reward" ? p.belohnung_name
            : p.name,
       alt: p.old_value,
       neu: p.new_value,
@@ -391,14 +391,28 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
 /* ------------------------------------------------------------------ Abstimmungen */
 
 async function vorschlagen(env, ich, { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "" }) {
-  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward"];
+  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
-  const neu = Math.floor(Number(wert));
-  if (!(neu > 0)) throw new Fehler("Der Wert muss größer als null sein");
+  const loeschen = art === "delete_quest" || art === "delete_reward";
+  const neu = loeschen ? 0 : Math.floor(Number(wert));
+  if (!loeschen && !(neu > 0)) throw new Fehler("Der Wert muss größer als null sein");
 
   let alt = null;
-  if (art === "quest_points" || art === "reward_cost") {
+  if (loeschen) {
+    const tabelle = art === "delete_quest" ? "quests" : "rewards";
+    const spalte = art === "delete_quest" ? "points" : "cost";
+    const ziel = await env.DB.prepare(
+      `select ${spalte} as wert from ${tabelle} where id = ?1 and couple_id = ?2 and active = 1`
+    ).bind(zielId, ich.couple_id).first();
+    if (!ziel) throw new Fehler("Das gibt es nicht");
+    alt = ziel.wert;
+
+    const schonOffen = await env.DB.prepare(
+      "select 1 as da from proposals where couple_id = ?1 and target_id = ?2 and status = 'offen'"
+    ).bind(ich.couple_id, zielId).first();
+    if (schonOffen) throw new Fehler("Dazu läuft schon eine Abstimmung");
+  } else if (art === "quest_points" || art === "reward_cost") {
     const tabelle = art === "quest_points" ? "quests" : "rewards";
     const spalte = art === "quest_points" ? "points" : "cost";
     const ziel = await env.DB.prepare(
@@ -467,7 +481,12 @@ async function auszaehlen(env, vorschlag) {
     new_quest: env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
       .bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.category || "Sonstiges", vorschlag.new_value),
     new_reward: env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
-      .bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.new_value)
+      .bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.new_value),
+    // Nie hart löschen: der Verlauf soll lesbar bleiben.
+    delete_quest: env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
+      .bind(vorschlag.target_id, vorschlag.couple_id),
+    delete_reward: env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
+      .bind(vorschlag.target_id, vorschlag.couple_id)
   }[vorschlag.kind];
 
   await env.DB.batch([

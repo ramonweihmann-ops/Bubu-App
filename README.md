@@ -21,11 +21,11 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 | --- | --- |
 | Preis steht vorher | Beim Melden wird der aktuelle Punktwert eingefroren. Spätere Änderungen wirken nie rückwirkend. |
 | Vier Augen | Melden darf jeder, freigeben nur der andere. Ohne Bestätigung keine Punkte. |
-| Nur gemeinsam | Punktwert ändern, Quest anlegen, Belohnung ergänzen: nur mit Zustimmung von beiden. Ein Nein lässt alles beim Alten. |
+| Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**: nur mit Zustimmung von beiden. Ein Nein lässt alles beim Alten. |
 
 Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer eine eigene Meldung
 bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
-Datenbank es abweist (`claim_no_self_decide` in der Migration). Punktestände werden nirgends
+Datenbank es abweist (CHECK in der Tabelle und Prüfung in `worker/api.js`). Punktestände werden nirgends
 gespeichert, sondern aus allen Buchungen berechnet.
 
 ## Aufbau
@@ -93,6 +93,6 @@ weiterhin Bubu App.
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
 worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln)
-d1/migrations/  Datenbank: Tabellen, Trigger, Ansichten
+d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 docs/           Mockup und Anleitungen
 ```
