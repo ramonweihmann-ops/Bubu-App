@@ -18,7 +18,7 @@ database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
 
 [vars]
 BASIS_URL = "https://haus-quest.com"
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "600393178714-ds40oku8g1qskci4vsngrihre3ps0hal.apps.googleusercontent.com"
 
 # Geheimnisse werden nie hier abgelegt, sondern gesetzt mit:
 #   wrangler secret put GOOGLE_CLIENT_SECRET
