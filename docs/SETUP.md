@@ -20,7 +20,7 @@ der Preis der Domain — sonst nichts.
 
 ## 1. Wie das Ganze zusammenhängt
 
-Alles unter einem Dach — deine Domain, bei Cloudflare:
+Alles unter einem Dach — die Domain, bei Cloudflare:
 
 | Baustein | Aufgabe | Kosten |
 | --- | --- | --- |
@@ -51,9 +51,9 @@ nur „ich habe X erledigt“; ob daraus Punkte werden, entscheidet der Server.
 „App installieren“. Mehr braucht sie nicht.
 
 ```
-deine-domain.de          →  Seite mit dem Installationsknopf
-deine-domain.de/app      →  die App selbst
-deine-domain.de/api/…    →  die Regeln (Worker) + Datenbank (D1)
+haus-quest.com          →  Seite mit dem Installationsknopf
+haus-quest.com/app      →  die App selbst
+haus-quest.com/api/…    →  die Regeln (Worker) + Datenbank (D1)
 ```
 
 ---
@@ -131,16 +131,41 @@ Rechne mit 5 Minuten.
 3. Mehr nicht. Datenbank, API und Website richte ich ein — das läuft über Konfiguration im
    Repo, nicht über Klicks im Dashboard.
 
-Damit ich das kann, brauche ich einmalig Zugriff. Zwei Wege, such dir einen aus:
+Damit Änderungen automatisch live gehen, braucht GitHub einmalig einen Schlüssel für dein
+Cloudflare-Konto. **Ich bekomme ihn nie zu sehen** — er liegt als Repository-Secret, und die
+Veröffentlichung übernimmt GitHub, nicht ich.
 
-- **Du lädst mich ein** (sauberer): Cloudflare → **Manage Account** → **Members** → **Invite**,
-  Rolle *Administrator*. Dann arbeite ich in deinem Konto, und du kannst den Zugang jederzeit
-  wieder entziehen.
-- **Du legst ein API-Token an**: **My Profile** → **API Tokens** → **Create Token** → Vorlage
-  *Edit Cloudflare Workers*, zusätzlich Berechtigung *D1: Edit*. Das Token schickst du mir
-  nicht per Chat, sondern hinterlegst es als Repository-Secret auf GitHub
-  (Repo → Settings → Secrets and variables → Actions → **New repository secret**,
-  Name `CLOUDFLARE_API_TOKEN`).
+### 4.1 Datenbank anlegen (einmalig, an deinem Rechner)
+
+Dafür brauchst du nur Node.js. Zwei Befehle:
+
+```bash
+npx wrangler login                    # öffnet den Browser, du bestätigst einmal
+npx wrangler d1 create haus-quest
+```
+
+Der zweite Befehl gibt einen Block aus, in dem `database_id = "…"` steht.
+**Diese ID schickst du mir** — sie ist keine Geheimnummer, sondern nur eine Adresse.
+
+### 4.2 Schlüssel für die automatische Veröffentlichung
+
+1. Cloudflare → **My Profile** → **API Tokens** → **Create Token**
+2. Vorlage **Edit Cloudflare Workers** verwenden
+3. Bei den Berechtigungen zusätzlich **D1 → Edit** hinzufügen
+4. Token erstellen und **einmal kopieren** — er wird nur einmal angezeigt
+5. Dazu brauchst du noch die **Account ID**: Cloudflare-Startseite, rechte Spalte
+   („Account ID“), oder aus der Adresszeile des Dashboards
+
+Beides hinterlegst du auf GitHub, nicht im Chat:
+Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+| Name | Inhalt |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | das Token aus Schritt 4 |
+| `CLOUDFLARE_ACCOUNT_ID` | deine Account ID |
+
+Ab da gilt: Ich pushe, GitHub veröffentlicht, wenige Sekunden später ist es live.
+Du kannst den Zugang jederzeit entziehen, indem du das Token bei Cloudflare löschst.
 
 ---
 
@@ -179,12 +204,12 @@ Das ist das Fenster, das ihr beim Anmelden seht („Bubu App möchte auf dein Ko
 2. **Anwendungstyp: Webanwendung**, Name: `Bubu App Web`
 3. **Autorisierte JavaScript-Quellen**:
    ```
-   https://DEINE-DOMAIN.de
+   https://haus-quest.com
    http://localhost:8787
    ```
 4. **Autorisierte Weiterleitungs-URIs**:
    ```
-   https://DEINE-DOMAIN.de/api/auth/callback
+   https://haus-quest.com/api/auth/callback
    http://localhost:8787/api/auth/callback
    ```
 5. **Erstellen**. Es erscheinen **Client-ID** und **Client-Schlüssel**.
@@ -205,7 +230,7 @@ Alles Übrige — hier nur, damit du weißt, was passiert:
 | Schritt | Was dabei entsteht |
 | --- | --- |
 | Datenbank anlegen | `wrangler d1 create bubu`, danach [`d1/schema.sql`](../d1/schema.sql) einspielen: Tabellen, Regeln, Startdaten aus eurer Tabelle |
-| API bauen | Ein Worker unter `deine-domain.de/api` — Anmeldung, Pairing, Melden, Bestätigen, Anträge, Abstimmungen |
+| API bauen | Ein Worker unter `haus-quest.com/api` — Anmeldung, Pairing, Melden, Bestätigen, Anträge, Abstimmungen |
 | App bauen | Die Oberfläche genau nach dem Mockup, als installierbare Web-App |
 | Push einrichten | Web Push mit VAPID-Schlüsseln, ausgelöst vom Worker, sobald jemand bestätigt oder genehmigt. Kein Firebase, keine Kosten |
 | Veröffentlichen | Cloudflare Pages an dieses Repo koppeln: Push → wenige Sekunden später live |
@@ -232,11 +257,13 @@ Google-Entwicklerkonto. Für den privaten Betrieb nicht nötig.
 
 1. **Deine Domain**
 2. **Google Client-ID** (Abschnitt 5.3)
-3. Bescheid, dass **`GOOGLE_CLIENT_SECRET`** und **`CLOUDFLARE_API_TOKEN`** als
-   GitHub-Secrets hinterlegt sind — oder dass du mich in dein Cloudflare-Konto eingeladen hast
+3. Die **`database_id`** aus Abschnitt 4.1
+4. Bescheid, dass **`CLOUDFLARE_API_TOKEN`**, **`CLOUDFLARE_ACCOUNT_ID`** und
+   **`GOOGLE_CLIENT_SECRET`** als GitHub-Secrets hinterlegt sind
 
 Nicht schicken: Client-Schlüssel, API-Token, Passwörter. Die gehören in die Secrets, nicht in
-den Chat.
+den Chat. Ich habe keine E-Mail-Adresse und kein eigenes Konto — alles läuft über deine
+Konten und die Secrets in diesem Repo.
 
 Danach baue ich die App. Zum Schluss öffnet ihr die Domain auf euren Handys, tippt auf
 **App installieren**, meldet euch mit Google an, einer erzeugt den Pairing-Code, der andere
@@ -260,7 +287,7 @@ Kurzfassung der Einrichtung:
 5. **Authentication → Providers → Google** aktivieren, Client-ID und Schlüssel eintragen
    (Weiterleitungs-URI dann `https://DEIN-PROJEKT.supabase.co/auth/v1/callback`).
    **Email-Provider ausschalten.**
-6. **Authentication → URL Configuration**: Site URL und Redirect URLs auf deine Domain.
+6. **Authentication → URL Configuration**: Site URL und Redirect URLs auf die Domain.
 
 Zu beachten: kostenlose Projekte pausieren nach sieben Tagen ohne Zugriff und werden per Klick
 wieder geweckt; automatische Sicherungen gibt es im Free-Tier nicht.

@@ -30,9 +30,9 @@ gespeichert, sondern aus allen Buchungen berechnet.
 ## Aufbau
 
 ```
-deine-domain.de          →  Seite mit dem Installationsknopf
-deine-domain.de/app      →  die App (Web-App zum Anheften, PWA)
-deine-domain.de/api/…    →  Worker: prüft, wer fragt, und setzt die Regeln durch
+haus-quest.com          →  Seite mit dem Installationsknopf
+haus-quest.com/app      →  die App (Web-App zum Anheften, PWA)
+haus-quest.com/api/…    →  Worker: prüft, wer fragt, und setzt die Regeln durch
                             D1: Quests, Meldungen, Buchungen
 ```
 

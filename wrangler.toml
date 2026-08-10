@@ -1,0 +1,26 @@
+# Haus-Quest – ein Worker liefert die Seite und die Schnittstelle.
+name = "haus-quest"
+main = "worker/index.js"
+compatibility_date = "2026-08-01"
+
+# Die statischen Dateien: Startseite, App, Symbole, Service Worker.
+[assets]
+directory = "./web"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Eigene Datenbank, ausschließlich für diese App.
+# database_id trägt „wrangler d1 create haus-quest“ ein.
+[[d1_databases]]
+binding = "DB"
+database_name = "haus-quest"
+database_id = "TRAGE_ICH_BEIM_ANLEGEN_EIN"
+
+[vars]
+BASIS_URL = "https://haus-quest.com"
+GOOGLE_CLIENT_ID = ""
+
+# Geheimnisse werden nie hier abgelegt, sondern gesetzt mit:
+#   wrangler secret put GOOGLE_CLIENT_SECRET
+#   wrangler secret put SESSION_SECRET
+#   wrangler secret put VAPID_PRIVATE_KEY

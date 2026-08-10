@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haus-Quest — Punkte für erledigte Aufgaben</title>
+<meta name="description" content="Aufgaben erledigen, Punkte sammeln, Belohnungen einlösen. Freigegeben nur zu zweit.">
+<meta name="theme-color" content="#152c4f">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+
+<style>
+:root {
+  --ground: #ffffff;
+  --tint: #f4f7fc;
+  --line: #dbe3f0;
+  --ink: #152c4f;
+  --ink-2: #55688a;
+  --ink-3: #8899b3;
+  --accent: #ec0f06;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0b1830; --tint: #11223d; --line: #24395c;
+    --ink: #e9f0fb; --ink-2: #a5b6d1; --ink-3: #7488a6; --accent: #ff4b42;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: var(--font-ui); -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px 24px; text-align: center; gap: 4px;
+}
+img.logo { width: min(300px, 74vw); height: auto; }
+h1 {
+  font-family: var(--font-display); font-weight: 800; letter-spacing: -.035em;
+  font-size: clamp(34px, 9vw, 52px); margin: 10px 0 0; line-height: 1;
+}
+p.claim { font-size: 17px; color: var(--ink-2); margin: 12px 0 0; max-width: 26ch; line-height: 1.5; }
+.actions { display: flex; flex-direction: column; gap: 10px; margin-top: 30px; width: min(340px, 100%); }
+.btn {
+  font: inherit; font-size: 16px; font-weight: 700; border-radius: 14px; padding: 15px 20px;
+  border: 1px solid transparent; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+}
+.btn[hidden] { display: none; }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:active { transform: translateY(1px); }
+.btn.ghost { background: var(--ground); border-color: var(--line); color: var(--ink); }
+.hint {
+  font-size: 13.5px; color: var(--ink-2); background: var(--tint); border-radius: 14px;
+  padding: 14px 16px; margin-top: 4px; text-align: left; line-height: 1.55; display: none;
+}
+.hint[data-show] { display: block; }
+.hint b { color: var(--ink); }
+.hint ol { margin: 8px 0 0; padding-left: 20px; }
+.hint li { margin-bottom: 4px; }
+footer {
+  margin-top: 34px; font-family: var(--font-data); font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf, Seite an Seite">
+<h1>Haus-Quest</h1>
+<p class="claim">Punkte für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
+
+<div class="actions">
+  <button class="btn primary" id="install" hidden>App installieren</button>
+  <a class="btn ghost" href="/app">Im Browser öffnen</a>
+  <div class="hint" id="hint"></div>
+</div>
+
+<footer>Privat · nur für eingeladene Konten</footer>
+
+<script>
+(() => {
+  "use strict";
+  const knopf = document.getElementById("install");
+  const hinweis = document.getElementById("hint");
+  let prompt = null;
+
+  const zeige = (html) => { hinweis.innerHTML = html; hinweis.setAttribute("data-show", ""); };
+
+  // Android/Chrome: der Browser meldet sich, sobald die App installierbar ist.
+  window.addEventListener("beforeinstallprompt", (ev) => {
+    ev.preventDefault();
+    prompt = ev;
+    knopf.hidden = false;
+  });
+
+  knopf.addEventListener("click", async () => {
+    if (!prompt) return;
+    prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    prompt = null;
+    knopf.hidden = true;
+    if (outcome === "accepted") zeige("Fertig — die App liegt jetzt auf dem Startbildschirm.");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    knopf.hidden = true;
+    zeige("Fertig — die App liegt jetzt auf dem Startbildschirm.");
+  });
+
+  // Bereits installiert? Dann direkt weiter.
+  if (window.matchMedia("(display-mode: standalone)").matches) location.replace("/app");
+
+  // Browser ohne automatische Abfrage bekommen die Anleitung von Hand.
+  setTimeout(() => {
+    if (!prompt && knopf.hidden) {
+      const istIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      zeige(istIOS
+        ? "<b>Auf dem iPhone anheften</b><ol><li>Unten auf <b>Teilen</b> tippen</li>"
+          + "<li><b>Zum Home-Bildschirm</b> wählen</li><li>Mit <b>Hinzufügen</b> bestätigen</li></ol>"
+        : "<b>Auf dem Handy anheften</b><ol><li>Menü des Browsers öffnen (drei Punkte)</li>"
+          + "<li><b>App installieren</b> oder <b>Zum Startbildschirm hinzufügen</b> wählen</li>"
+          + "<li>Bestätigen — fertig</li></ol>");
+    }
+  }, 1200);
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+})();
+</script>
+</body>
+</html>
