@@ -948,16 +948,18 @@ footer { padding: 40px 0 64px; color: var(--ink-3); font-family: var(--font-ui);
         <table class="spec">
           <thead><tr><th>Bereich</th><th>Vorschlag</th></tr></thead>
           <tbody>
-            <tr><td>Anmeldung</td><td>Google Sign-In über Supabase Auth. Kein eigenes Passwort, keine Registrierung — die App übernimmt Name, E-Mail und Profilbild. Danach das Pairing über einen sechsstelligen Code, der ein einziges Mal einlösbar ist und nach 24 Stunden verfällt.</td></tr>
-            <tr><td>App</td><td>Android nativ mit Kotlin und Jetpack Compose — das Bottom-Nav-Muster, die Sheets und die Vollbild-Belohnung entsprechen 1:1 Material-3-Komponenten.</td></tr>
-            <tr><td>Backend</td><td>Supabase (Postgres, Auth, Realtime): Tabellen <code>couples</code>, <code>members</code>, <code>quests</code>, <code>claims</code>, <code>rewards</code>, <code>requests</code>, <code>transfers</code>, <code>proposals</code>, <code>ledger</code>. Punktestände werden aus dem Ledger berechnet, nie direkt gesetzt.</td></tr>
-            <tr><td>Vier-Augen-Regel</td><td>Als Datenbankregel, nicht nur in der Oberfläche: eine Buchung entsteht ausschließlich durch die Bestätigung des jeweils anderen Mitglieds. Selbstbestätigung ist serverseitig ausgeschlossen.</td></tr>
+            <tr><td>Adresse</td><td>Eine eigene Domain. Darunter läuft alles: die Seite mit dem Installationsknopf, die App selbst und die Schnittstelle. Bei einem späteren Verkauf wechselt der Name mit — nichts hängt an einer fremden Adresse.</td></tr>
+            <tr><td>App</td><td>Web-App zum Anheften. Über den Browser installiert, danach ein Symbol auf dem Startbildschirm mit eigenem Fenster und Benachrichtigungen. Kein Store, keine Installationsdatei, Updates sofort bei beiden. Für den Play Store später mit Bubblewrap als APK verpackbar, ohne den Code neu zu schreiben.</td></tr>
+            <tr><td>Anmeldung</td><td>Google Sign-In. Kein eigenes Passwort, keine Registrierung — die App übernimmt Name, E-Mail und Profilbild. Danach das Pairing über einen sechsstelligen Code, der einmal einlösbar ist und nach 24 Stunden verfällt.</td></tr>
+            <tr><td>Daten</td><td>Cloudflare D1 als Datenbank, ein Worker als Schnittstelle davor. Tabellen für Quests, Meldungen, Belohnungen, Anträge, Übertragungen, Abstimmungen und Buchungen. Punktestände werden aus den Buchungen gerechnet, nie gesetzt.</td></tr>
+            <tr><td>Vier-Augen-Regel</td><td>Als Datenbankregel, nicht nur in der Oberfläche: Wer eine eigene Meldung bestätigen will, bekommt einen Fehler. Selbstbestätigung ist serverseitig ausgeschlossen, egal was die App schickt.</td></tr>
             <tr><td>Abstimmung</td><td>Ein Vorschlag speichert alten und neuen Wert. Er wird erst wirksam, wenn beide Stimmen vorliegen. Laufende Meldungen behalten den Wert vom Zeitpunkt der Meldung.</td></tr>
-            <tr><td>Push</td><td>Firebase Cloud Messaging, ausgelöst per Datenbank-Trigger. Stiller Kanal für Erinnerungen, lauter Kanal für Belohnungen.</td></tr>
+            <tr><td>Push</td><td>Web Push direkt an die angeheftete App, ausgelöst von der Schnittstelle, sobald jemand bestätigt oder genehmigt. Stiller Kanal für Erinnerungen, lauter für Belohnungen.</td></tr>
             <tr><td>Offline</td><td>Melden funktioniert offline und wird nachgereicht — Hausarbeit passiert im Keller.</td></tr>
-            <tr><td>Import</td><td>Die vorhandene Reinigungsquest-Tabelle wird beim Einrichten eingelesen: 22 Quests, 11 Belohnungen, zwei Kontostände.</td></tr>
+            <tr><td>Import</td><td>Die vorhandene Reinigungsquest-Tabelle steht als Startbestand bereit: 22 Quests, 11 Belohnungen, zwei Kontostände.</td></tr>
+            <tr><td>Sicherung</td><td>Schaltfläche „Alles exportieren“ in der App, die den kompletten Stand als Datei herunterlädt.</td></tr>
           </tbody>
-        </table>
+      </table>
       </div>
       <div class="callout">
         <h3>Verkauf später: was dann noch zu tun ist</h3>
@@ -973,20 +975,20 @@ footer { padding: 40px 0 64px; color: var(--ink-3); font-family: var(--font-ui);
       <h2>Streng getrennt vom Webportal</h2>
       <p class="lede">
         Keine gemeinsame Datenbank, kein gemeinsames Schema, keine gemeinsamen Schlüssel.
-        Die Bubu App bekommt eine eigene Welt — Stage und Prod des Mietportals bleiben unberührt.
+        Die Bubu App bekommt eine eigene Welt unter eigener Adresse — Stage und Prod des Mietportals bleiben unberührt.
       </p>
       <div class="tablewrap">
         <table class="spec">
           <thead><tr><th>Ebene</th><th>Trennung</th></tr></thead>
           <tbody>
             <tr><td>Repository</td><td>Eigenes GitHub-Repo, eigener Verlauf, eigene Releases. Kein Ordner im Webportal.</td></tr>
-            <tr><td>Supabase</td><td>Eigenes Supabase-Projekt mit eigener Projekt-URL, eigenem anon-Key und eigener Datenbank. Kein zusätzliches Schema in der bestehenden Instanz — dort teilen sich Stage und Prod sonst Rollen, Auth-Nutzer und Storage.</td></tr>
-            <tr><td>Nutzerkonten</td><td>Eigene Auth-Instanz. Wer im Mietportal angemeldet ist, ist es hier nicht — und umgekehrt.</td></tr>
-            <tr><td>Umgebungen</td><td>Getrennte Projekte für Test und Echtbetrieb, damit Probieren nie eure echten Punktestände trifft.</td></tr>
-            <tr><td>Schlüssel</td><td>Eigene <code>.env</code> im neuen Repo. Kein Schlüssel wandert zwischen den Projekten.</td></tr>
-            <tr><td>Kosten</td><td>Beide Projekte passen in den kostenlosen Supabase-Rahmen; das zweite Projekt kostet nichts extra.</td></tr>
+            <tr><td>Datenbank</td><td>Eine eigene Instanz, ausschließlich für diese App. Kein geteiltes Schema, keine geteilten Tabellen, keine geteilten Rollen.</td></tr>
+            <tr><td>Nutzerkonten</td><td>Eigene Sitzungsverwaltung. Wer im Mietportal angemeldet ist, ist es hier nicht — und umgekehrt.</td></tr>
+            <tr><td>Hosting</td><td>Eigenes Projekt unter eigener Domain, getrennt vom Netlify-Konto des Webportals.</td></tr>
+            <tr><td>Schlüssel</td><td>Eigene Secrets im neuen Repo. Kein Schlüssel wandert zwischen den Projekten.</td></tr>
+            <tr><td>Kosten</td><td>Datenbank, Schnittstelle, Hosting und Benachrichtigungen liegen im kostenlosen Rahmen. Es bleibt der Preis der Domain.</td></tr>
           </tbody>
-        </table>
+      </table>
       </div>
     </div>
   </section>
@@ -996,27 +998,27 @@ footer { padding: 40px 0 64px; color: var(--ink-3); font-family: var(--font-ui);
     <div class="wrap">
       <p class="eyebrow">Verteilung</p>
       <h2>Wie die App aufs Handy kommt</h2>
-      <p class="lede">Drei Wege, alle ohne öffentlichen Store-Eintrag. Der dritte ist für euch zwei der bequemste.</p>
+      <p class="lede">Ein Weg für jetzt, zwei für später. Keiner davon braucht einen öffentlichen Store-Eintrag.</p>
       <div class="grid-3">
         <div class="pcard">
-          <span class="k">Weg 1 · APK verschicken</span>
-          <h3>Datei per Messenger</h3>
-          <p>Die fertige APK landet als Datei bei WhatsApp oder in der Cloud, ihr tippt sie an und erlaubt einmalig „Installation aus dieser Quelle“. Kein Konto, keine Gebühr, niemand sonst kommt an die App. Updates heißt: neue Datei schicken, drübertippen.</p>
+          <span class="k">So machen wir es</span>
+          <h3>Über die eigene Domain anheften</h3>
+          <p>Seite öffnen, „App installieren“ antippen, fertig. Danach liegt sie als Symbol auf dem Startbildschirm — eigenes Fenster, keine Adressleiste, Benachrichtigungen inklusive. Kein Store, keine Datei zum Verschicken, Updates sofort bei euch beiden.</p>
         </div>
         <div class="pcard">
-          <span class="k">Weg 2 · Play Console</span>
-          <h3>Interner Test</h3>
-          <p>Google Play mit geschlossener Testspur: Ihr ladet die App hoch, tragt eure zwei Mailadressen ein, alle anderen sehen davon nichts. Updates kommen automatisch. Kostet einmalig 25 US-Dollar für das Entwicklerkonto.</p>
+          <span class="k">Falls doch nötig</span>
+          <h3>APK verschicken</h3>
+          <p>Eine Installationsdatei per Messenger, antippen, einmalig „Installation aus dieser Quelle“ erlauben. Kostenlos, aber jedes Update heißt: neue Datei schicken. Sinnvoll nur, wenn eine angeheftete App partout nicht reicht.</p>
         </div>
         <div class="pcard">
-          <span class="k">Weg 3 · Ohne Store</span>
-          <h3>Als Web-App zum Anheften</h3>
-          <p>Die App läuft im Browser unter einer privaten Adresse und wird über „Zum Startbildschirm hinzufügen“ zu einem Symbol wie jede andere App — inklusive Push-Benachrichtigungen. Keine Installationsdatei, kein Store, Updates sofort bei allen. Auf Android praktisch nicht von einer installierten App zu unterscheiden.</p>
+          <span class="k">Beim Verkauf</span>
+          <h3>Play Store</h3>
+          <p>Dieselbe App lässt sich als APK verpacken und in den Store stellen — erst in eine geschlossene Testspur, später öffentlich. Einmalig 25 US-Dollar für das Entwicklerkonto. Der Code bleibt derselbe.</p>
         </div>
       </div>
       <div class="callout">
-        <h3>Empfehlung</h3>
-        <p>Für zwei Personen ist Weg 3 der geradlinigste: sofort startklar, Updates ohne Verschicken, und das Mockup ist bereits Web. Wenn es sich später anfühlen soll wie eine „echte“ App aus dem Store — oder ihr sie verkaufen wollt —, ist der Schritt zu Weg 1 oder 2 jederzeit möglich, ohne die Datenbank anzufassen.</p>
+        <h3>Was das kostet</h3>
+        <p>Die Domain, sonst nichts: etwa fünf bis zwölf Euro im Jahr. Hosting, Datenbank, Schnittstelle, Anmeldung und Benachrichtigungen liegen im kostenlosen Rahmen — und zwar mit so viel Luft, dass ihr zwei auch in zehn Jahren an keine Grenze stoßt.</p>
       </div>
     </div>
   </section>

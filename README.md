@@ -9,7 +9,8 @@ Grundlage ist die Reinigungsquest-Tabelle (22 Quests, 11 Belohnungen, zwei Konte
 Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Projekten.
 
 - **Mockup:** [`docs/mockup.html`](./docs/mockup.html) — im Browser öffnen, der Prototyp oben ist antippbar.
-- **Datenbank:** [`supabase/schema.sql`](./supabase/schema.sql) — Schema, Regeln und Startdaten.
+- **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
+- **Datenbank:** [`d1/schema.sql`](./d1/schema.sql) — Tabellen und Regeln.
 
 ---
 
@@ -21,67 +22,66 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 | Vier Augen | Melden darf jeder, freigeben nur der andere. Ohne Bestätigung keine Punkte. |
 | Nur gemeinsam | Punktwert ändern, Quest anlegen, Belohnung ergänzen: nur mit Zustimmung von beiden. Ein Nein lässt alles beim Alten. |
 
-Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: eine Buchung entsteht
-ausschließlich durch die Bestätigung des jeweils anderen Mitglieds (siehe Trigger
-`trg_claim_confirm` im Schema). Selbstbestätigung ist serverseitig ausgeschlossen.
+Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer eine eigene Meldung
+bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
+Datenbank es abweist (`claim_no_self_decide` im Schema). Punktestände werden nirgends
+gespeichert, sondern aus allen Buchungen berechnet.
+
+## Aufbau
+
+```
+deine-domain.de          →  Seite mit dem Installationsknopf
+deine-domain.de/app      →  die App (Web-App zum Anheften, PWA)
+deine-domain.de/api/…    →  Worker: prüft, wer fragt, und setzt die Regeln durch
+                            D1: Quests, Meldungen, Buchungen
+```
+
+| Baustein | Technik | Kosten |
+| --- | --- | --- |
+| Website + App | Cloudflare Pages | 0 € |
+| API und Regeln | Cloudflare Workers | 0 € |
+| Datenbank | Cloudflare D1 (SQLite) | 0 € |
+| Anmeldung | Google OAuth, Sitzung im Worker | 0 € |
+| Benachrichtigungen | Web Push (VAPID) | 0 € |
+| Domain | beliebiger Registrar | ~5–12 €/Jahr |
+
+Warum nicht Supabase: Der kostenlose Rahmen erlaubt zwei aktive Projekte pro Konto, und die
+sind hier bereits belegt. Das fertige Postgres-Schema liegt für den Fall der Fälle unter
+[`supabase/schema.sql`](./supabase/schema.sql) bereit — Details im
+[Anhang der Einrichtung](./docs/SETUP.md#anhang-supabase-variante).
 
 ## Anmeldung
 
-Google Sign-In über Supabase Auth — kein eigenes Passwort, keine Registrierung.
-Übernommen werden Name, E-Mail und Profilbild.
+Google Sign-In — kein eigenes Passwort, keine Registrierung. Übernommen werden Name, E-Mail
+und Profilbild.
 
 Danach das **Pairing**: Der erste erzeugt einen sechsstelligen Code, der zweite gibt ihn ein.
-Der Code ist einmal einlösbar und verfällt nach 24 Stunden. Ein Konto kann in genau einem Paar sein.
+Der Code ist einmal einlösbar und verfällt nach 24 Stunden. Ein Konto kann in genau einem Paar
+sein, ein Paar besteht aus genau zwei Personen — beides erzwingt die Datenbank.
 
-Einrichtung in Supabase:
-
-1. **Authentication → Providers → Google** aktivieren.
-2. In der [Google Cloud Console](https://console.cloud.google.com/) OAuth-Client (Typ *Web*) anlegen.
-3. Als Redirect-URI die Callback-Adresse aus Supabase eintragen
-   (`https://<projekt>.supabase.co/auth/v1/callback`).
-4. Client-ID und Secret in Supabase hinterlegen.
-
-## Strikt getrennt vom Webportal
-
-Die App bekommt eine **eigene Datenbasis**. Nichts wird mit Stage oder Prod des Mietportals geteilt:
+## Trennung von anderen Projekten
 
 | Ebene | Trennung |
 | --- | --- |
-| Repository | Eigenes GitHub-Repo, eigener Verlauf, eigene Releases. |
-| Supabase | **Eigenes Supabase-Projekt** mit eigener Projekt-URL, eigenem anon-Key, eigener Datenbank. Kein zusätzliches Schema in der bestehenden Instanz — dort teilen sich Stage und Prod sonst Rollen, Auth-Nutzer und Storage. |
-| Nutzerkonten | Eigene Auth-Instanz. Eine Anmeldung im Mietportal gilt hier nicht und umgekehrt. |
-| Umgebungen | Getrennte Projekte für Test und Echtbetrieb, damit Ausprobieren nie echte Punktestände trifft. |
-| Schlüssel | Eigene `.env` in diesem Repo. Kein Schlüssel wandert zwischen den Projekten. |
-| Kosten | Beide Projekte passen in den kostenlosen Supabase-Rahmen. |
-
-Einrichtung:
-
-```bash
-cp .env.example .env      # danach URL und anon-Key des NEUEN Projekts eintragen
-```
-
-Schema einspielen: Inhalt von `supabase/schema.sql` im **SQL Editor des neuen Projekts** ausführen.
+| Repository | Eigenes Repo, eigener Verlauf, eigene Releases. |
+| Datenbank | Eigene D1-Instanz, ausschließlich für diese App. Kein geteiltes Schema, keine geteilten Tabellen. |
+| Nutzerkonten | Eigene Sitzungsverwaltung. Eine Anmeldung anderswo gilt hier nicht und umgekehrt. |
+| Schlüssel | Eigene Secrets in diesem Repo. Kein Schlüssel wandert zwischen Projekten. |
+| Hosting | Eigenes Cloudflare-Projekt unter eigener Domain. |
 
 ## Wie die App aufs Handy kommt
 
-Alle drei Wege kommen ohne öffentlichen Store-Eintrag aus.
+Über die Domain: Seite öffnen, **App installieren** antippen, fertig. Danach liegt sie als
+Symbol auf dem Startbildschirm, mit eigenem Fenster und Push-Benachrichtigungen — auf Android
+kaum von einer Store-App zu unterscheiden. Kein Store, keine Gebühr, keine Installationsdatei
+zum Verschicken, und Updates sind sofort bei beiden.
 
-**Weg 1 — APK verschicken.** Die fertige Installationsdatei per Messenger oder Cloud teilen,
-antippen, einmalig „Installation aus dieser Quelle erlauben“ bestätigen. Kein Konto, keine Gebühr.
-Updates heißt: neue Datei schicken.
-
-**Weg 2 — Play Console, interne Testspur.** App hochladen, die beiden Mailadressen eintragen,
-niemand sonst sieht sie. Updates kommen automatisch. Einmalig 25 US-Dollar für das Entwicklerkonto.
-
-**Weg 3 — Web-App zum Anheften (Empfehlung für zwei Personen).** Die App läuft unter einer privaten
-Adresse und wird über „Zum Startbildschirm hinzufügen“ zu einem Symbol wie jede andere App,
-inklusive Push. Keine Installationsdatei, kein Store, Updates sofort bei beiden.
-
-Der Wechsel von Weg 3 zu Weg 1 oder 2 ist später jederzeit möglich, ohne die Datenbank anzufassen.
+Falls es später doch in den Play Store soll: Dieselbe App lässt sich mit Bubblewrap in eine APK
+verpacken, ohne den Code neu zu schreiben. Das Google-Entwicklerkonto kostet einmalig 25 US-Dollar.
 
 ## Figuren und Namen
 
 Fuchs und Wolf sind eigene Vektorzeichnungen und liegen an **einer** Stelle im Mockup
-(die `<symbol>`-Blöcke `m-fox`, `m-wolf`, `m-duo` in `docs/mockup.html`). Sie können bleiben oder in einem Zug
-getauscht werden. Für einen späteren Verkauf wäre nur der Name „Bubu App“ zu prüfen —
-und, falls doch Tenor-GIFs dazukommen, deren Lizenz.
+(die `<symbol>`-Blöcke `m-fox`, `m-wolf`, `m-duo` in `docs/mockup.html`). Sie können bleiben
+oder in einem Zug getauscht werden. Für einen späteren Verkauf wäre nur der Name „Bubu App“
+zu prüfen — und, falls doch Tenor-GIFs dazukommen, deren Lizenz.
