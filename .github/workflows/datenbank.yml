@@ -28,6 +28,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          wranglerVersion: "4"
           command: d1 execute haus-quest --remote --file=d1/schema.sql --yes
 
       - name: Startdaten einspielen
@@ -35,4 +36,5 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          wranglerVersion: "4"
           command: d1 execute haus-quest --remote --file=d1/seed.sql --yes
