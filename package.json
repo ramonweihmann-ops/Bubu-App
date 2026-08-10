@@ -1,0 +1,12 @@
+{
+  "name": "haus-quest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "schema:lokal": "wrangler d1 execute haus-quest --local --file=d1/schema.sql",
+    "schema:live": "wrangler d1 execute haus-quest --remote --file=d1/schema.sql"
+  },
+  "devDependencies": { "wrangler": "^4.120.1" }
+}

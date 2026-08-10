@@ -1,0 +1,822 @@
+// Haus-Quest – Oberfläche.
+//
+// Diese Datei zeigt nur an und schickt Absichten an die Schnittstelle.
+// Ob aus „erledigt“ Punkte werden, entscheidet der Server — nie das Handy.
+
+const app = document.getElementById("app");
+const scrim = document.getElementById("scrim");
+const celebrate = document.getElementById("celebrate");
+const toastEl = document.getElementById("toast");
+const confettiEl = document.getElementById("confetti");
+
+let S = null;                  // Zustand vom Server
+let ansicht = "start";
+let filter = "Alle";
+let laderTimer = null;
+
+/* ------------------------------------------------------------------ Werkzeug */
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const icon = (id, s = 20) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
+async function api(pfad, daten) {
+  const antwort = await fetch(`/api/${pfad}`, {
+    method: daten ? "POST" : "GET",
+    headers: daten ? { "Content-Type": "application/json" } : {},
+    body: daten ? JSON.stringify(daten) : undefined
+  });
+  const ergebnis = await antwort.json().catch(() => ({}));
+  if (!antwort.ok) throw new Error(ergebnis.fehler || "Da ist etwas schiefgegangen");
+  return ergebnis;
+}
+
+function zeitpunkt(iso) {
+  if (!iso) return "";
+  const dann = new Date(iso.replace(" ", "T") + (iso.endsWith("Z") ? "" : "Z"));
+  const min = Math.round((Date.now() - dann.getTime()) / 60000);
+  if (min < 1) return "gerade eben";
+  if (min < 60) return `vor ${min} Min.`;
+  if (min < 24 * 60) return `vor ${Math.round(min / 60)} Std.`;
+  if (min < 48 * 60) return "gestern";
+  return dann.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+}
+
+function bild(person, groesse = "") {
+  const quelle = person?.avatar;
+  const ersatz = person && S?.partner && person.id === S.partner.id ? "/wolf.webp" : "/fox.webp";
+  return `<span class="avatar ${groesse}"><img src="${esc(quelle || ersatz)}" alt=""
+    onerror="this.src='${ersatz}'"></span>`;
+}
+
+/* ------------------------------------------------------------------ Rückmeldung */
+
+let toastTimer;
+function toast(text, fehler = false) {
+  toastEl.className = "toast" + (fehler ? " fehler" : "");
+  toastEl.innerHTML = `${icon(fehler ? "i-info" : "i-check", 18)}<span>${esc(text)}</span>`;
+  toastEl.setAttribute("data-open", "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.removeAttribute("data-open"), 3200);
+}
+
+function konfetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const farben = ["#ec0f06", "#ffffff", "#f0913f", "#a9a6a1"];
+  confettiEl.innerHTML = Array.from({ length: 34 }, (_, i) =>
+    `<i style="left:${Math.random() * 100}%;background:${farben[i % farben.length]};animation-delay:${(Math.random() * .6).toFixed(2)}s"></i>`
+  ).join("");
+  setTimeout(() => { confettiEl.innerHTML = ""; }, 2600);
+}
+
+function feiern(punkte, text) {
+  const posen = ["anim-a", "anim-b", "anim-c"];
+  const pose = posen[Math.floor(Math.random() * posen.length)];
+  celebrate.innerHTML = `
+    <img src="/logo.webp" alt="" class="${pose}">
+    <div class="big">+0</div>
+    <div class="cap">${esc(text)}</div>
+    <button class="btn ghost" data-schliessen>Weiter</button>`;
+  celebrate.setAttribute("data-open", "");
+  konfetti();
+  if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
+
+  const ziel = celebrate.querySelector(".big");
+  let v = 0;
+  const schritt = Math.max(1, Math.round(punkte / 14));
+  const uhr = setInterval(() => {
+    v = Math.min(punkte, v + schritt);
+    ziel.textContent = "+" + v;
+    if (v >= punkte) clearInterval(uhr);
+  }, 45);
+}
+
+celebrate.addEventListener("click", (ev) => {
+  if (ev.target.closest("[data-schliessen]") || ev.target === celebrate) celebrate.removeAttribute("data-open");
+});
+
+/* ------------------------------------------------------------------ Laden */
+
+async function laden(still = false) {
+  try {
+    S = await api("state");
+    zeichne();
+  } catch (fehler) {
+    if (String(fehler.message).includes("Nicht angemeldet")) {
+      S = { angemeldet: false };
+      zeichne();
+    } else if (!still) {
+      toast(fehler.message, true);
+    }
+  }
+}
+
+function zeichne() {
+  if (!S) return;
+  if (!S.angemeldet) return anmelden();
+  if (!S.verbunden) return verbinden();
+
+  const nav = [
+    { id: "start", label: "Start", icon: "i-home" },
+    { id: "quests", label: "Quests", icon: "i-broom" },
+    { id: "pruefen", label: "Prüfen", icon: "i-shield", badge: zuPruefen().length },
+    { id: "belohnungen", label: "Belohnung", icon: "i-gift" },
+    { id: "wir", label: "Wir", icon: "i-vote" }
+  ];
+
+  const inhalt = {
+    start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
+    belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf
+  }[ansicht] || schirmStart;
+
+  app.innerHTML = inhalt() + `
+    <nav class="navbar">
+      ${nav.map((n) => `
+        <button data-go="${n.id}" aria-current="${ansicht === n.id}">
+          ${n.badge ? `<span class="badge-n">${n.badge}</span>` : ""}
+          ${icon(n.icon, 21)}${n.label}
+        </button>`).join("")}
+    </nav>`;
+}
+
+/* ------------------------------------------------------------------ Anmeldung */
+
+function anmelden() {
+  app.innerHTML = `
+    <div class="mitte">
+      <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
+      <h1>Haus-Quest</h1>
+      <p>Punkte für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
+      <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
+      <p style="font-size:12px;color:var(--ink-3);margin-top:18px;max-width:30ch">
+        Gespeichert werden Name, E-Mail und Profilbild aus deinem Google-Konto — sonst nichts.
+      </p>
+    </div>`;
+}
+
+function verbinden() {
+  const code = S.code;
+  app.innerHTML = `
+    <div class="appbar"><div><div class="title">Paar verbinden</div>
+      <div class="sub">Angemeldet als ${esc(S.ich.name)}</div></div>
+      <button class="iconbtn" data-abmelden aria-label="Abmelden">${icon("i-out", 18)}</button></div>
+    <div class="body">
+      <div class="card flat leer">
+        <img src="/logo.webp" alt="">
+        <div class="t">Ohne zweite Person geht hier nichts: Bestätigen und Abstimmen brauchen zwei.</div>
+      </div>
+
+      ${code ? `
+      <div class="card" style="align-items:center;gap:8px">
+        <span class="section-label" style="margin:0">Dein Code</span>
+        <span class="codeanzeige">${esc(code)}</span>
+        <div class="btnrow" style="width:100%">
+          <button class="btn ghost" data-teilen>Code teilen</button>
+          <button class="btn ghost" data-neuladen>Aktualisieren</button>
+        </div>
+        <div style="font-size:12px;color:var(--ink-3);text-align:center">
+          Gib ihn deinem Partner. Sobald er ihn eingibt, geht es los.
+        </div>
+      </div>` : `
+      <button class="btn primary block" data-paar-anlegen>Code erzeugen</button>`}
+
+      <p class="section-label">Oder Code eingeben</p>
+      <div class="card">
+        <div class="field">
+          <label>Code deines Partners</label>
+          <input class="codefeld" id="code-eingabe" inputmode="numeric" maxlength="6" placeholder="000000">
+        </div>
+        <button class="btn dark block" data-paar-beitreten>Verbinden</button>
+      </div>
+
+      <div class="note">${icon("i-lock", 16)}<span>Ein Konto kann in genau einem Paar sein.
+        Alle Daten gehören dem Paar — niemand sonst sieht sie.</span></div>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Hilfen zum Zustand */
+
+const zuPruefen = () => [
+  ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id).map((m) => ({ ...m, art: "meldung" })),
+  ...S.antraege.filter((a) => a.requested_by !== S.ich.id).map((a) => ({ ...a, art: "antrag" })),
+  ...S.uebertragungen.filter((u) => u.to_member === S.ich.id).map((u) => ({ ...u, art: "uebertragung" }))
+];
+
+const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
+const offeneAbstimmungen = () => S.abstimmungen.filter((a) => a.status === "offen");
+
+/* ------------------------------------------------------------------ Start */
+
+function schirmStart() {
+  const offen = zuPruefen();
+  const wartet = meineOffenen();
+  const abst = offeneAbstimmungen();
+
+  return `
+    <div class="appbar">
+      <div>
+        <div class="title">Hallo ${esc(S.ich.name.split(" ")[0])}</div>
+        <div class="sub">${new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
+      </div>
+      <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
+    </div>
+    <div class="body">
+      <div class="accounts">
+        <div class="account me">
+          ${bild(S.ich)}<span class="who">${esc(S.ich.name.split(" ")[0])}</span>
+          <span class="pts">${S.ich.punkte}</span><span class="unit">Punkte</span>
+        </div>
+        <div class="account">
+          ${bild(S.partner)}<span class="who">${esc(S.partner.name.split(" ")[0])}</span>
+          <span class="pts">${S.partner.punkte}</span><span class="unit">Punkte</span>
+        </div>
+      </div>
+
+      ${offen.length ? `
+      <div class="card alert">
+        <div style="display:flex;gap:11px;align-items:center">
+          <span style="color:var(--accent);flex:none">${icon("i-shield", 22)}</span>
+          <div style="flex:1">
+            <div style="font-size:14.5px;font-weight:700">${offen.length} ${offen.length === 1 ? "Sache wartet" : "Sachen warten"} auf dich</div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Ohne dein OK gibt es keine Punkte.</div>
+          </div>
+        </div>
+        <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
+      </div>` : ""}
+
+      <div class="quick">
+        <button data-go="quests">${icon("i-broom", 21)}Quest erledigt</button>
+        <button data-go="belohnungen">${icon("i-gift", 21)}Belohnung</button>
+        <button data-sheet="transfer">${icon("i-swap", 21)}Punkte senden</button>
+      </div>
+
+      ${wartet.length ? `
+      <p class="section-label">Wartet auf ${esc(S.partner.name.split(" ")[0])}</p>
+      <div class="card" style="gap:8px">
+        ${wartet.map((m) => `
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="flex:1;font-size:13.5px">${esc(m.quest)}${m.quantity > 1 ? ` · ${m.quantity}×` : ""}</span>
+            <span class="chip wait">+${m.quantity * m.points_each}</span>
+          </div>`).join("")}
+      </div>` : ""}
+
+      ${abst.length ? `
+      <p class="section-label">Offene Abstimmungen</p>
+      ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
+
+      <p class="section-label">Letzte Aktivität</p>
+      ${S.verlauf.length ? `
+      <ul class="card feed">
+        ${S.verlauf.slice(0, 6).map((b) => `
+          <li><span class="dot ${b.delta < 0 ? "red" : ""}"></span>
+            <span class="txt"><b>${esc(b.member_id === S.ich.id ? "Du" : S.partner.name.split(" ")[0])}</b> ·
+              ${esc(b.reason)} <b>${b.delta > 0 ? "+" : ""}${b.delta}</b>
+              <div class="when">${zeitpunkt(b.created_at)}</div></span></li>`).join("")}
+      </ul>` : `
+      <div class="card flat leer"><img src="/logo.webp" alt="">
+        <div class="h">Noch nichts passiert</div>
+        <div class="t">Meldet eure erste Quest — dann füllt sich das hier.</div></div>`}
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Quests */
+
+function schirmQuests() {
+  const gemeldet = new Set(meineOffenen().map((m) => m.quest_id));
+  const kategorien = ["Alle", ...new Set(S.quests.map((q) => q.category))];
+  const liste = S.quests.filter((q) => filter === "Alle" || q.category === filter);
+
+  return `
+    <div class="appbar">
+      <div><div class="title">Quests</div><div class="sub">Punktwerte gelten für beide</div></div>
+      <button class="iconbtn" data-sheet="neu" aria-label="Quest vorschlagen">${icon("i-plus", 18)}</button>
+    </div>
+    <div class="body">
+      <div class="filters">
+        ${kategorien.map((k) => `<button data-filter="${esc(k)}" aria-pressed="${filter === k}">${esc(k)}</button>`).join("")}
+      </div>
+      ${liste.map((q) => `
+        <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${gemeldet.has(q.id) ? "disabled" : ""}>
+          <span class="grow">
+            <span class="t">${esc(q.name)}</span>
+            <span class="m">${esc(q.category)}${gemeldet.has(q.id) ? ` · wartet auf ${esc(S.partner.name.split(" ")[0])}` : ""}</span>
+          </span>
+          ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>' : `<span class="pts-pill">${q.points}</span>`}
+        </button>`).join("")}
+      <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:6px 0 0">
+        Punktwert ändern? Lange auf eine Quest tippen.
+      </p>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Prüfen */
+
+function schirmPruefen() {
+  const offen = zuPruefen();
+  const kurz = S.partner.name.split(" ")[0];
+
+  return `
+    <div class="appbar"><div><div class="title">Prüfen</div>
+      <div class="sub">Du gibst die Punkte frei</div></div></div>
+    <div class="body">
+      ${offen.length ? offen.map((e) => {
+        if (e.art === "meldung") return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              ${bild(S.partner, "sm")}
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} meldet · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">${esc(e.quest)}</span>
+              </span>
+              <span class="pts-pill">+${e.quantity * e.points_each}</span>
+            </div>
+            ${e.quantity > 1 || e.note ? `<div style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap">
+              ${e.quantity > 1 ? `<span class="chip open">${e.quantity}× à ${e.points_each}</span>` : ""}
+              ${e.note ? `<span>„${esc(e.note)}“</span>` : ""}</div>` : ""}
+            <div class="btnrow">
+              <button class="btn primary" data-entscheiden="claims" data-id="${e.id}" data-status="bestaetigt">Bestätigen</button>
+              <button class="btn ghost" data-entscheiden="claims" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
+            </div>
+          </div>`;
+        if (e.art === "antrag") return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              ${bild(S.partner, "sm")}
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} beantragt · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
+              </span>
+              <span class="pts-pill">−${e.cost}</span>
+            </div>
+            ${e.wish_date || e.message ? `<div style="font-size:12.5px;color:var(--ink-2)">
+              ${e.wish_date ? `<b>${esc(e.wish_date)}</b>` : ""}${e.wish_date && e.message ? " · " : ""}${e.message ? `„${esc(e.message)}“` : ""}</div>` : ""}
+            <div class="btnrow">
+              <button class="btn primary" data-entscheiden="requests" data-id="${e.id}" data-status="bestaetigt">Genehmigen</button>
+              <button class="btn ghost" data-entscheiden="requests" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
+            </div>
+          </div>`;
+        return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              ${bild(S.partner, "sm")}
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} überträgt · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">Punkte für dich</span>
+              </span>
+              <span class="pts-pill">+${e.amount}</span>
+            </div>
+            ${e.message ? `<div style="font-size:12.5px;color:var(--ink-2)">„${esc(e.message)}“</div>` : ""}
+            <div class="btnrow">
+              <button class="btn primary" data-entscheiden="transfers" data-id="${e.id}" data-status="bestaetigt">Annehmen</button>
+              <button class="btn ghost" data-entscheiden="transfers" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
+            </div>
+          </div>`;
+      }).join("") : `
+        <div class="card flat leer">
+          <img src="/logo.webp" alt="">
+          <div class="h">Alles geprüft</div>
+          <div class="t">Keine offenen Meldungen. ${esc(kurz)} weiß Bescheid.</div>
+        </div>`}
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Belohnungen */
+
+function schirmBelohnungen() {
+  return `
+    <div class="appbar"><div><div class="title">Belohnungen</div>
+      <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Punkte</div></div></div>
+    <div class="body">
+      <button class="reward wide" data-sheet="transfer" style="background:var(--tint);border-color:transparent">
+        <span class="ico" style="background:var(--bg)">${icon("i-swap", 18)}</span>
+        <span class="n">Punkte an ${esc(S.partner.name.split(" ")[0])} übertragen<br>
+          <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
+      </button>
+      <p class="section-label">Einlösbar</p>
+      <div class="rewards">
+        ${S.belohnungen.map((b) => {
+          const zuTeuer = b.cost > S.ich.punkte;
+          return `
+          <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
+            <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
+            <span class="n">${esc(b.name)}</span>
+            <span class="c">${zuTeuer ? `${S.ich.punkte} von ${b.cost} Punkten` : `${b.cost} Punkte`}</span>
+          </button>`;
+        }).join("")}
+      </div>
+      <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
+        Jede Einlösung geht als Antrag an ${esc(S.partner.name.split(" ")[0])}.
+        Erst mit Zustimmung werden die Punkte abgebucht.
+      </p>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Wir */
+
+function abstimmungKarte(a) {
+  const entschieden = a.status !== "offen";
+  const angenommen = a.status === "bestaetigt";
+  const kurz = (id) => id === S.ich.id ? "Du" : S.partner.name.split(" ")[0];
+  const stimme = (w) => w === undefined || w === null ? "offen" : (w ? "zugestimmt" : "abgelehnt");
+
+  return `
+    <div class="card vote">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:14.5px;font-weight:700;flex:1">${esc(a.titel || "Vorschlag")}</span>
+        <span class="chip ${entschieden ? (angenommen ? "done" : "open") : "wait"}">
+          ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
+      </div>
+      <div class="change">
+        ${a.alt !== null && a.alt !== undefined ? `<span class="old">${a.alt} Punkte</span>→` : "<span>Punktwert</span>"}
+        <span class="new">${a.neu} Punkte</span>
+      </div>
+      ${a.grund ? `<div class="why">${esc(kurz(a.von))}: „${esc(a.grund)}“</div>` : ""}
+      <div class="stance">
+        <span>Du: <i>${stimme(a.meine)}</i></span>
+        <span>${esc(S.partner.name.split(" ")[0])}: <i>${stimme(a.ihre)}</i></span>
+      </div>
+      ${!entschieden && (a.meine === undefined || a.meine === null) ? `
+      <div class="btnrow">
+        <button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zustimmen</button>
+        <button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>
+      </div>` : ""}
+      ${entschieden && !angenommen ? '<div style="font-size:12px;color:var(--ink-3)">Der alte Wert gilt weiter.</div>' : ""}
+    </div>`;
+}
+
+function schirmWir() {
+  const offen = offeneAbstimmungen();
+  const erledigt = S.abstimmungen.filter((a) => a.status !== "offen").slice(0, 5);
+
+  return `
+    <div class="appbar">
+      <div><div class="title">Wir</div>
+        <div class="sub">${esc(S.ich.name.split(" ")[0])} &amp; ${esc(S.partner.name.split(" ")[0])}</div></div>
+      <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
+    </div>
+    <div class="body">
+      <p class="section-label">Offene Abstimmungen</p>
+      ${offen.length ? offen.map(abstimmungKarte).join("") : `
+        <div class="card flat" style="font-size:13px;color:var(--ink-2)">
+          Nichts offen. Punktwerte ändert ihr über die Quest-Liste — lange auf eine Quest tippen.
+        </div>`}
+
+      <p class="section-label">Hausregeln</p>
+      <ul class="card rules">
+        <li><span class="n">01</span><span>Der Punktwert einer Quest steht <b>vor</b> dem Erledigen fest.</span></li>
+        <li><span class="n">02</span><span>Erledigt melden kann jeder — <b>freigeben nur der andere</b>.</span></li>
+        <li><span class="n">03</span><span>Werte ändern, Quests anlegen: <b>nur wenn beide zustimmen</b>.</span></li>
+        <li><span class="n">04</span><span>Bis eine Abstimmung durch ist, gilt der <b>alte Wert</b>.</span></li>
+        <li><span class="n">05</span><span>Anträge und Übertragungen brauchen ein <b>Ja</b> vom anderen.</span></li>
+      </ul>
+
+      ${erledigt.length ? `<p class="section-label">Entschieden</p>${erledigt.map(abstimmungKarte).join("")}` : ""}
+
+      <p class="section-label">Konto</p>
+      <button class="rowlink" data-go="verlauf">
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-clock", 17)}</span>
+        <span class="grow"><span class="t">Verlauf &amp; Punktekonto</span>
+          <span class="m">Jede Buchung nachvollziehbar</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
+      <button class="rowlink" data-export>
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-down", 17)}</span>
+        <span class="grow"><span class="t">Alles exportieren</span>
+          <span class="m">Kompletter Stand als Datei</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
+      <button class="btn text block" data-abmelden>Abmelden</button>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Verlauf */
+
+function schirmVerlauf() {
+  const meins = S.verlauf.filter((b) => b.member_id === S.ich.id);
+  const gesammelt = meins.filter((b) => b.delta > 0).reduce((s, b) => s + b.delta, 0);
+  const eingeloest = meins.filter((b) => b.delta < 0).reduce((s, b) => s - b.delta, 0);
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Verlauf</div><div class="sub">Alle Buchungen</div></div>
+    </div>
+    <div class="body">
+      <div class="card navy">
+        <span style="font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6">Dein Punktestand</span>
+        <span style="font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1">${S.ich.punkte}</span>
+        <span style="font-size:12.5px;opacity:.75">${gesammelt} gesammelt · ${eingeloest} eingelöst (letzte 40 Buchungen)</span>
+      </div>
+      ${S.verlauf.length ? `
+      <ul class="card ledger">
+        ${S.verlauf.map((b) => `
+          <li>
+            ${bild(b.member_id === S.ich.id ? S.ich : S.partner, "sm")}
+            <span style="flex:1">
+              <span style="font-size:13.5px;font-weight:600;display:block">${esc(b.reason)}</span>
+              <span style="font-size:11px;color:var(--ink-3);font-family:var(--font-data)">
+                ${esc(b.member_id === S.ich.id ? "Du" : S.partner.name.split(" ")[0])} · ${zeitpunkt(b.created_at)}</span>
+            </span>
+            <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${b.delta}</span>
+          </li>`).join("")}
+      </ul>` : `<div class="card flat leer"><div class="t">Noch keine Buchungen.</div></div>`}
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Sheets */
+
+function sheet(html) {
+  scrim.innerHTML = `<div class="sheet">${html}</div>`;
+  scrim.setAttribute("data-open", "");
+}
+function sheetZu() {
+  scrim.removeAttribute("data-open");
+  scrim.innerHTML = "";
+}
+scrim.addEventListener("click", (ev) => { if (ev.target === scrim) sheetZu(); });
+
+function sheetMelden(quest) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Erledigt melden</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="pts-pill">${quest.points} Punkte</span>
+    </div>
+    <div class="field">
+      <label>Wie oft</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">1</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">
+          = <b style="color:var(--accent)" id="summe">${quest.points}</b> Punkte</span>
+      </div>
+    </div>
+    <div class="field"><label>Notiz für ${esc(S.partner.name.split(" ")[0])}</label>
+      <textarea id="notiz" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Die Punkte werden erst gutgeschrieben, wenn
+      ${esc(S.partner.name.split(" ")[0])} bestätigt. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
+    <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${quest.points}">
+      Zur Bestätigung senden</button>`);
+}
+
+function sheetAntrag(belohnung) {
+  const fehlt = belohnung.cost > S.ich.punkte;
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Antrag stellen</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
+      <span class="pts-pill">−${belohnung.cost}</span>
+    </div>
+    <div class="field"><label>Wunschtermin</label><input id="termin" placeholder="z. B. heute Abend"></div>
+    <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
+    <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
+      <span>Konto nach Einlösung</span>
+      <span><b>${S.ich.punkte}</b> → <b style="color:var(--accent)">${S.ich.punkte - belohnung.cost}</b></span>
+    </div>
+    <div class="note">${icon("i-info", 16)}<span>${fehlt
+      ? "Dir fehlen noch Punkte — der Antrag lässt sich erst genehmigen, wenn du sie hast."
+      : `${esc(S.partner.name.split(" ")[0])} muss zustimmen. Erst dann werden die Punkte abgebucht.`}</span></div>
+    <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}">Antrag senden</button>`);
+}
+
+function sheetTransfer() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Punkte übertragen</h3>
+    <div style="display:flex;align-items:center;gap:14px;justify-content:center;padding:6px 0">
+      <span style="text-align:center">${bild(S.ich)}<div style="font-size:12px;margin-top:5px">${esc(S.ich.name.split(" ")[0])}</div></span>
+      <span style="color:var(--accent)">${icon("i-send", 22)}</span>
+      <span style="text-align:center">${bild(S.partner)}<div style="font-size:12px;margin-top:5px">${esc(S.partner.name.split(" ")[0])}</div></span>
+    </div>
+    <div class="field">
+      <label>Betrag</label>
+      <div class="stepper">
+        <button data-betrag="-1" aria-label="weniger">−</button>
+        <span class="val" id="betrag">${Math.min(5, S.ich.punkte) || 1}</span>
+        <button data-betrag="1" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
+          von ${S.ich.punkte} verfügbar</span>
+      </div>
+    </div>
+    <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>${esc(S.partner.name.split(" ")[0])} muss die Übertragung annehmen.</span></div>
+    <button class="btn primary block" data-senden="transfer">Übertragen</button>`);
+}
+
+function sheetNeu() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Quest vorschlagen</h3>
+    <div class="field"><label>Name</label><input id="qname" placeholder="z. B. Wäsche waschen"></div>
+    <div class="field"><label>Kategorie</label>
+      <select id="qkat">${["Wohnen", "Küche", "Bad", "Fenster", "Sonstiges"].map((k) => `<option>${k}</option>`).join("")}</select></div>
+    <div class="field">
+      <label>Punktwert</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">3</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum lohnt sich das?"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Neue Quests gehen in die Abstimmung. Übernommen wird der
+      Vorschlag erst, wenn ${esc(S.partner.name.split(" ")[0])} zustimmt.</span></div>
+    <button class="btn primary block" data-senden="neu">Zur Abstimmung geben</button>`);
+}
+
+function sheetPunktwert(quest) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Punktwert ändern</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="pts-pill">jetzt ${quest.points}</span>
+    </div>
+    <div class="field">
+      <label>Neuer Wert</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">${quest.points}</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt der alte Wert nicht mehr?"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn beide zustimmen — und nie rückwirkend.
+      Bereits gemeldete Quests behalten ${quest.points} Punkte.</span></div>
+    <button class="btn primary block" data-senden="punktwert" data-id="${quest.id}">Zur Abstimmung geben</button>`);
+}
+
+/* ------------------------------------------------------------------ Bedienung */
+
+let druckTimer = null;
+
+document.addEventListener("pointerdown", (ev) => {
+  const zeile = ev.target.closest("[data-sheet='melden'][data-id]");
+  if (!zeile) return;
+  druckTimer = setTimeout(() => {
+    druckTimer = null;
+    const quest = S.quests.find((q) => q.id === zeile.dataset.id);
+    if (quest) { if (navigator.vibrate) navigator.vibrate(12); sheetPunktwert(quest); }
+  }, 550);
+});
+document.addEventListener("pointerup", () => { clearTimeout(druckTimer); });
+document.addEventListener("pointercancel", () => { clearTimeout(druckTimer); });
+document.addEventListener("pointermove", () => { clearTimeout(druckTimer); });
+
+document.addEventListener("click", async (ev) => {
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export]");
+  if (!el) return;
+
+  // Navigation & Anzeige
+  if (el.dataset.go) { ansicht = el.dataset.go; sheetZu(); zeichne(); return; }
+  if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
+
+  if (el.dataset.sheet) {
+    if (scrim.hasAttribute("data-open")) return;
+    const art = el.dataset.sheet;
+    if (art === "melden") {
+      const quest = S.quests.find((q) => q.id === el.dataset.id);
+      if (quest) sheetMelden(quest);
+    } else if (art === "antrag") {
+      const b = S.belohnungen.find((x) => x.id === el.dataset.id);
+      if (b) sheetAntrag(b);
+    } else if (art === "transfer") {
+      if (S.ich.punkte < 1) return toast("Du hast noch keine Punkte zum Übertragen", true);
+      sheetTransfer();
+    } else if (art === "neu") sheetNeu();
+    return;
+  }
+
+  // Stepper
+  if (el.dataset.menge) {
+    const feld = document.getElementById("menge");
+    const summe = document.getElementById("summe");
+    const neu = Math.max(1, Number(feld.textContent) + Number(el.dataset.menge));
+    feld.textContent = neu;
+    if (summe) {
+      const proStueck = Number(document.querySelector("[data-senden='melden']")?.dataset.punkte || 0);
+      summe.textContent = neu * proStueck;
+    }
+    return;
+  }
+  if (el.dataset.betrag) {
+    const feld = document.getElementById("betrag");
+    const neu = Math.max(1, Math.min(S.ich.punkte, Number(feld.textContent) + Number(el.dataset.betrag)));
+    feld.textContent = neu;
+    return;
+  }
+
+  const wert = (id) => document.getElementById(id)?.value?.trim() || "";
+  const zahl = (id) => Number(document.getElementById(id)?.textContent || 0);
+
+  try {
+    el.disabled = true;
+
+    if (el.dataset.senden === "melden") {
+      await api("claims", { questId: el.dataset.id, anzahl: zahl("menge"), notiz: wert("notiz") });
+      sheetZu(); await laden();
+      toast(`Gemeldet — ${S.partner.name.split(" ")[0]} muss bestätigen.`);
+      return;
+    }
+    if (el.dataset.senden === "antrag") {
+      await api("requests", { rewardId: el.dataset.id, termin: wert("termin"), nachricht: wert("nachricht") });
+      sheetZu(); await laden();
+      toast("Antrag gesendet.");
+      return;
+    }
+    if (el.dataset.senden === "transfer") {
+      await api("transfers", { betrag: zahl("betrag"), nachricht: wert("nachricht") });
+      sheetZu(); await laden();
+      toast("Übertragung angeboten.");
+      return;
+    }
+    if (el.dataset.senden === "neu") {
+      if (!wert("qname")) throw new Error("Ein Name fehlt");
+      await api("proposals", { art: "new_quest", wert: zahl("menge"), name: wert("qname"), kategorie: wert("qkat"), grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "punktwert") {
+      await api("proposals", { art: "quest_points", zielId: el.dataset.id, wert: zahl("menge"), grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+
+    if (el.dataset.entscheiden) {
+      const bereich = el.dataset.entscheiden;
+      const status = el.dataset.status;
+      const ergebnis = await api(`${bereich}/${el.dataset.id}/decide`, { status });
+      await laden();
+      if (status === "bestaetigt") {
+        if (bereich === "claims") feiern(ergebnis.punkte, `${ergebnis.quest} bestätigt · ${S.partner.name.split(" ")[0]}`);
+        else if (bereich === "requests") toast(`${ergebnis.belohnung} genehmigt.`);
+        else toast("Punkte angenommen.");
+      } else {
+        toast("Abgelehnt.");
+      }
+      return;
+    }
+
+    if (el.dataset.stimme) {
+      const ergebnis = await api(`proposals/${el.dataset.stimme}/vote`, { antwort: el.dataset.antwort === "ja" });
+      await laden();
+      if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Punkte.`);
+      else if (ergebnis.status === "abgelehnt") toast("Abgelehnt — der alte Wert gilt weiter.");
+      else toast(`Deine Stimme zählt. Es fehlt noch ${S.partner.name.split(" ")[0]}.`);
+      return;
+    }
+
+    if (el.hasAttribute("data-paar-anlegen")) { await api("pair/create", {}); await laden(); return; }
+
+    if (el.hasAttribute("data-paar-beitreten")) {
+      const code = document.getElementById("code-eingabe")?.value.replace(/\D/g, "");
+      await api("pair/join", { code });
+      await laden();
+      toast("Verbunden. Los geht's!");
+      return;
+    }
+
+    if (el.hasAttribute("data-teilen")) {
+      const text = `Mein Haus-Quest-Code: ${S.code}\nApp: https://haus-quest.com`;
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); toast("Code kopiert."); }
+      return;
+    }
+
+    if (el.hasAttribute("data-neuladen")) { await laden(); toast("Aktualisiert."); return; }
+
+    if (el.hasAttribute("data-export")) {
+      const daten = await api("export");
+      const url = URL.createObjectURL(new Blob([JSON.stringify(daten, null, 2)], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `haus-quest-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("Datei gespeichert.");
+      return;
+    }
+
+    if (el.hasAttribute("data-abmelden")) {
+      await fetch("/api/auth/logout", { method: "POST" });
+      location.href = "/";
+      return;
+    }
+  } catch (fehler) {
+    toast(fehler.message, true);
+  } finally {
+    el.disabled = false;
+  }
+});
+
+/* ------------------------------------------------------------------ Start */
+
+laden();
+
+// Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen.
+setInterval(() => { if (!document.hidden && !scrim.hasAttribute("data-open")) laden(true); }, 25000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) laden(true); });
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");

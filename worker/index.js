@@ -1,21 +1,18 @@
-// Haus-Quest – Schnittstelle.
-//
-// Alles, was Punkte bewegt, läuft hier durch: Die App schickt nur Absichten
-// („ich habe X erledigt“), geprüft und gebucht wird an dieser Stelle und in
-// der Datenbank. Die eigentlichen Endpunkte kommen mit der App dazu.
+// Haus-Quest – ein Worker liefert die Seite und die Schnittstelle.
+
+import { handleAuth } from "./auth.js";
+import { handleApi } from "./api.js";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/api/health") {
-      return Response.json({ ok: true, dienst: "haus-quest", zeit: new Date().toISOString() });
+    if (url.pathname.startsWith("/api/auth/")) {
+      return handleAuth(request, env, url);
     }
-
     if (url.pathname.startsWith("/api/")) {
-      return Response.json({ fehler: "Unbekannter Endpunkt" }, { status: 404 });
+      return handleApi(request, env, url);
     }
-
     return env.ASSETS.fetch(request);
   }
 };

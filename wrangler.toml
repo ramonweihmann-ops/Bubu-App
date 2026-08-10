@@ -1,5 +1,5 @@
 # Haus-Quest – ein Worker liefert die Seite und die Schnittstelle.
-name = "haus-quest"
+name = "bubu-app"
 main = "worker/index.js"
 compatibility_date = "2026-08-01"
 account_id = "c96097fc58419e9dc3df6cc67d7aaa9c"
@@ -15,6 +15,7 @@ not_found_handling = "single-page-application"
 binding = "DB"
 database_name = "haus-quest"
 database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
+migrations_dir = "d1/migrations"
 
 [vars]
 BASIS_URL = "https://haus-quest.com"

@@ -2,8 +2,9 @@
 // Hält die Hülle der App offline verfügbar. Daten kommen immer frisch aus dem Netz;
 // gemeldete Quests werden vom Worker nachgereicht, wenn wieder Empfang da ist.
 
-const CACHE = "hq-shell-v1";
-const HUELLE = ["/", "/app", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE = "hq-shell-v2";
+const HUELLE = ["/", "/app/", "/app/app.css", "/app/app.js", "/logo.webp",
+                "/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (ev) => {
   ev.waitUntil(caches.open(CACHE).then((c) => c.addAll(HUELLE)).then(() => self.skipWaiting()));

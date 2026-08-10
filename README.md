@@ -1,4 +1,4 @@
-# Bubu App
+# Haus-Quest
 
 Punktekonto für zwei. Aufgaben („Quests“) haben einen **vorher festgelegten** Punktwert.
 Wer eine erledigt, meldet sie — gutgeschrieben wird sie erst, wenn **der andere bestätigt**.
@@ -11,7 +11,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup:** [`docs/mockup.html`](./docs/mockup.html) — im Browser öffnen, der Prototyp oben ist antippbar.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
-- **Datenbank:** [`d1/schema.sql`](./d1/schema.sql) — Tabellen und Regeln.
+- **Datenbank:** [`d1/migrations/`](./d1/migrations) — Tabellen und Regeln, als Migrationen.
 
 ---
 
@@ -25,7 +25,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 
 Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer eine eigene Meldung
 bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
-Datenbank es abweist (`claim_no_self_decide` im Schema). Punktestände werden nirgends
+Datenbank es abweist (`claim_no_self_decide` in der Migration). Punktestände werden nirgends
 gespeichert, sondern aus allen Buchungen berechnet.
 
 ## Aufbau
@@ -39,8 +39,8 @@ haus-quest.com/api/…    →  Worker: prüft, wer fragt, und setzt die Regeln d
 
 | Baustein | Technik | Kosten |
 | --- | --- | --- |
-| Website + App | Cloudflare Pages | 0 € |
-| API und Regeln | Cloudflare Workers | 0 € |
+| Website + App | Cloudflare Workers (statische Dateien) | 0 € |
+| API und Regeln | derselbe Worker unter `/api` | 0 € |
 | Datenbank | Cloudflare D1 (SQLite) | 0 € |
 | Anmeldung | Google OAuth, Sitzung im Worker | 0 € |
 | Benachrichtigungen | Web Push (VAPID) | 0 € |
@@ -82,7 +82,17 @@ verpacken, ohne den Code neu zu schreiben. Das Google-Entwicklerkonto kostet ein
 
 ## Figuren und Namen
 
-Fuchs und Wolf sind eigene Vektorzeichnungen und liegen an **einer** Stelle im Mockup
-(die `<symbol>`-Blöcke `m-fox`, `m-wolf`, `m-duo` in `docs/mockup.html`). Sie können bleiben
-oder in einem Zug getauscht werden. Für einen späteren Verkauf wäre nur der Name „Bubu App“
-zu prüfen — und, falls doch Tenor-GIFs dazukommen, deren Lizenz.
+Fuchs und Wolf liegen als Bilddateien in `web/` (`logo.webp`, `fox.webp`, `wolf.webp`) und
+in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
+Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
+weiterhin Bubu App.
+
+## Aufbau des Codes
+
+```
+web/            Startseite mit Installationsknopf, Symbole, Service Worker
+web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
+worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln)
+d1/migrations/  Datenbank: Tabellen, Trigger, Ansichten
+docs/           Mockup und Anleitungen
+```

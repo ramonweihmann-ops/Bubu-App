@@ -141,56 +141,40 @@ Angelegt über **Storage & Databases** → **D1 SQL Database** → **Create Data
 `haus-quest`. Die Database ID steht bereits in der `wrangler.toml`, ebenso die Account ID —
 dafür brauchst du kein Secret.
 
-### 4.2 Schlüssel für die automatische Veröffentlichung
+### 4.2 Veröffentlichung ✓ erledigt
 
-1. Cloudflare → **My Profile** → **API Tokens** → **Create Token**
-2. Vorlage **Edit Cloudflare Workers** → **Use template**
-3. Die Vorlage bringt das Meiste mit. Ergänze in der Liste **Permissions**:
+Cloudflare holt sich den Code selbst aus dem Repo — kein API-Token, kein Secret bei GitHub:
+**Workers & Pages** → **Create** → **Import a repository** → `Bubu-App`.
+Jeder Push geht damit von allein live.
 
-   | Bereich | Recht |
-   | --- | --- |
-   | Account · Workers Scripts | Edit |
-   | Account · Workers KV Storage | Edit |
-   | Account · D1 | Edit |
-   | Account · Account Settings | Read |
-   | Zone · Workers Routes | Edit |
-   | User · User Details | Read |
-   | User · Memberships | Read |
+**Eine Einstellung ist dort noch nachzuziehen.** Damit Änderungen an der Datenbank mitwandern,
+muss der Deploy-Befehl die Migrationen mitnehmen:
 
-4. **Account Resources:** `Include` → dein Konto auswählen
-5. **Zone Resources:** `Include` → `Specific zone` → `haus-quest.com` auswählen
-6. **Continue to summary** → **Create Token** → Wert **einmal kopieren**
-7. Auf GitHub hinterlegen: Repo → **Settings** → **Secrets and variables** → **Actions** →
-   **New repository secret**
-   - **Name:** `CLOUDFLARE_API_TOKEN`
-   - **Secret:** der kopierte Wert
-
-**Token vorher selbst prüfen.** Bevor du ihn bei GitHub einträgst, kannst du in der
-Kommandozeile testen, ob er gültig ist — der Schlüssel bleibt dabei bei dir:
+**Workers & Pages** → **bubu-app** → **Settings** → **Build** → **Deploy command**:
 
 ```
-curl -H "Authorization: Bearer DEIN_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify
+npx wrangler d1 migrations apply haus-quest --remote --yes && npx wrangler deploy
 ```
 
-Richtig ist die Antwort, wenn darin `"status": "active"` und `"success": true` steht.
-Kommt stattdessen `"code": 9109` („Invalid access token“), ist der Wert selbst falsch —
-meist ein Leerzeichen, ein Zeilenumbruch oder ein unvollständiger Kopiervorgang.
-Kommt `"code": 10000`, ist der Wert richtig, aber die Rechte fehlen.
+Der erste Teil spielt neue Datenbankschritte ein und merkt sich, was schon gelaufen ist —
+mehrfaches Ausführen schadet also nicht.
 
-Die beiden Auswahllisten in Schritt 4 und 5 sind die übliche Stolperstelle: Bleiben sie leer,
-kann das Token zwar den Kontonamen lesen, aber nichts veröffentlichen. Die Fehlermeldung
-lautet dann `Authentication error [code: 10000]` — sie klingt nach falschem Schlüssel, meint
-aber fehlende Rechte.
+### 4.3 Geheimnis für den Google-Login
 
-Ab da gilt: Ich pushe, GitHub veröffentlicht, wenige Sekunden später ist es live.
-Den Zugang entziehst du jederzeit, indem du das Token bei Cloudflare löschst.
+Der Client-Schlüssel gehört jetzt zu Cloudflare, nicht mehr zu GitHub (dort veröffentlicht
+niemand mehr):
 
-### 4.3 Schema einspielen
+**Workers & Pages** → **bubu-app** → **Settings** → **Variables and Secrets** →
+**Add** → Typ **Secret**
 
-Sobald das Token liegt, einmalig: Repo → **Actions** → **Datenbank aufsetzen** →
-**Run workflow** → Auswahl `schema`. Danach stehen alle Tabellen und Regeln.
-Die Startdaten aus eurer Tabelle kommen beim Pairing automatisch dazu; der Lauf mit
-`seed` ist nur für den Fall, dass die Liste von Hand nachgezogen werden soll.
+| Name | Wert |
+| --- | --- |
+| `GOOGLE_CLIENT_SECRET` | der Client-Schlüssel aus der Google-Anleitung (beginnt mit `GOCSPX-`) |
+
+### 4.4 Domain verbinden
+
+**Workers & Pages** → **bubu-app** → **Settings** → **Domains & Routes** → **Add** →
+**Custom domain** → `haus-quest.com`. Weil die Domain bei Cloudflare liegt, ist das ein Klick.
 
 ---
 

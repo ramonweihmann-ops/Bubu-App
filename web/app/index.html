@@ -2,32 +2,50 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Haus-Quest</title>
-<meta name="theme-color" content="#152c4f">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
-<style>
-:root { --ground:#fff; --ink:#152c4f; --ink-2:#55688a; --accent:#ec0f06; --tint:#f4f7fc; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ground:#0b1830; --ink:#e9f0fb; --ink-2:#a5b6d1; --tint:#11223d; --accent:#ff4b42; }
-}
-body {
-  margin:0; min-height:100dvh; background:var(--ground); color:var(--ink);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:14px; padding:32px 24px; text-align:center;
-}
-img { width:min(220px,60vw); }
-h1 { font-size:28px; letter-spacing:-.03em; margin:0; }
-p { color:var(--ink-2); margin:0; max-width:30ch; line-height:1.55; }
-.stand { background:var(--tint); border-radius:14px; padding:12px 16px; font-size:14px; color:var(--ink-2); }
-</style>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="/app/app.css">
 </head>
 <body>
-  <img src="/logo.webp" alt="">
-  <h1>Gleich geht’s los</h1>
-  <p>Die App wird gerade gebaut. Diese Seite ist schon die richtige — sobald sie fertig ist, erscheint sie hier von selbst.</p>
-  <p class="stand">Angeheftet? Dann bist du fertig vorbereitet. Beim nächsten Öffnen ist die App da.</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+  <symbol id="i-broom" viewBox="0 0 24 24"><path d="M17 3 9 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M6 14h9l1 7H5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M11 14v7M15 14v7" stroke="currentColor" stroke-width="1.5" fill="none"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 5 3.5 7.7 7 9 3.5-1.3 7-4 7-9V6l-7-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M3 11h18v9H3z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 7h20v4H2zM12 7v13" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7S10.5 3 8 3a2 2 0 0 0 0 4h4zm0 0s1.5-4 4-4a2 2 0 0 1 0 4h-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-vote" viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5.5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5.5M12 7.6v.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-8-5.1-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 15.9 12 21 12 21z" fill="currentColor"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 3 3 7L21 3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="10.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12m0 0 5-5m-5 5-5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M11 8l-4 4 4 4M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-google" viewBox="0 0 24 24">
+    <path d="M21.6 12.2c0-.7-.06-1.4-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.89-1.74 2.98-4.3 2.98-7.35Z" fill="#4285F4"/>
+    <path d="M12 22c2.7 0 4.96-.9 6.61-2.43l-3.23-2.51c-.9.6-2.05.95-3.38.95-2.6 0-4.8-1.75-5.59-4.11H3.07v2.59A10 10 0 0 0 12 22Z" fill="#34A853"/>
+    <path d="M6.41 13.9a6 6 0 0 1 0-3.82V7.49H3.07a10 10 0 0 0 0 9.02l3.34-2.6Z" fill="#FBBC05"/>
+    <path d="M12 5.98c1.47 0 2.79.51 3.83 1.5l2.86-2.86C16.95 2.99 14.7 2 12 2A10 10 0 0 0 3.07 7.49l3.34 2.59C7.2 7.72 9.4 5.98 12 5.98Z" fill="#EA4335"/>
+  </symbol>
+</svg>
+
+<div id="app">
+  <div class="lader"><img src="/logo.webp" alt="" width="120"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="celebrate" id="celebrate"></div>
+<div class="toast" id="toast"></div>
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+
+<script type="module" src="/app/app.js"></script>
 </body>
 </html>

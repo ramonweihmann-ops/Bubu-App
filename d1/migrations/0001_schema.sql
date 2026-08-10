@@ -1,20 +1,37 @@
 -- ============================================================================
---  Bubu App – Schema für Cloudflare D1 (SQLite)
+--  Haus-Quest – Schema für Cloudflare D1 (SQLite)
 --
---  Einspielen:  npx wrangler d1 execute bubu --remote --file=d1/schema.sql
+--  Wird als Migration automatisch eingespielt (siehe README).
 --
---  Die Regeln stecken auch hier in der Datenbank, nicht nur in der Oberfläche:
---  Eine Meldung, die dieselbe Person bestätigt, die sie gemeldet hat, wird von
---  der Datenbank abgewiesen. Punktestände werden gerechnet, nie gesetzt.
+--  Die Regeln stecken in der Datenbank, nicht nur in der Oberfläche:
+--  Eine Meldung, die dieselbe Person bestätigt, die sie gemeldet hat, wird
+--  abgewiesen. Punktestände werden gerechnet, nie gesetzt.
 --
 --  Der Zugriffsschutz liegt im Worker: die App spricht nie direkt mit der
---  Datenbank, sondern nur über die API, die vorher prüft, wer fragt und zu
---  welchem Paar die Person gehört.
+--  Datenbank, sondern nur über die Schnittstelle, die vorher prüft, wer fragt
+--  und zu welchem Paar die Person gehört.
 -- ============================================================================
 
 pragma foreign_keys = on;
 
--- ---------------------------------------------------------------- Paar & Mitglieder
+-- ---------------------------------------------------------------- Konten
+create table users (
+  id         text primary key,              -- Google-Subject, stabil je Konto
+  email      text not null,
+  name       text not null,
+  avatar_url text,
+  created_at text not null default (datetime('now'))
+);
+
+create table sessions (
+  token_hash text primary key,              -- nur der Hash, nie das Original
+  user_id    text not null references users(id) on delete cascade,
+  created_at text not null default (datetime('now')),
+  expires_at text not null
+);
+create index sessions_user_idx on sessions(user_id);
+
+-- ---------------------------------------------------------------- Paar
 create table couples (
   id                text primary key,
   created_at        text not null default (datetime('now')),
@@ -23,12 +40,9 @@ create table couples (
 );
 
 create table members (
-  user_id      text primary key,          -- Google-Subject (stabile Konto-ID)
-  couple_id    text not null references couples(id) on delete cascade,
-  email        text not null,
-  display_name text not null,
-  avatar_url   text,
-  joined_at    text not null default (datetime('now'))
+  user_id   text primary key references users(id) on delete cascade,
+  couple_id text not null references couples(id) on delete cascade,
+  joined_at text not null default (datetime('now'))
 );
 create index members_couple_idx on members(couple_id);
 
@@ -63,11 +77,11 @@ create table rewards (
 create index rewards_couple_idx on rewards(couple_id, active);
 
 -- ---------------------------------------------------------------- Buchungen
--- Wird ausschließlich von Triggern gefüllt. Die API schreibt hier nie direkt hinein.
+-- Wird ausschließlich von Triggern gefüllt. Die Schnittstelle schreibt hier nie hinein.
 create table ledger (
   id          text primary key,
   couple_id   text not null references couples(id) on delete cascade,
-  member_id   text not null references members(user_id) on delete cascade,
+  member_id   text not null references users(id) on delete cascade,
   delta       integer not null,
   reason      text not null,
   source_type text not null,
@@ -75,6 +89,7 @@ create table ledger (
   created_at  text not null default (datetime('now'))
 );
 create index ledger_member_idx on ledger(couple_id, member_id);
+create index ledger_zeit_idx on ledger(couple_id, created_at desc);
 
 -- Punktestände: immer gerechnet, nie gespeichert.
 create view balances as
@@ -86,20 +101,18 @@ create table claims (
   id          text primary key,
   couple_id   text not null references couples(id) on delete cascade,
   quest_id    text not null references quests(id),
-  claimed_by  text not null references members(user_id) on delete cascade,
+  claimed_by  text not null references users(id) on delete cascade,
   quantity    integer not null default 1 check (quantity > 0),
   points_each integer not null,               -- eingefroren beim Melden
   note        text,
-  photo_key   text,
   status      text not null default 'offen' check (status in ('offen','bestaetigt','abgelehnt')),
-  decided_by  text references members(user_id),
+  decided_by  text references users(id),
   decided_at  text,
   created_at  text not null default (datetime('now')),
   check (decided_by is null or decided_by <> claimed_by)
 );
-create index claims_open_idx on claims(couple_id, status);
+create index claims_offen_idx on claims(couple_id, status);
 
--- Einmal entschieden ist entschieden.
 create trigger claim_decide_once
 before update of status on claims
 for each row when old.status <> 'offen' and new.status <> old.status
@@ -107,7 +120,7 @@ begin
   select raise(abort, 'Diese Meldung ist bereits entschieden');
 end;
 
--- Das Vier-Augen-Prinzip. Die Datenbank lässt Selbstbestätigung nicht zu.
+-- Das Vier-Augen-Prinzip. Selbstbestätigung ist hier zu Ende, egal was die App schickt.
 create trigger claim_no_self_decide
 before update of status on claims
 for each row when new.status <> 'offen'
@@ -125,7 +138,8 @@ for each row when new.status = 'bestaetigt' and old.status = 'offen'
 begin
   insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
   values (lower(hex(randomblob(16))), new.couple_id, new.claimed_by,
-          new.quantity * new.points_each, 'Quest bestätigt', 'claim', new.id);
+          new.quantity * new.points_each,
+          (select name from quests where id = new.quest_id), 'claim', new.id);
 end;
 
 -- ---------------------------------------------------------------- Anträge auf Belohnungen
@@ -133,16 +147,17 @@ create table requests (
   id           text primary key,
   couple_id    text not null references couples(id) on delete cascade,
   reward_id    text not null references rewards(id),
-  requested_by text not null references members(user_id) on delete cascade,
+  requested_by text not null references users(id) on delete cascade,
   cost         integer not null,             -- eingefroren beim Stellen
   wish_date    text,
   message      text,
   status       text not null default 'offen' check (status in ('offen','bestaetigt','abgelehnt')),
-  decided_by   text references members(user_id),
+  decided_by   text references users(id),
   decided_at   text,
   created_at   text not null default (datetime('now')),
   check (decided_by is null or decided_by <> requested_by)
 );
+create index requests_offen_idx on requests(couple_id, status);
 
 create trigger request_decide_once
 before update of status on requests
@@ -174,15 +189,15 @@ for each row when new.status = 'bestaetigt' and old.status = 'offen'
 begin
   insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
   values (lower(hex(randomblob(16))), new.couple_id, new.requested_by,
-          -new.cost, 'Belohnung eingelöst', 'request', new.id);
+          -new.cost, (select name from rewards where id = new.reward_id), 'request', new.id);
 end;
 
 -- ---------------------------------------------------------------- Punkte übertragen
 create table transfers (
   id          text primary key,
   couple_id   text not null references couples(id) on delete cascade,
-  from_member text not null references members(user_id) on delete cascade,
-  to_member   text not null references members(user_id) on delete cascade,
+  from_member text not null references users(id) on delete cascade,
+  to_member   text not null references users(id) on delete cascade,
   amount      integer not null check (amount > 0),
   message     text,
   status      text not null default 'offen' check (status in ('offen','bestaetigt','abgelehnt')),
@@ -190,6 +205,14 @@ create table transfers (
   created_at  text not null default (datetime('now')),
   check (from_member <> to_member)
 );
+create index transfers_offen_idx on transfers(couple_id, status);
+
+create trigger transfer_decide_once
+before update of status on transfers
+for each row when old.status <> 'offen' and new.status <> old.status
+begin
+  select raise(abort, 'Diese Übertragung ist bereits entschieden');
+end;
 
 create trigger transfer_check_balance
 before update of status on transfers
@@ -220,18 +243,19 @@ create table proposals (
   target_id  text,
   old_value  integer,
   new_value  integer not null check (new_value > 0),
-  name       text,                            -- bei Neuanlage
+  name       text,
   category   text,
   reason     text,
-  created_by text not null references members(user_id) on delete cascade,
+  created_by text not null references users(id) on delete cascade,
   status     text not null default 'offen' check (status in ('offen','bestaetigt','abgelehnt')),
   decided_at text,
   created_at text not null default (datetime('now'))
 );
+create index proposals_offen_idx on proposals(couple_id, status);
 
 create table proposal_votes (
   proposal_id text not null references proposals(id) on delete cascade,
-  member_id   text not null references members(user_id) on delete cascade,
+  member_id   text not null references users(id) on delete cascade,
   answer      integer not null check (answer in (0, 1)),
   voted_at    text not null default (datetime('now')),
   primary key (proposal_id, member_id)
@@ -298,17 +322,10 @@ begin
   update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = new.proposal_id;
 end;
 
--- ---------------------------------------------------------------- Sitzungen & Push
-create table sessions (
-  token      text primary key,               -- zufällig, nur als Hash gespeichert
-  user_id    text not null references members(user_id) on delete cascade,
-  created_at text not null default (datetime('now')),
-  expires_at text not null
-);
-
+-- ---------------------------------------------------------------- Benachrichtigungen
 create table push_subscriptions (
   id         text primary key,
-  user_id    text not null references members(user_id) on delete cascade,
+  user_id    text not null references users(id) on delete cascade,
   endpoint   text not null unique,
   p256dh     text not null,
   auth       text not null,
