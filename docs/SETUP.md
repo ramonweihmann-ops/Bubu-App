@@ -165,6 +165,18 @@ dafür brauchst du kein Secret.
    - **Name:** `CLOUDFLARE_API_TOKEN`
    - **Secret:** der kopierte Wert
 
+**Token vorher selbst prüfen.** Bevor du ihn bei GitHub einträgst, kannst du in der
+Kommandozeile testen, ob er gültig ist — der Schlüssel bleibt dabei bei dir:
+
+```
+curl -H "Authorization: Bearer DEIN_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify
+```
+
+Richtig ist die Antwort, wenn darin `"status": "active"` und `"success": true` steht.
+Kommt stattdessen `"code": 9109` („Invalid access token“), ist der Wert selbst falsch —
+meist ein Leerzeichen, ein Zeilenumbruch oder ein unvollständiger Kopiervorgang.
+Kommt `"code": 10000`, ist der Wert richtig, aber die Rechte fehlen.
+
 Die beiden Auswahllisten in Schritt 4 und 5 sind die übliche Stolperstelle: Bleiben sie leer,
 kann das Token zwar den Kontonamen lesen, aber nichts veröffentlichen. Die Fehlermeldung
 lautet dann `Authentication error [code: 10000]` — sie klingt nach falschem Schlüssel, meint
