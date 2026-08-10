@@ -218,9 +218,7 @@ async function handleApi(request, env, url) {
       ok: true,
       zeit: (/* @__PURE__ */ new Date()).toISOString(),
       clientId: env.GOOGLE_CLIENT_ID ? env.GOOGLE_CLIENT_ID.split("-")[0] + "-\u2026" : null,
-      clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET),
-      clientSchluesselLaenge: env.GOOGLE_CLIENT_SECRET ? String(env.GOOGLE_CLIENT_SECRET).length : 0,
-      clientSchluesselPraefix: env.GOOGLE_CLIENT_SECRET ? String(env.GOOGLE_CLIENT_SECRET).slice(0, 7) : null
+      clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET)
     });
   }
   if (!ich) return json({ fehler: "Nicht angemeldet", angemeldet: false }, 401);
@@ -677,7 +675,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-EtGstE/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-1oa3eB/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -709,7 +707,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-EtGstE/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-1oa3eB/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

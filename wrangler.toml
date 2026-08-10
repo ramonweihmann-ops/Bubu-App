@@ -8,7 +8,9 @@ account_id = "c96097fc58419e9dc3df6cc67d7aaa9c"
 [assets]
 directory = "./web"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
+# Ohne diese Zeile fängt die Auslieferung statischer Dateien jede Navigation ab
+# und liefert die Startseite — auch für /api/auth/start. Der Worker läuft dann nie.
+run_worker_first = ["/api/*"]
 
 # Eigene Datenbank, ausschließlich für diese App.
 [[d1_databases]]
