@@ -393,11 +393,21 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
   ).bind(meldungId, ich.couple_id).first();
   if (!meldung) throw new Fehler("Meldung nicht gefunden", 404);
   if (meldung.claimed_by === ich.id) throw new Fehler("Eine Meldung muss vom jeweils anderen best\xE4tigt werden");
-  const ergebnis = await env.DB.prepare(
-    `update claims set status = ?1, decided_by = ?2, decided_at = datetime('now')
-      where id = ?3 and couple_id = ?4 and status = 'offen'`
-  ).bind(status, ich.id, meldungId, ich.couple_id).run();
-  if (!ergebnis.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
+  const [entschieden] = await env.DB.batch([
+    env.DB.prepare(
+      `update claims set status = ?1, decided_by = ?2, decided_at = datetime('now')
+        where id = ?3 and couple_id = ?4 and status = 'offen' and claimed_by <> ?2`
+    ).bind(status, ich.id, meldungId, ich.couple_id),
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select ?1, c.couple_id, c.claimed_by, c.quantity * c.points_each,
+              (select name from quests where id = c.quest_id), 'claim', c.id
+         from claims c
+        where c.id = ?2 and c.status = 'bestaetigt'
+          and not exists (select 1 from ledger where source_id = c.id)`
+    ).bind(id(), meldungId)
+  ]);
+  if (!entschieden.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
   return { ok: true, punkte: meldung.quantity * meldung.points_each, quest: meldung.quest };
 }
 __name(meldungEntscheiden, "meldungEntscheiden");
@@ -418,11 +428,29 @@ async function antragEntscheiden(env, ich, antragId, status) {
   ).bind(antragId, ich.couple_id).first();
   if (!antrag) throw new Fehler("Antrag nicht gefunden", 404);
   if (antrag.requested_by === ich.id) throw new Fehler("Ein Antrag muss vom jeweils anderen entschieden werden");
-  const ergebnis = await env.DB.prepare(
-    `update requests set status = ?1, decided_by = ?2, decided_at = datetime('now')
-      where id = ?3 and couple_id = ?4 and status = 'offen'`
-  ).bind(status, ich.id, antragId, ich.couple_id).run();
-  if (!ergebnis.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
+  if (status === "bestaetigt") {
+    const stand = await env.DB.prepare(
+      "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
+    ).bind(antrag.requested_by).first();
+    if (stand.punkte < antrag.cost) {
+      throw new Fehler(`Zu wenig Punkte f\xFCr diese Belohnung \u2014 ${stand.punkte} von ${antrag.cost}`);
+    }
+  }
+  const [entschieden] = await env.DB.batch([
+    env.DB.prepare(
+      `update requests set status = ?1, decided_by = ?2, decided_at = datetime('now')
+        where id = ?3 and couple_id = ?4 and status = 'offen' and requested_by <> ?2`
+    ).bind(status, ich.id, antragId, ich.couple_id),
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select ?1, r.couple_id, r.requested_by, -r.cost,
+              (select name from rewards where id = r.reward_id), 'request', r.id
+         from requests r
+        where r.id = ?2 and r.status = 'bestaetigt'
+          and not exists (select 1 from ledger where source_id = r.id)`
+    ).bind(id(), antragId)
+  ]);
+  if (!entschieden.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
   return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost };
 }
 __name(antragEntscheiden, "antragEntscheiden");
@@ -446,11 +474,36 @@ async function uebertragen(env, ich, { betrag, nachricht = "" }) {
 __name(uebertragen, "uebertragen");
 async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
   if (!["bestaetigt", "abgelehnt"].includes(status)) throw new Fehler("Unbekannte Entscheidung");
-  const ergebnis = await env.DB.prepare(
-    `update transfers set status = ?1, decided_at = datetime('now')
-      where id = ?2 and couple_id = ?3 and to_member = ?4 and status = 'offen'`
-  ).bind(status, uebertragungId, ich.couple_id, ich.id).run();
-  if (!ergebnis.meta.changes) throw new Fehler("Nur die empfangende Person kann annehmen oder ablehnen");
+  const uebertragung = await env.DB.prepare(
+    "select * from transfers where id = ?1 and couple_id = ?2"
+  ).bind(uebertragungId, ich.couple_id).first();
+  if (!uebertragung) throw new Fehler("\xDCbertragung nicht gefunden", 404);
+  if (uebertragung.to_member !== ich.id) throw new Fehler("Nur die empfangende Person kann annehmen oder ablehnen");
+  if (status === "bestaetigt") {
+    const stand = await env.DB.prepare(
+      "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
+    ).bind(uebertragung.from_member).first();
+    if (stand.punkte < uebertragung.amount) throw new Fehler("Die Punkte reichen inzwischen nicht mehr");
+  }
+  const [entschieden] = await env.DB.batch([
+    env.DB.prepare(
+      `update transfers set status = ?1, decided_at = datetime('now')
+        where id = ?2 and couple_id = ?3 and to_member = ?4 and status = 'offen'`
+    ).bind(status, uebertragungId, ich.couple_id, ich.id),
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select ?1, t.couple_id, t.from_member, -t.amount, 'Punkte \xFCbertragen', 'transfer', t.id
+         from transfers t where t.id = ?2 and t.status = 'bestaetigt'
+          and not exists (select 1 from ledger where source_id = t.id and delta < 0)`
+    ).bind(id(), uebertragungId),
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select ?1, t.couple_id, t.to_member, t.amount, 'Punkte erhalten', 'transfer', t.id
+         from transfers t where t.id = ?2 and t.status = 'bestaetigt'
+          and not exists (select 1 from ledger where source_id = t.id and delta > 0)`
+    ).bind(id(), uebertragungId)
+  ]);
+  if (!entschieden.meta.changes) throw new Fehler("Diese \xDCbertragung ist bereits entschieden");
   return { ok: true };
 }
 __name(uebertragungEntscheiden, "uebertragungEntscheiden");
@@ -505,10 +558,36 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
     `insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, ?3)
      on conflict(proposal_id, member_id) do nothing`
   ).bind(vorschlagId, ich.id, antwort ? 1 : 0).run();
-  const danach = await env.DB.prepare("select status, new_value from proposals where id = ?1").bind(vorschlagId).first();
-  return { ok: true, status: danach.status, wert: danach.new_value };
+  const status = await auszaehlen(env, vorschlag);
+  return { ok: true, status, wert: vorschlag.new_value };
 }
 __name(abstimmen, "abstimmen");
+async function auszaehlen(env, vorschlag) {
+  const stimmen = await env.DB.prepare(
+    "select answer from proposal_votes where proposal_id = ?1"
+  ).bind(vorschlag.id).all();
+  const nein = stimmen.results.some((s) => !s.answer);
+  const ja = stimmen.results.filter((s) => s.answer).length;
+  if (nein) {
+    await env.DB.prepare(
+      "update proposals set status = 'abgelehnt', decided_at = datetime('now') where id = ?1 and status = 'offen'"
+    ).bind(vorschlag.id).run();
+    return "abgelehnt";
+  }
+  if (ja < 2) return "offen";
+  const anwenden = {
+    quest_points: env.DB.prepare("update quests set points = ?1 where id = ?2 and couple_id = ?3").bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
+    reward_cost: env.DB.prepare("update rewards set cost = ?1 where id = ?2 and couple_id = ?3").bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
+    new_quest: env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)").bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.category || "Sonstiges", vorschlag.new_value),
+    new_reward: env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)").bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.new_value)
+  }[vorschlag.kind];
+  await env.DB.batch([
+    anwenden,
+    env.DB.prepare("update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = ?1 and status = 'offen'").bind(vorschlag.id)
+  ]);
+  return "bestaetigt";
+}
+__name(auszaehlen, "auszaehlen");
 async function ausgabe(env, ich) {
   if (!ich.couple_id) return { hinweis: "Noch kein Paar verbunden" };
   const paar = ich.couple_id;
@@ -589,7 +668,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-Oobq0r/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-EtGstE/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -621,7 +700,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-Oobq0r/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-EtGstE/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

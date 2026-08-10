@@ -3,13 +3,16 @@
 --
 --  Wird als Migration automatisch eingespielt (siehe README).
 --
---  Die Regeln stecken in der Datenbank, nicht nur in der Oberfläche:
---  Eine Meldung, die dieselbe Person bestätigt, die sie gemeldet hat, wird
---  abgewiesen. Punktestände werden gerechnet, nie gesetzt.
+--  Punktestände werden gerechnet, nie gespeichert: siehe Ansicht „balances".
 --
---  Der Zugriffsschutz liegt im Worker: die App spricht nie direkt mit der
---  Datenbank, sondern nur über die Schnittstelle, die vorher prüft, wer fragt
---  und zu welchem Paar die Person gehört.
+--  Das Vier-Augen-Prinzip steht als CHECK in den Tabellen (decided_by <> claimed_by)
+--  und wird zusätzlich in worker/api.js geprüft. Die App spricht nie direkt mit
+--  der Datenbank, sondern nur über die Schnittstelle — Selbstbestätigung ist damit
+--  auf beiden Ebenen ausgeschlossen.
+--
+--  Bewusst ohne Trigger: D1 kann Trigger mit BEGIN…END über die Fernschnittstelle
+--  nicht einspielen (es zerlegt die Datei an Semikolons). Die Buchungen entstehen
+--  deshalb in derselben Transaktion wie die Entscheidung, siehe api.js.
 -- ============================================================================
 
 pragma foreign_keys = on;
@@ -45,15 +48,6 @@ create table members (
   joined_at text not null default (datetime('now'))
 );
 create index members_couple_idx on members(couple_id);
-
--- Ein Paar besteht aus genau zwei Personen.
-create trigger members_max_two
-before insert on members
-for each row
-begin
-  select raise(abort, 'Ein Paar besteht aus genau zwei Personen')
-  where (select count(*) from members where couple_id = new.couple_id) >= 2;
-end;
 
 -- ---------------------------------------------------------------- Quests & Belohnungen
 create table quests (
@@ -113,35 +107,6 @@ create table claims (
 );
 create index claims_offen_idx on claims(couple_id, status);
 
-create trigger claim_decide_once
-before update of status on claims
-for each row when old.status <> 'offen' and new.status <> old.status
-begin
-  select raise(abort, 'Diese Meldung ist bereits entschieden');
-end;
-
--- Das Vier-Augen-Prinzip. Selbstbestätigung ist hier zu Ende, egal was die App schickt.
-create trigger claim_no_self_decide
-before update of status on claims
-for each row when new.status <> 'offen'
-begin
-  select raise(abort, 'Eine Meldung muss vom jeweils anderen bestätigt werden')
-  where new.decided_by is null or new.decided_by = new.claimed_by
-     or not exists (select 1 from members
-                    where user_id = new.decided_by and couple_id = new.couple_id);
-end;
-
--- Erst die Bestätigung erzeugt die Buchung.
-create trigger claim_confirm_ledger
-after update of status on claims
-for each row when new.status = 'bestaetigt' and old.status = 'offen'
-begin
-  insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-  values (lower(hex(randomblob(16))), new.couple_id, new.claimed_by,
-          new.quantity * new.points_each,
-          (select name from quests where id = new.quest_id), 'claim', new.id);
-end;
-
 -- ---------------------------------------------------------------- Anträge auf Belohnungen
 create table requests (
   id           text primary key,
@@ -159,39 +124,6 @@ create table requests (
 );
 create index requests_offen_idx on requests(couple_id, status);
 
-create trigger request_decide_once
-before update of status on requests
-for each row when old.status <> 'offen' and new.status <> old.status
-begin
-  select raise(abort, 'Dieser Antrag ist bereits entschieden');
-end;
-
-create trigger request_no_self_decide
-before update of status on requests
-for each row when new.status <> 'offen'
-begin
-  select raise(abort, 'Ein Antrag muss vom jeweils anderen entschieden werden')
-  where new.decided_by is null or new.decided_by = new.requested_by;
-end;
-
-create trigger request_check_balance
-before update of status on requests
-for each row when new.status = 'bestaetigt' and old.status = 'offen'
-begin
-  select raise(abort, 'Zu wenig Punkte für diese Belohnung')
-  where (select coalesce(sum(delta), 0) from ledger
-         where member_id = new.requested_by) < new.cost;
-end;
-
-create trigger request_approve_ledger
-after update of status on requests
-for each row when new.status = 'bestaetigt' and old.status = 'offen'
-begin
-  insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-  values (lower(hex(randomblob(16))), new.couple_id, new.requested_by,
-          -new.cost, (select name from rewards where id = new.reward_id), 'request', new.id);
-end;
-
 -- ---------------------------------------------------------------- Punkte übertragen
 create table transfers (
   id          text primary key,
@@ -206,34 +138,6 @@ create table transfers (
   check (from_member <> to_member)
 );
 create index transfers_offen_idx on transfers(couple_id, status);
-
-create trigger transfer_decide_once
-before update of status on transfers
-for each row when old.status <> 'offen' and new.status <> old.status
-begin
-  select raise(abort, 'Diese Übertragung ist bereits entschieden');
-end;
-
-create trigger transfer_check_balance
-before update of status on transfers
-for each row when new.status = 'bestaetigt' and old.status = 'offen'
-begin
-  select raise(abort, 'Zu wenig Punkte für die Übertragung')
-  where (select coalesce(sum(delta), 0) from ledger
-         where member_id = new.from_member) < new.amount;
-end;
-
-create trigger transfer_accept_ledger
-after update of status on transfers
-for each row when new.status = 'bestaetigt' and old.status = 'offen'
-begin
-  insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-  values (lower(hex(randomblob(16))), new.couple_id, new.from_member,
-          -new.amount, 'Punkte übertragen', 'transfer', new.id);
-  insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-  values (lower(hex(randomblob(16))), new.couple_id, new.to_member,
-          new.amount, 'Punkte erhalten', 'transfer', new.id);
-end;
 
 -- ---------------------------------------------------------------- Abstimmungen
 create table proposals (
@@ -260,67 +164,6 @@ create table proposal_votes (
   voted_at    text not null default (datetime('now')),
   primary key (proposal_id, member_id)
 );
-
--- Ein Nein beendet den Vorschlag. Der alte Wert gilt weiter.
-create trigger proposal_reject
-after insert on proposal_votes
-for each row when new.answer = 0
-begin
-  update proposals set status = 'abgelehnt', decided_at = datetime('now')
-  where id = new.proposal_id and status = 'offen';
-end;
-
--- Übernommen wird erst, wenn beide zugestimmt haben.
-create trigger proposal_accept_quest_points
-after insert on proposal_votes
-for each row when new.answer = 1
-  and (select count(*) from proposal_votes where proposal_id = new.proposal_id and answer = 1) >= 2
-  and (select kind from proposals where id = new.proposal_id) = 'quest_points'
-  and (select status from proposals where id = new.proposal_id) = 'offen'
-begin
-  update quests set points = (select new_value from proposals where id = new.proposal_id)
-  where id = (select target_id from proposals where id = new.proposal_id);
-  update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = new.proposal_id;
-end;
-
-create trigger proposal_accept_reward_cost
-after insert on proposal_votes
-for each row when new.answer = 1
-  and (select count(*) from proposal_votes where proposal_id = new.proposal_id and answer = 1) >= 2
-  and (select kind from proposals where id = new.proposal_id) = 'reward_cost'
-  and (select status from proposals where id = new.proposal_id) = 'offen'
-begin
-  update rewards set cost = (select new_value from proposals where id = new.proposal_id)
-  where id = (select target_id from proposals where id = new.proposal_id);
-  update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = new.proposal_id;
-end;
-
-create trigger proposal_accept_new_quest
-after insert on proposal_votes
-for each row when new.answer = 1
-  and (select count(*) from proposal_votes where proposal_id = new.proposal_id and answer = 1) >= 2
-  and (select kind from proposals where id = new.proposal_id) = 'new_quest'
-  and (select status from proposals where id = new.proposal_id) = 'offen'
-begin
-  insert into quests (id, couple_id, name, category, points)
-  select lower(hex(randomblob(16))), couple_id, name,
-         coalesce(category, 'Sonstiges'), new_value
-  from proposals where id = new.proposal_id;
-  update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = new.proposal_id;
-end;
-
-create trigger proposal_accept_new_reward
-after insert on proposal_votes
-for each row when new.answer = 1
-  and (select count(*) from proposal_votes where proposal_id = new.proposal_id and answer = 1) >= 2
-  and (select kind from proposals where id = new.proposal_id) = 'new_reward'
-  and (select status from proposals where id = new.proposal_id) = 'offen'
-begin
-  insert into rewards (id, couple_id, name, cost)
-  select lower(hex(randomblob(16))), couple_id, name, new_value
-  from proposals where id = new.proposal_id;
-  update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = new.proposal_id;
-end;
 
 -- ---------------------------------------------------------------- Benachrichtigungen
 create table push_subscriptions (
