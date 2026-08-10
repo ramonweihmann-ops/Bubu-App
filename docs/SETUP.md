@@ -153,7 +153,7 @@ muss der Deploy-Befehl die Migrationen mitnehmen:
 **Workers & Pages** → **bubu-app** → **Settings** → **Build** → **Deploy command**:
 
 ```
-npx wrangler d1 migrations apply haus-quest --remote --yes && npx wrangler deploy
+npx wrangler d1 migrations apply haus-quest --remote && npx wrangler deploy
 ```
 
 Der erste Teil spielt neue Datenbankschritte ein und merkt sich, was schon gelaufen ist —
