@@ -5,6 +5,7 @@
 
 import { angemeldet } from "./auth.js";
 import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND } from "./startdaten.js";
+import { sendePush, vapid } from "./push.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -20,6 +21,7 @@ class Fehler extends Error {
 }
 
 const id = () => crypto.randomUUID();
+const vorname = (n) => String(n || "").split(" ")[0];
 
 export async function handleApi(request, env, url) {
   const pfad = url.pathname.replace(/^\/api\//, "");
@@ -44,6 +46,9 @@ export async function handleApi(request, env, url) {
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
     if (pfad === "export") return json(await ausgabe(env, ich));
+    if (pfad === "push/key") return json({ schluessel: (await vapid(env)).oeffentlich });
+    if (pfad === "push/subscribe") return json(await geraetMerken(env, ich, koerper));
+    if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
 
     if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
 
@@ -152,6 +157,54 @@ async function anfangsbestand(env, paarId) {
   if (buchungen.length) await env.DB.batch(buchungen);
 }
 
+/* ------------------------------------------------------------------ Benachrichtigungen */
+
+async function geraetMerken(env, ich, { endpoint, p256dh, auth }) {
+  if (!endpoint || !p256dh || !auth) throw new Fehler("Angaben zum Gerät fehlen");
+  await env.DB.prepare(
+    `insert into push_subscriptions (id, user_id, endpoint, p256dh, auth) values (?1, ?2, ?3, ?4, ?5)
+     on conflict(endpoint) do update set user_id = ?2, p256dh = ?4, auth = ?5`
+  ).bind(id(), ich.id, endpoint, p256dh, auth).run();
+  return { ok: true };
+}
+
+async function ereignisseGelesen(env, ich, ids) {
+  const liste = Array.isArray(ids) ? ids.filter((x) => typeof x === "string").slice(0, 50) : [];
+  if (!liste.length) return { ok: true };
+  const platzhalter = liste.map((_, i) => `?${i + 2}`).join(",");
+  await env.DB.prepare(
+    `update ereignisse set gelesen = 1 where user_id = ?1 and id in (${platzhalter})`
+  ).bind(ich.id, ...liste).run();
+  return { ok: true };
+}
+
+/**
+ * Legt ein Ereignis für die andere Person an und schickt die Benachrichtigung.
+ * Das Ereignis ist das Verlässliche: es zeigt den Vollbild-Moment auch dann,
+ * wenn die Push-Nachricht nie ankam.
+ */
+async function melde(env, paarId, empfaengerId, ereignis) {
+  await env.DB.prepare(
+    `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(id(), paarId, empfaengerId, ereignis.art, ereignis.titel,
+         ereignis.text || null, ereignis.punkte ?? null).run();
+
+  await sendePush(env, empfaengerId, {
+    titel: ereignis.titel,
+    text: ereignis.text || "",
+    url: "/app/",
+    tag: ereignis.art
+  });
+}
+
+async function partnerVon(env, ich) {
+  const treffer = await env.DB.prepare(
+    "select user_id from members where couple_id = ?1 and user_id <> ?2"
+  ).bind(ich.couple_id, ich.id).first();
+  return treffer?.user_id || null;
+}
+
 /* ------------------------------------------------------------------ Zustand */
 
 async function zustand(env, ich) {
@@ -168,7 +221,7 @@ async function zustand(env, ich) {
   }
 
   const paar = ich.couple_id;
-  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf] =
+  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse] =
     await Promise.all([
       env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1`).bind(paar).all(),
@@ -191,7 +244,9 @@ async function zustand(env, ich) {
       env.DB.prepare(`select v.* from proposal_votes v join proposals p on p.id = v.proposal_id
                        where p.couple_id = ?1`).bind(paar).all(),
       env.DB.prepare(`select id, member_id, delta, reason, created_at from ledger
-                       where couple_id = ?1 order by created_at desc limit 40`).bind(paar).all()
+                       where couple_id = ?1 order by created_at desc limit 40`).bind(paar).all(),
+      env.DB.prepare(`select id, art, titel, text, punkte, created_at from ereignisse
+                       where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all()
     ]);
 
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
@@ -229,7 +284,8 @@ async function zustand(env, ich) {
       meine: stimmenJe[p.id]?.[ich.id],
       ihre: partner ? stimmenJe[p.id]?.[partner.id] : undefined
     })),
-    verlauf: verlauf.results
+    verlauf: verlauf.results,
+    ereignisse: ereignisse.results
   };
 }
 
@@ -243,6 +299,16 @@ async function melden(env, ich, { questId, anzahl = 1, notiz = "" }) {
   ).bind(id(), ich.couple_id, ich.id, menge, String(notiz).slice(0, 300), questId).run();
 
   if (!ergebnis.meta.changes) throw new Fehler("Diese Quest gibt es nicht");
+
+  const quest = await env.DB.prepare("select name, points from quests where id = ?1").bind(questId).first();
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} hat etwas erledigt`,
+      text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * quest.points} Punkte warten auf deine Bestätigung.`
+    });
+  }
   return { ok: true };
 }
 
@@ -274,7 +340,12 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
 
-  return { ok: true, punkte: meldung.quantity * meldung.points_each, quest: meldung.quest };
+  const punkte = meldung.quantity * meldung.points_each;
+  await melde(env, ich.couple_id, meldung.claimed_by, status === "bestaetigt"
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat bestätigt`, text: meldung.quest, punkte }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: meldung.quest, punkte });
+
+  return { ok: true, punkte, quest: meldung.quest };
 }
 
 /* ------------------------------------------------------------------ Belohnungen */
@@ -286,6 +357,16 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
   ).bind(id(), ich.couple_id, ich.id, String(termin).slice(0, 60), String(nachricht).slice(0, 300), rewardId).run();
 
   if (!ergebnis.meta.changes) throw new Fehler("Diese Belohnung gibt es nicht");
+
+  const belohnung = await env.DB.prepare("select name, cost from rewards where id = ?1").bind(rewardId).first();
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} möchte etwas einlösen`,
+      text: `${belohnung.name} — ${belohnung.cost} Punkte. Du entscheidest.`
+    });
+  }
   return { ok: true };
 }
 
@@ -324,6 +405,10 @@ async function antragEntscheiden(env, ich, antragId, status) {
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
 
+  await melde(env, ich.couple_id, antrag.requested_by, status === "bestaetigt"
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat genehmigt`, text: antrag.belohnung, punkte: -antrag.cost }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: antrag.belohnung });
+
   return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost };
 }
 
@@ -347,6 +432,12 @@ async function uebertragen(env, ich, { betrag, nachricht = "" }) {
     `insert into transfers (id, couple_id, from_member, to_member, amount, message)
      values (?1, ?2, ?3, ?4, ?5, ?6)`
   ).bind(id(), ich.couple_id, ich.id, partner.user_id, menge, String(nachricht).slice(0, 300)).run();
+
+  await melde(env, ich.couple_id, partner.user_id, {
+    art: "info",
+    titel: `${vorname(ich.name)} schickt dir Punkte`,
+    text: `${menge} Punkte — du musst sie annehmen.`
+  });
   return { ok: true };
 }
 
@@ -385,6 +476,12 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
     ).bind(id(), uebertragungId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Übertragung ist bereits entschieden");
+
+  await melde(env, ich.couple_id, uebertragung.from_member, status === "bestaetigt"
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat die Punkte angenommen`,
+        text: `${uebertragung.amount} Punkte übertragen`, punkte: -uebertragung.amount }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat die Punkte abgelehnt`,
+        text: `${uebertragung.amount} Punkte bleiben bei dir` });
   return { ok: true };
 }
 
@@ -436,6 +533,16 @@ async function vorschlagen(env, ich, { art, zielId, wert, name = "", kategorie =
     env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
       .bind(vorschlag, ich.id)
   ]);
+
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} schlägt etwas vor`,
+      text: loeschen ? `${name || "Ein Eintrag"} soll gelöscht werden — deine Stimme fehlt.`
+                     : `Neuer Wert: ${neu} Punkte — deine Stimme fehlt.`
+    });
+  }
   return { ok: true };
 }
 
@@ -452,6 +559,12 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
   ).bind(vorschlagId, ich.id, antwort ? 1 : 0).run();
 
   const status = await auszaehlen(env, vorschlag);
+
+  if (status !== "offen" && vorschlag.created_by !== ich.id) {
+    await melde(env, ich.couple_id, vorschlag.created_by, status === "bestaetigt"
+      ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat zugestimmt`, text: "Euer Vorschlag gilt ab jetzt" }
+      : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: "Der alte Stand gilt weiter" });
+  }
   return { ok: true, status, wert: vorschlag.new_value };
 }
 

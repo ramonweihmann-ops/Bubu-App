@@ -195,6 +195,123 @@ var BELOHNUNGEN = [
   { name: "L", kosten: 8 }
 ];
 
+// worker/push.js
+var enc = new TextEncoder();
+var b64url = /* @__PURE__ */ __name((puffer) => btoa(String.fromCharCode(...new Uint8Array(puffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""), "b64url");
+var vonB64url = /* @__PURE__ */ __name((text) => {
+  const roh = atob(String(text).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(roh, (c) => c.charCodeAt(0));
+}, "vonB64url");
+function zusammen(...teile) {
+  const gesamt = teile.reduce((n, t) => n + t.length, 0);
+  const aus = new Uint8Array(gesamt);
+  let stelle = 0;
+  for (const t of teile) {
+    aus.set(t, stelle);
+    stelle += t.length;
+  }
+  return aus;
+}
+__name(zusammen, "zusammen");
+async function hmac(schluessel, daten) {
+  const k = await crypto.subtle.importKey("raw", schluessel, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, daten));
+}
+__name(hmac, "hmac");
+async function vapid(env) {
+  const zeile = await env.DB.prepare("select wert from einstellungen where schluessel = 'vapid'").first();
+  if (zeile) return JSON.parse(zeile.wert);
+  const paar = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const daten = {
+    oeffentlich: b64url(await crypto.subtle.exportKey("raw", paar.publicKey)),
+    privat: await crypto.subtle.exportKey("jwk", paar.privateKey)
+  };
+  await env.DB.prepare(
+    "insert into einstellungen (schluessel, wert) values ('vapid', ?1) on conflict(schluessel) do nothing"
+  ).bind(JSON.stringify(daten)).run();
+  const nachher = await env.DB.prepare("select wert from einstellungen where schluessel = 'vapid'").first();
+  return JSON.parse(nachher.wert);
+}
+__name(vapid, "vapid");
+async function vapidKopf(env, endpunkt) {
+  const schluessel = await vapid(env);
+  const ziel = new URL(endpunkt);
+  const kopf = b64url(enc.encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const inhalt = b64url(enc.encode(JSON.stringify({
+    aud: ziel.origin,
+    exp: Math.floor(Date.now() / 1e3) + 12 * 3600,
+    sub: `https://${ziel.hostname === "localhost" ? "haus-quest.com" : "haus-quest.com"}`
+  })));
+  const privat = await crypto.subtle.importKey(
+    "jwk",
+    schluessel.privat,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+  const signatur = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    privat,
+    enc.encode(`${kopf}.${inhalt}`)
+  );
+  return `vapid t=${kopf}.${inhalt}.${b64url(signatur)}, k=${schluessel.oeffentlich}`;
+}
+__name(vapidKopf, "vapidKopf");
+async function verschluesseln(text, p256dh, auth) {
+  const empfaenger = vonB64url(p256dh);
+  const geheimnis = vonB64url(auth);
+  const eigen = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const eigenRoh = new Uint8Array(await crypto.subtle.exportKey("raw", eigen.publicKey));
+  const fremd = await crypto.subtle.importKey("raw", empfaenger, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const gemeinsam = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: fremd }, eigen.privateKey, 256));
+  const prkSchluessel = await hmac(geheimnis, gemeinsam);
+  const infoSchluessel = zusammen(enc.encode("WebPush: info\0"), empfaenger, eigenRoh, new Uint8Array([1]));
+  const ikm = await hmac(prkSchluessel, infoSchluessel);
+  const salz = crypto.getRandomValues(new Uint8Array(16));
+  const prk = await hmac(salz, ikm);
+  const cek = (await hmac(prk, zusammen(enc.encode("Content-Encoding: aes128gcm\0"), new Uint8Array([1])))).slice(0, 16);
+  const nonce = (await hmac(prk, zusammen(enc.encode("Content-Encoding: nonce\0"), new Uint8Array([1])))).slice(0, 12);
+  const klartext = zusammen(enc.encode(text), new Uint8Array([2]));
+  const schluessel = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const geheim = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, tagLength: 128 },
+    schluessel,
+    klartext
+  ));
+  const groesse = new Uint8Array(4);
+  new DataView(groesse.buffer).setUint32(0, 4096);
+  return zusammen(salz, groesse, new Uint8Array([eigenRoh.length]), eigenRoh, geheim);
+}
+__name(verschluesseln, "verschluesseln");
+async function sendePush(env, benutzerId, nachricht) {
+  const geraete = await env.DB.prepare(
+    "select id, endpoint, p256dh, auth from push_subscriptions where user_id = ?1"
+  ).bind(benutzerId).all();
+  if (!geraete.results.length) return;
+  const text = JSON.stringify(nachricht);
+  await Promise.all(geraete.results.map(async (g) => {
+    try {
+      const koerper = await verschluesseln(text, g.p256dh, g.auth);
+      const antwort = await fetch(g.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: await vapidKopf(env, g.endpoint),
+          "Content-Encoding": "aes128gcm",
+          "Content-Type": "application/octet-stream",
+          TTL: "86400",
+          Urgency: "normal"
+        },
+        body: koerper
+      });
+      if (antwort.status === 404 || antwort.status === 410) {
+        await env.DB.prepare("delete from push_subscriptions where id = ?1").bind(g.id).run();
+      }
+    } catch {
+    }
+  }));
+}
+__name(sendePush, "sendePush");
+
 // worker/api.js
 var json = /* @__PURE__ */ __name((daten, status = 200) => new Response(JSON.stringify(daten), {
   status,
@@ -210,6 +327,7 @@ var Fehler = class extends Error {
   }
 };
 var id = /* @__PURE__ */ __name(() => crypto.randomUUID(), "id");
+var vorname = /* @__PURE__ */ __name((n) => String(n || "").split(" ")[0], "vorname");
 async function handleApi(request, env, url) {
   const pfad = url.pathname.replace(/^\/api\//, "");
   const ich = await angemeldet(request, env);
@@ -229,6 +347,9 @@ async function handleApi(request, env, url) {
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
     if (pfad === "export") return json(await ausgabe(env, ich));
+    if (pfad === "push/key") return json({ schluessel: (await vapid(env)).oeffentlich });
+    if (pfad === "push/subscribe") return json(await geraetMerken(env, ich, koerper));
+    if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
     if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
     if (pfad === "claims") return json(await melden(env, ich, koerper));
     if (teile[0] === "claims" && teile[2] === "decide") return json(await meldungEntscheiden(env, ich, teile[1], koerper.status));
@@ -306,6 +427,53 @@ async function anfangsbestand(env, paarId) {
   if (buchungen.length) await env.DB.batch(buchungen);
 }
 __name(anfangsbestand, "anfangsbestand");
+async function geraetMerken(env, ich, { endpoint, p256dh, auth }) {
+  if (!endpoint || !p256dh || !auth) throw new Fehler("Angaben zum Ger\xE4t fehlen");
+  await env.DB.prepare(
+    `insert into push_subscriptions (id, user_id, endpoint, p256dh, auth) values (?1, ?2, ?3, ?4, ?5)
+     on conflict(endpoint) do update set user_id = ?2, p256dh = ?4, auth = ?5`
+  ).bind(id(), ich.id, endpoint, p256dh, auth).run();
+  return { ok: true };
+}
+__name(geraetMerken, "geraetMerken");
+async function ereignisseGelesen(env, ich, ids) {
+  const liste = Array.isArray(ids) ? ids.filter((x) => typeof x === "string").slice(0, 50) : [];
+  if (!liste.length) return { ok: true };
+  const platzhalter = liste.map((_, i) => `?${i + 2}`).join(",");
+  await env.DB.prepare(
+    `update ereignisse set gelesen = 1 where user_id = ?1 and id in (${platzhalter})`
+  ).bind(ich.id, ...liste).run();
+  return { ok: true };
+}
+__name(ereignisseGelesen, "ereignisseGelesen");
+async function melde(env, paarId, empfaengerId, ereignis) {
+  await env.DB.prepare(
+    `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(
+    id(),
+    paarId,
+    empfaengerId,
+    ereignis.art,
+    ereignis.titel,
+    ereignis.text || null,
+    ereignis.punkte ?? null
+  ).run();
+  await sendePush(env, empfaengerId, {
+    titel: ereignis.titel,
+    text: ereignis.text || "",
+    url: "/app/",
+    tag: ereignis.art
+  });
+}
+__name(melde, "melde");
+async function partnerVon(env, ich) {
+  const treffer = await env.DB.prepare(
+    "select user_id from members where couple_id = ?1 and user_id <> ?2"
+  ).bind(ich.couple_id, ich.id).first();
+  return treffer?.user_id || null;
+}
+__name(partnerVon, "partnerVon");
 async function zustand(env, ich) {
   if (!ich.couple_id) {
     const eigener = await env.DB.prepare(
@@ -319,7 +487,7 @@ async function zustand(env, ich) {
     };
   }
   const paar = ich.couple_id;
-  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf] = await Promise.all([
+  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse] = await Promise.all([
     env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1`).bind(paar).all(),
     env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
@@ -341,7 +509,9 @@ async function zustand(env, ich) {
     env.DB.prepare(`select v.* from proposal_votes v join proposals p on p.id = v.proposal_id
                        where p.couple_id = ?1`).bind(paar).all(),
     env.DB.prepare(`select id, member_id, delta, reason, created_at from ledger
-                       where couple_id = ?1 order by created_at desc limit 40`).bind(paar).all()
+                       where couple_id = ?1 order by created_at desc limit 40`).bind(paar).all(),
+    env.DB.prepare(`select id, art, titel, text, punkte, created_at from ereignisse
+                       where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all()
   ]);
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
   const mit = personen.results.map((p) => ({
@@ -378,7 +548,8 @@ async function zustand(env, ich) {
       meine: stimmenJe[p.id]?.[ich.id],
       ihre: partner ? stimmenJe[p.id]?.[partner.id] : void 0
     })),
-    verlauf: verlauf.results
+    verlauf: verlauf.results,
+    ereignisse: ereignisse.results
   };
 }
 __name(zustand, "zustand");
@@ -389,6 +560,15 @@ async function melden(env, ich, { questId, anzahl = 1, notiz = "" }) {
      select ?1, ?2, q.id, ?3, ?4, q.points, ?5 from quests q where q.id = ?6 and q.couple_id = ?2`
   ).bind(id(), ich.couple_id, ich.id, menge, String(notiz).slice(0, 300), questId).run();
   if (!ergebnis.meta.changes) throw new Fehler("Diese Quest gibt es nicht");
+  const quest = await env.DB.prepare("select name, points from quests where id = ?1").bind(questId).first();
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} hat etwas erledigt`,
+      text: `${quest.name}${menge > 1 ? ` (${menge}\xD7)` : ""} \u2014 ${menge * quest.points} Punkte warten auf deine Best\xE4tigung.`
+    });
+  }
   return { ok: true };
 }
 __name(melden, "melden");
@@ -415,7 +595,9 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
     ).bind(id(), meldungId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
-  return { ok: true, punkte: meldung.quantity * meldung.points_each, quest: meldung.quest };
+  const punkte = meldung.quantity * meldung.points_each;
+  await melde(env, ich.couple_id, meldung.claimed_by, status === "bestaetigt" ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat best\xE4tigt`, text: meldung.quest, punkte } : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: meldung.quest, punkte });
+  return { ok: true, punkte, quest: meldung.quest };
 }
 __name(meldungEntscheiden, "meldungEntscheiden");
 async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }) {
@@ -424,6 +606,15 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
      select ?1, ?2, b.id, ?3, b.cost, ?4, ?5 from rewards b where b.id = ?6 and b.couple_id = ?2`
   ).bind(id(), ich.couple_id, ich.id, String(termin).slice(0, 60), String(nachricht).slice(0, 300), rewardId).run();
   if (!ergebnis.meta.changes) throw new Fehler("Diese Belohnung gibt es nicht");
+  const belohnung = await env.DB.prepare("select name, cost from rewards where id = ?1").bind(rewardId).first();
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} m\xF6chte etwas einl\xF6sen`,
+      text: `${belohnung.name} \u2014 ${belohnung.cost} Punkte. Du entscheidest.`
+    });
+  }
   return { ok: true };
 }
 __name(antragStellen, "antragStellen");
@@ -458,6 +649,7 @@ async function antragEntscheiden(env, ich, antragId, status) {
     ).bind(id(), antragId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
+  await melde(env, ich.couple_id, antrag.requested_by, status === "bestaetigt" ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat genehmigt`, text: antrag.belohnung, punkte: -antrag.cost } : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: antrag.belohnung });
   return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost };
 }
 __name(antragEntscheiden, "antragEntscheiden");
@@ -476,6 +668,11 @@ async function uebertragen(env, ich, { betrag, nachricht = "" }) {
     `insert into transfers (id, couple_id, from_member, to_member, amount, message)
      values (?1, ?2, ?3, ?4, ?5, ?6)`
   ).bind(id(), ich.couple_id, ich.id, partner.user_id, menge, String(nachricht).slice(0, 300)).run();
+  await melde(env, ich.couple_id, partner.user_id, {
+    art: "info",
+    titel: `${vorname(ich.name)} schickt dir Punkte`,
+    text: `${menge} Punkte \u2014 du musst sie annehmen.`
+  });
   return { ok: true };
 }
 __name(uebertragen, "uebertragen");
@@ -511,6 +708,16 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
     ).bind(id(), uebertragungId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese \xDCbertragung ist bereits entschieden");
+  await melde(env, ich.couple_id, uebertragung.from_member, status === "bestaetigt" ? {
+    art: "bestaetigt",
+    titel: `${vorname(ich.name)} hat die Punkte angenommen`,
+    text: `${uebertragung.amount} Punkte \xFCbertragen`,
+    punkte: -uebertragung.amount
+  } : {
+    art: "abgelehnt",
+    titel: `${vorname(ich.name)} hat die Punkte abgelehnt`,
+    text: `${uebertragung.amount} Punkte bleiben bei dir`
+  });
   return { ok: true };
 }
 __name(uebertragungEntscheiden, "uebertragungEntscheiden");
@@ -565,6 +772,14 @@ async function vorschlagen(env, ich, { art, zielId, wert, name = "", kategorie =
     // Wer vorschlägt, stimmt zu. Es fehlt noch die andere Stimme.
     env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)").bind(vorschlag, ich.id)
   ]);
+  const partner = await partnerVon(env, ich);
+  if (partner) {
+    await melde(env, ich.couple_id, partner, {
+      art: "info",
+      titel: `${vorname(ich.name)} schl\xE4gt etwas vor`,
+      text: loeschen ? `${name || "Ein Eintrag"} soll gel\xF6scht werden \u2014 deine Stimme fehlt.` : `Neuer Wert: ${neu} Punkte \u2014 deine Stimme fehlt.`
+    });
+  }
   return { ok: true };
 }
 __name(vorschlagen, "vorschlagen");
@@ -579,6 +794,9 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
      on conflict(proposal_id, member_id) do nothing`
   ).bind(vorschlagId, ich.id, antwort ? 1 : 0).run();
   const status = await auszaehlen(env, vorschlag);
+  if (status !== "offen" && vorschlag.created_by !== ich.id) {
+    await melde(env, ich.couple_id, vorschlag.created_by, status === "bestaetigt" ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat zugestimmt`, text: "Euer Vorschlag gilt ab jetzt" } : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: "Der alte Stand gilt weiter" });
+  }
   return { ok: true, status, wert: vorschlag.new_value };
 }
 __name(abstimmen, "abstimmen");
@@ -691,7 +909,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-27liVD/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-xZ1xbb/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -723,7 +941,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-27liVD/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-xZ1xbb/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

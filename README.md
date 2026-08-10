@@ -43,7 +43,7 @@ haus-quest.com/api/…    →  Worker: prüft, wer fragt, und setzt die Regeln d
 | API und Regeln | derselbe Worker unter `/api` | 0 € |
 | Datenbank | Cloudflare D1 (SQLite) | 0 € |
 | Anmeldung | Google OAuth, Sitzung im Worker | 0 € |
-| Benachrichtigungen | Web Push (VAPID) | 0 € |
+| Benachrichtigungen | Web Push (VAPID), Schlüsselpaar erzeugt sich selbst | 0 € |
 | Domain | beliebiger Registrar | ~5–12 €/Jahr |
 
 Warum nicht Supabase: Der kostenlose Rahmen erlaubt zwei aktive Projekte pro Konto, und die
@@ -87,12 +87,26 @@ in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
+## Benachrichtigungen
+
+Jede Entscheidung erreicht die andere Person auf zwei Wegen:
+
+- **Push aufs Handy**, auch bei geschlossener App. Das Schlüsselpaar (VAPID) erzeugt der Worker
+  beim ersten Versand selbst und legt es in der Datenbank ab — es ist nichts von Hand zu hinterlegen.
+- **Ein gemerktes Ereignis** in der Datenbank. Beim nächsten Öffnen zeigt die App den
+  Vollbild-Moment nach — auch wenn die Push-Nachricht nie ankam oder weggewischt wurde.
+
+Der Vollbild-Moment erscheint dadurch bei **beiden**: beim Prüfenden sofort nach dem Tippen,
+beim Melder, sobald er die App das nächste Mal öffnet. Zustimmung feiert mit Konfetti und
+hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
+
 ## Aufbau des Codes
 
 ```
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
-worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln)
+worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln),
+                push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 docs/           Mockup und Anleitungen
 ```

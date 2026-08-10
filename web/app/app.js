@@ -68,30 +68,40 @@ function konfetti() {
   setTimeout(() => { confettiEl.innerHTML = ""; }, 2600);
 }
 
-function feiern(punkte, text) {
+function feiern({ punkte = 0, titel = "", text = "", positiv = true }) {
   const posen = ["anim-a", "anim-b", "anim-c"];
   const pose = posen[Math.floor(Math.random() * posen.length)];
+
   celebrate.innerHTML = `
-    <img src="/logo.webp" alt="" class="${pose}">
-    <div class="big">+0</div>
-    <div class="cap">${esc(text)}</div>
+    <img src="/logo.webp" alt="" class="${positiv ? pose : ""}" ${positiv ? "" : 'style="opacity:.75"'}>
+    ${positiv && punkte ? '<div class="big">+0</div>' : ""}
+    <div class="cap" style="font-size:19px;font-weight:700;opacity:1">${esc(titel)}</div>
+    ${text ? `<div class="cap">${esc(text)}</div>` : ""}
     <button class="btn ghost" data-schliessen>Weiter</button>`;
   celebrate.setAttribute("data-open", "");
-  konfetti();
-  if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
+
+  if (positiv) {
+    konfetti();
+    if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
+  } else if (navigator.vibrate) {
+    navigator.vibrate(40);
+  }
 
   const ziel = celebrate.querySelector(".big");
+  if (!ziel || !punkte) return;
   let v = 0;
-  const schritt = Math.max(1, Math.round(punkte / 14));
+  const schritt = Math.max(1, Math.round(Math.abs(punkte) / 14));
   const uhr = setInterval(() => {
-    v = Math.min(punkte, v + schritt);
-    ziel.textContent = "+" + v;
-    if (v >= punkte) clearInterval(uhr);
+    v = Math.min(Math.abs(punkte), v + schritt);
+    ziel.textContent = (punkte < 0 ? "−" : "+") + v;
+    if (v >= Math.abs(punkte)) clearInterval(uhr);
   }, 45);
 }
 
 celebrate.addEventListener("click", (ev) => {
-  if (ev.target.closest("[data-schliessen]") || ev.target === celebrate) celebrate.removeAttribute("data-open");
+  if (!ev.target.closest("[data-schliessen]") && ev.target !== celebrate) return;
+  celebrate.removeAttribute("data-open");
+  setTimeout(naechstesEreignis, 250);
 });
 
 /* ------------------------------------------------------------------ Laden */
@@ -100,6 +110,7 @@ async function laden(still = false) {
   try {
     S = await api("state");
     zeichne();
+    await ereignisseZeigen();
   } catch (fehler) {
     if (String(fehler.message).includes("Nicht angemeldet")) {
       S = { angemeldet: false };
@@ -107,6 +118,38 @@ async function laden(still = false) {
     } else if (!still) {
       toast(fehler.message, true);
     }
+  }
+}
+
+/** Was der Partner entschieden hat, während die App zu war.
+ *  Mehrere Ereignisse werden nacheinander gezeigt, keins fällt unter den Tisch. */
+let ereignisWarteschlange = [];
+
+async function ereignisseZeigen() {
+  const liste = S?.ereignisse || [];
+  if (liste.length) {
+    S.ereignisse = [];
+    ereignisWarteschlange.push(...liste);
+    api("events/gelesen", { ids: liste.map((e) => e.id) }).catch(() => {});
+  }
+  naechstesEreignis();
+}
+
+function naechstesEreignis() {
+  if (celebrate.hasAttribute("data-open") || scrim.hasAttribute("data-open")) return;
+  const e = ereignisWarteschlange.shift();
+  if (!e) return;
+
+  if (e.art === "bestaetigt" || e.art === "abgelehnt") {
+    feiern({
+      punkte: e.art === "bestaetigt" ? e.punkte : 0,
+      titel: e.titel,
+      text: e.text,
+      positiv: e.art === "bestaetigt"
+    });
+  } else {
+    toast(e.titel);
+    naechstesEreignis();
   }
 }
 
@@ -242,6 +285,14 @@ function schirmStart() {
         </div>
         <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
       </div>` : ""}
+
+      ${pushOffen() ? `
+      <button class="rowlink" data-push style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-bell", 18)}</span>
+        <span class="grow"><span class="t">Benachrichtigungen einschalten</span>
+          <span class="m">Damit du merkst, wenn ${esc(S.partner.name.split(" ")[0])} etwas meldet</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>` : ""}
 
       <div class="quick">
         <button data-go="quests">${icon("i-broom", 21)}Quest erledigt</button>
@@ -758,7 +809,7 @@ document.addEventListener("pointercancel", () => { clearTimeout(druckTimer); });
 document.addEventListener("pointermove", () => { clearTimeout(druckTimer); });
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -879,7 +930,7 @@ document.addEventListener("click", async (ev) => {
       const ergebnis = await api(`${bereich}/${el.dataset.id}/decide`, { status });
       await laden();
       if (status === "bestaetigt") {
-        if (bereich === "claims") feiern(ergebnis.punkte, `${ergebnis.quest} bestätigt · ${S.partner.name.split(" ")[0]}`);
+        if (bereich === "claims") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.quest });
         else if (bereich === "requests") toast(`${ergebnis.belohnung} genehmigt.`);
         else toast("Punkte angenommen.");
       } else {
@@ -928,6 +979,13 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
+    if (el.hasAttribute("data-push")) {
+      await pushEinschalten();
+      zeichne();
+      toast("Benachrichtigungen sind an.");
+      return;
+    }
+
     if (el.hasAttribute("data-bleiben")) { sheetZu(); return; }
 
     if (el.hasAttribute("data-schliessen-app")) {
@@ -948,6 +1006,34 @@ document.addEventListener("click", async (ev) => {
     el.disabled = false;
   }
 });
+
+/* ------------------------------------------------------------------ Benachrichtigungen */
+
+function pushMoeglich() {
+  return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+}
+
+function pushOffen() {
+  return pushMoeglich() && Notification.permission === "default";
+}
+
+async function pushEinschalten() {
+  if (!pushMoeglich()) throw new Error("Dieses Gerät kann keine Benachrichtigungen");
+
+  const erlaubnis = await Notification.requestPermission();
+  if (erlaubnis !== "granted") throw new Error("Ohne Erlaubnis geht es nicht — im Browser unter „Berechtigungen“ nachholbar");
+
+  const { schluessel } = await api("push/key");
+  const roh = atob(schluessel.replace(/-/g, "+").replace(/_/g, "/"));
+  const bytes = Uint8Array.from(roh, (c) => c.charCodeAt(0));
+
+  const reg = await navigator.serviceWorker.ready;
+  const vorhanden = await reg.pushManager.getSubscription();
+  const abo = vorhanden || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes });
+
+  const j = abo.toJSON();
+  await api("push/subscribe", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
+}
 
 /* ------------------------------------------------------------------ Zurück-Taste */
 //
@@ -1000,4 +1086,9 @@ laden();
 setInterval(() => { if (!document.hidden && !scrim.hasAttribute("data-open")) laden(true); }, 25000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) laden(true); });
 
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").then(() => {
+    // Erlaubnis schon erteilt? Dann das Gerät still nachtragen — etwa nach Neuinstallation.
+    if (pushMoeglich() && Notification.permission === "granted") pushEinschalten().catch(() => {});
+  });
+}
