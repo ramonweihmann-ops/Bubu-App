@@ -135,17 +135,11 @@ Damit Änderungen automatisch live gehen, braucht GitHub einmalig einen Schlüss
 Cloudflare-Konto. **Ich bekomme ihn nie zu sehen** — er liegt als Repository-Secret, und die
 Veröffentlichung übernimmt GitHub, nicht ich.
 
-### 4.1 Datenbank anlegen (einmalig, an deinem Rechner)
+### 4.1 Datenbank anlegen ✓ erledigt
 
-Dafür brauchst du nur Node.js. Zwei Befehle:
-
-```bash
-npx wrangler login                    # öffnet den Browser, du bestätigst einmal
-npx wrangler d1 create haus-quest
-```
-
-Der zweite Befehl gibt einen Block aus, in dem `database_id = "…"` steht.
-**Diese ID schickst du mir** — sie ist keine Geheimnummer, sondern nur eine Adresse.
+Angelegt über **Storage & Databases** → **D1 SQL Database** → **Create Database**, Name
+`haus-quest`. Die Database ID steht bereits in der `wrangler.toml`, ebenso die Account ID —
+dafür brauchst du kein Secret.
 
 ### 4.2 Schlüssel für die automatische Veröffentlichung
 
@@ -153,19 +147,18 @@ Der zweite Befehl gibt einen Block aus, in dem `database_id = "…"` steht.
 2. Vorlage **Edit Cloudflare Workers** verwenden
 3. Bei den Berechtigungen zusätzlich **D1 → Edit** hinzufügen
 4. Token erstellen und **einmal kopieren** — er wird nur einmal angezeigt
-5. Dazu brauchst du noch die **Account ID**: Cloudflare-Startseite, rechte Spalte
-   („Account ID“), oder aus der Adresszeile des Dashboards
-
-Beides hinterlegst du auf GitHub, nicht im Chat:
-Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-| Name | Inhalt |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | das Token aus Schritt 4 |
-| `CLOUDFLARE_ACCOUNT_ID` | deine Account ID |
+5. Auf GitHub hinterlegen: Repo → **Settings** → **Secrets and variables** → **Actions** →
+   **New repository secret**, Name `CLOUDFLARE_API_TOKEN`
 
 Ab da gilt: Ich pushe, GitHub veröffentlicht, wenige Sekunden später ist es live.
-Du kannst den Zugang jederzeit entziehen, indem du das Token bei Cloudflare löschst.
+Den Zugang entziehst du jederzeit, indem du das Token bei Cloudflare löschst.
+
+### 4.3 Schema einspielen
+
+Sobald das Token liegt, einmalig: Repo → **Actions** → **Datenbank aufsetzen** →
+**Run workflow** → Auswahl `schema`. Danach stehen alle Tabellen und Regeln.
+Die Startdaten aus eurer Tabelle kommen beim Pairing automatisch dazu; der Lauf mit
+`seed` ist nur für den Fall, dass die Liste von Hand nachgezogen werden soll.
 
 ---
 
@@ -257,9 +250,8 @@ Google-Entwicklerkonto. Für den privaten Betrieb nicht nötig.
 
 1. **Deine Domain**
 2. **Google Client-ID** (Abschnitt 5.3)
-3. Die **`database_id`** aus Abschnitt 4.1
-4. Bescheid, dass **`CLOUDFLARE_API_TOKEN`**, **`CLOUDFLARE_ACCOUNT_ID`** und
-   **`GOOGLE_CLIENT_SECRET`** als GitHub-Secrets hinterlegt sind
+3. Bescheid, dass **`CLOUDFLARE_API_TOKEN`** und **`GOOGLE_CLIENT_SECRET`** als
+   GitHub-Secrets hinterlegt sind
 
 Nicht schicken: Client-Schlüssel, API-Token, Passwörter. Die gehören in die Secrets, nicht in
 den Chat. Ich habe keine E-Mail-Adresse und kein eigenes Konto — alles läuft über deine

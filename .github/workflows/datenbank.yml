@@ -1,0 +1,38 @@
+name: Datenbank aufsetzen
+
+# Von Hand auszulösen: Repo → Actions → „Datenbank aufsetzen“ → Run workflow.
+# Spielt das Schema in die D1-Datenbank ein. Einmal beim Einrichten,
+# danach nur noch, wenn sich das Schema ändert.
+on:
+  workflow_dispatch:
+    inputs:
+      ziel:
+        description: "Was einspielen"
+        required: true
+        default: schema
+        type: choice
+        options: [schema, seed]
+
+jobs:
+  einspielen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Schema einspielen
+        if: inputs.ziel == 'schema'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: d1 execute haus-quest --remote --file=d1/schema.sql --yes
+
+      - name: Startdaten einspielen
+        if: inputs.ziel == 'seed'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: d1 execute haus-quest --remote --file=d1/seed.sql --yes

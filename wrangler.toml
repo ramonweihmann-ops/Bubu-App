@@ -2,6 +2,7 @@
 name = "haus-quest"
 main = "worker/index.js"
 compatibility_date = "2026-08-01"
+account_id = "c96097fc58419e9dc3df6cc67d7aaa9c"
 
 # Die statischen Dateien: Startseite, App, Symbole, Service Worker.
 [assets]
@@ -10,11 +11,10 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 
 # Eigene Datenbank, ausschließlich für diese App.
-# database_id trägt „wrangler d1 create haus-quest“ ein.
 [[d1_databases]]
 binding = "DB"
 database_name = "haus-quest"
-database_id = "TRAGE_ICH_BEIM_ANLEGEN_EIN"
+database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
 
 [vars]
 BASIS_URL = "https://haus-quest.com"
