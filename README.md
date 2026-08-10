@@ -11,6 +11,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup:** [`docs/mockup.html`](./docs/mockup.html) — im Browser öffnen, der Prototyp oben ist antippbar.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
+- **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
 - **Datenbank:** [`d1/migrations/`](./d1/migrations) — Tabellen und Regeln, als Migrationen.
 
 ---
