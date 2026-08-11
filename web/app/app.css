@@ -56,6 +56,9 @@ body {
   display: flex; flex-direction: column; gap: 12px;
   -webkit-overflow-scrolling: touch;
 }
+/* Im scrollenden Bereich darf nichts zusammengedrückt werden — sonst schrumpfen
+   Zeilen mit eigenem Überlauf (etwa die Chip-Reihen) auf wenige Pixel. */
+.body > * { flex-shrink: 0; }
 
 /* ---------- Bausteine ---------- */
 .section-label {
@@ -219,6 +222,37 @@ body {
   background: var(--accent); color: #fff; font-family: var(--font-data); font-size: 9px; font-weight: 700;
   min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px;
 }
+
+/* ---------- Liste mit Bearbeiten-Knopf ---------- */
+.zeile { display: flex; gap: 8px; align-items: stretch; }
+.zeile > .rowlink { flex: 1; min-width: 0; }
+.stiftbtn {
+  flex: none; width: 46px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink-3); cursor: pointer;
+  display: grid; place-items: center;
+}
+.stiftbtn:active { background: var(--tint); color: var(--ink); }
+
+.reward-wrap { position: relative; display: flex; }
+.reward-wrap > .reward { flex: 1; padding-right: 40px; }
+.reward-wrap > .stiftbtn {
+  position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border-radius: 10px;
+  border-color: transparent; background: transparent;
+}
+
+/* ---------- Suchen und Sortieren ---------- */
+.suchzeile { position: relative; display: flex; align-items: center; }
+.suchzeile svg { position: absolute; left: 13px; color: var(--ink-3); pointer-events: none; }
+.suchzeile input {
+  font: inherit; font-size: 15px; width: 100%; padding: 12px 40px 12px 40px;
+  border: 1px solid var(--line); border-radius: 13px; background: var(--bg); color: var(--ink);
+}
+.suchzeile input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.suchzeile .leeren {
+  position: absolute; right: 6px; width: 32px; height: 32px; border: none; background: none;
+  color: var(--ink-3); font-size: 19px; cursor: pointer; border-radius: 9px;
+}
+.leer-hinweis { text-align: center; color: var(--ink-3); font-size: 13.5px; padding: 24px 0; }
 
 /* ---------- Auswertung ---------- */
 /* Zwei Reihen, geprüfte Palette: das hellere Geschwister des Navy und das Marken-Rot. */

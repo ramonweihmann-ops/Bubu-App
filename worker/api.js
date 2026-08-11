@@ -252,8 +252,12 @@ async function zustand(env, ich) {
       env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
-      env.DB.prepare("select id, name, category, points from quests where couple_id = ?1 and active = 1 order by points desc, name").bind(paar).all(),
-      env.DB.prepare("select id, name, cost from rewards where couple_id = ?1 and active = 1 order by cost, name").bind(paar).all(),
+      env.DB.prepare(`select q.id, q.name, q.category, q.points,
+                             (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
+                        from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
+      env.DB.prepare(`select b.id, b.name, b.cost,
+                             (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
+                        from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
       env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at, q.name as quest
                         from claims c join quests q on q.id = c.quest_id
                        where c.couple_id = ?1 and c.status = 'offen' order by c.created_at desc`).bind(paar).all(),

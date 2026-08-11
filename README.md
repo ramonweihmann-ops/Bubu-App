@@ -88,6 +88,17 @@ in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
+## Listen bedienen
+
+Quests und Belohnungen haben oben ein Suchfeld (Groß- und Kleinschreibung sowie Umlaute egal),
+darunter Sortierung nach **meist genutzt**, **Punkten** oder **Alphabet** — die aktive
+Sortierung kehrt beim erneuten Tippen ihre Richtung um. Bei den Quests bleibt darunter der
+Filter nach Kategorie.
+
+Jeder Eintrag hat einen **Stift**, der ein Menü mit *Ändern* und *Löschen* öffnet. Beides geht
+weiterhin nur über die Abstimmung. Zwei getrennte Symbole je Zeile wären auf dem Handy zu
+kleine Ziele, und Löschen soll nicht direkt neben dem Melden liegen.
+
 ## Auswertung
 
 Punkte je Tag der letzten zwei Wochen als Balken, beide Personen nebeneinander, dazu

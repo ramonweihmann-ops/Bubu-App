@@ -12,6 +12,8 @@ const confettiEl = document.getElementById("confetti");
 let S = null;                  // Zustand vom Server
 let ansicht = "start";
 let filter = "Alle";
+const suche = { quests: "", belohnungen: "" };
+const sortierung = { quests: { nach: "punkte", ab: true }, belohnungen: { nach: "punkte", ab: false } };
 let laderTimer = null;
 
 /* ------------------------------------------------------------------ Werkzeug */
@@ -381,14 +383,90 @@ function schirmStart() {
     </div>`;
 }
 
+/* ------------------------------------------------------------------ Suchen & Sortieren */
+
+const SORTIERUNGEN = [
+  { id: "genutzt", label: "Meist genutzt" },
+  { id: "punkte", label: "Punkte" },
+  { id: "alpha", label: "A–Z" }
+];
+
+function suchzeile(bereich, platzhalter) {
+  const wert = suche[bereich];
+  return `
+    <div class="suchzeile">
+      ${icon("i-search", 18)}
+      <input id="suchfeld" type="search" inputmode="search" autocomplete="off"
+        placeholder="${esc(platzhalter)}" value="${esc(wert)}" data-bereich="${bereich}">
+      ${wert ? `<button class="leeren" data-suche-leeren="${bereich}" aria-label="Suche leeren">×</button>` : ""}
+    </div>`;
+}
+
+function sortierzeile(bereich) {
+  const s = sortierung[bereich];
+  return `
+    <div class="filters">
+      ${SORTIERUNGEN.map((o) => {
+        const aktiv = s.nach === o.id;
+        const pfeil = !aktiv ? "" : o.id === "genutzt" ? "" : (s.ab ? " ↓" : " ↑");
+        return `<button data-sort="${o.id}" data-bereich="${bereich}" aria-pressed="${aktiv}">${o.label}${pfeil}</button>`;
+      }).join("")}
+    </div>`;
+}
+
+/** Sucht ohne Rücksicht auf Groß- und Kleinschreibung und auf Umlaute. */
+const schlicht = (t) => String(t).toLowerCase()
+  .replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss");
+
+function sortiereUndSuche(liste, bereich, wertVon) {
+  const s = sortierung[bereich];
+  const begriff = schlicht(suche[bereich].trim());
+  const gefiltert = begriff
+    ? liste.filter((e) => schlicht(e.name).includes(begriff) || schlicht(e.category || "").includes(begriff))
+    : liste;
+
+  const kopie = [...gefiltert];
+  if (s.nach === "alpha") {
+    kopie.sort((a, b) => a.name.localeCompare(b.name, "de") * (s.ab ? -1 : 1));
+  } else if (s.nach === "genutzt") {
+    kopie.sort((a, b) => (b.genutzt || 0) - (a.genutzt || 0) || a.name.localeCompare(b.name, "de"));
+  } else {
+    kopie.sort((a, b) => (wertVon(b) - wertVon(a)) * (s.ab ? 1 : -1) || a.name.localeCompare(b.name, "de"));
+  }
+  return kopie;
+}
+
 /* ------------------------------------------------------------------ Quests */
 
-function schirmQuests() {
+function questListe() {
   const gemeldet = new Set(meineOffenen().map((m) => m.quest_id));
+  const liste = sortiereUndSuche(
+    S.quests.filter((q) => filter === "Alle" || q.category === filter),
+    "quests",
+    (q) => q.punkte_jetzt ?? q.points
+  );
+
+  if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
+
+  return liste.map((q) => `
+    <div class="zeile">
+      <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${gemeldet.has(q.id) ? "disabled" : ""}>
+        <span class="grow">
+          <span class="t">${esc(q.name)}</span>
+          <span class="m">${esc(q.category)}${q.genutzt ? ` · ${q.genutzt}×` : ""}${
+            gemeldet.has(q.id) ? ` · wartet auf ${esc(S.partner.name.split(" ")[0])}` : ""}</span>
+        </span>
+        ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
+          : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${q.punkte_jetzt}</span>`
+          : `<span class="pts-pill">${q.points}</span>`}
+      </button>
+      <button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
+        aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>
+    </div>`).join("");
+}
+
+function schirmQuests() {
   const kategorien = ["Alle", ...new Set(S.quests.map((q) => q.category))];
-  const liste = S.quests
-    .filter((q) => filter === "Alle" || q.category === filter)
-    .sort((a, b) => (b.punkte_jetzt ?? b.points) - (a.punkte_jetzt ?? a.points) || a.name.localeCompare(b.name, "de"));
 
   return `
     <div class="appbar">
@@ -396,23 +474,13 @@ function schirmQuests() {
       <button class="iconbtn" data-sheet="neu" aria-label="Quest vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${suchzeile("quests", "Quest suchen …")}
       ${aktionsBanner("quest_bonus")}
+      ${sortierzeile("quests")}
       <div class="filters">
         ${kategorien.map((k) => `<button data-filter="${esc(k)}" aria-pressed="${filter === k}">${esc(k)}</button>`).join("")}
       </div>
-      ${liste.map((q) => `
-        <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${gemeldet.has(q.id) ? "disabled" : ""}>
-          <span class="grow">
-            <span class="t">${esc(q.name)}</span>
-            <span class="m">${esc(q.category)}${gemeldet.has(q.id) ? ` · wartet auf ${esc(S.partner.name.split(" ")[0])}` : ""}</span>
-          </span>
-          ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
-            : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${q.punkte_jetzt}</span>`
-            : `<span class="pts-pill">${q.points}</span>`}
-        </button>`).join("")}
-      <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:6px 0 0">
-        Punktwert ändern oder löschen? Lange auf eine Quest tippen.
-      </p>
+      <div id="liste" style="display:flex;flex-direction:column;gap:8px">${questListe()}</div>
     </div>`;
 }
 
@@ -489,6 +557,29 @@ function schirmPruefen() {
 
 /* ------------------------------------------------------------------ Belohnungen */
 
+function belohnungsListe() {
+  const liste = sortiereUndSuche(S.belohnungen, "belohnungen", (b) => b.kosten_jetzt ?? b.cost);
+  if (!liste.length) return '<div class="leer-hinweis" style="grid-column:1/-1">Nichts gefunden.</div>';
+
+  return liste.map((b) => {
+    const kosten = b.kosten_jetzt ?? b.cost;
+    const zuTeuer = kosten > S.ich.punkte;
+    return `
+      <div class="reward-wrap">
+        <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
+          <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
+          <span class="n">${esc(b.name)}</span>
+          <span class="c">${zuTeuer
+            ? `${S.ich.punkte} von ${kosten} Punkten`
+            : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Punkte`
+            : `${b.cost} Punkte`}${b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
+        </button>
+        <button class="stiftbtn" data-sheet="menue" data-art="belohnung" data-id="${b.id}"
+          aria-label="${esc(b.name)} ändern oder löschen">${icon("i-stift", 16)}</button>
+      </div>`;
+  }).join("");
+}
+
 function schirmBelohnungen() {
   return `
     <div class="appbar">
@@ -497,33 +588,21 @@ function schirmBelohnungen() {
       <button class="iconbtn" data-sheet="neue-belohnung" aria-label="Belohnung vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${suchzeile("belohnungen", "Belohnung suchen …")}
+      ${aktionsBanner("belohnung_rabatt")}
+      ${sortierzeile("belohnungen")}
+
       <button class="reward wide" data-sheet="transfer" style="background:var(--tint);border-color:transparent">
         <span class="ico" style="background:var(--bg)">${icon("i-swap", 18)}</span>
         <span class="n">Punkte an ${esc(S.partner.name.split(" ")[0])} übertragen<br>
           <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
       </button>
-      ${aktionsBanner("belohnung_rabatt")}
+
       <p class="section-label">Einlösbar</p>
-      <div class="rewards">
-        ${S.belohnungen.map((b) => {
-          const zuTeuer = b.kosten_jetzt > S.ich.punkte;
-          return `
-          <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
-            <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
-            <span class="n">${esc(b.name)}</span>
-            <span class="c">${zuTeuer
-              ? `${S.ich.punkte} von ${b.kosten_jetzt} Punkten`
-              : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${b.kosten_jetzt} Punkte`
-              : `${b.cost} Punkte`}</span>
-          </button>`;
-        }).join("")}
-      </div>
+      <div class="rewards" id="liste">${belohnungsListe()}</div>
       <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
         Jede Einlösung geht als Antrag an ${esc(S.partner.name.split(" ")[0])}.
         Erst mit Zustimmung werden die Punkte abgebucht.
-      </p>
-      <p style="font-size:12px;color:var(--ink-3);text-align:center;margin:2px 0 0">
-        Kosten ändern oder löschen? Lange auf eine Belohnung tippen.
       </p>
     </div>`;
 }
@@ -592,7 +671,7 @@ function schirmWir() {
       <p class="section-label">Offene Abstimmungen</p>
       ${offen.length ? offen.map(abstimmungKarte).join("") : `
         <div class="card flat" style="font-size:13px;color:var(--ink-2)">
-          Nichts offen. Punktwerte ändert ihr über die Quest-Liste — lange auf eine Quest tippen.
+          Nichts offen. Punktwerte ändert ihr über den Stift in der Quest-Liste.
         </div>`}
 
       <p class="section-label">Hausregeln</p>
@@ -1081,33 +1160,8 @@ function sheetPunktwert(quest) {
 
 /* ------------------------------------------------------------------ Bedienung */
 
-let druckTimer = null;
-let langGedrueckt = false;
-
-document.addEventListener("pointerdown", (ev) => {
-  const quest = ev.target.closest("[data-sheet='melden'][data-id]");
-  const belohnung = ev.target.closest("[data-sheet='antrag'][data-id]");
-  const ziel = quest || belohnung;
-  if (!ziel || scrim.hasAttribute("data-open")) return;
-  druckTimer = setTimeout(() => {
-    druckTimer = null;
-    langGedrueckt = true;
-    if (navigator.vibrate) navigator.vibrate(12);
-    if (quest) {
-      const q = S.quests.find((x) => x.id === quest.dataset.id);
-      if (q) sheetMenue("quest", q);
-    } else {
-      const b = S.belohnungen.find((x) => x.id === belohnung.dataset.id);
-      if (b) sheetMenue("belohnung", b);
-    }
-  }, 500);
-});
-document.addEventListener("pointerup", () => { clearTimeout(druckTimer); });
-document.addEventListener("pointercancel", () => { clearTimeout(druckTimer); });
-document.addEventListener("pointermove", () => { clearTimeout(druckTimer); });
-
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -1122,12 +1176,29 @@ document.addEventListener("click", async (ev) => {
   }
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
 
+  if (el.dataset.sort) {
+    const bereich = el.dataset.bereich;
+    const s = sortierung[bereich];
+    if (s.nach === el.dataset.sort && el.dataset.sort !== "genutzt") s.ab = !s.ab;
+    else { s.nach = el.dataset.sort; s.ab = el.dataset.sort === "punkte"; }
+    zeichne();
+    return;
+  }
+
+  if (el.dataset.sucheLeeren) {
+    suche[el.dataset.sucheLeeren] = "";
+    zeichne();
+    return;
+  }
+
   if (el.dataset.sheet) {
     const art = el.dataset.sheet;
-    // Nach langem Drücken ist das Menü schon offen — der Klick danach darf nichts auslösen.
-    if (langGedrueckt && (art === "melden" || art === "antrag")) { langGedrueckt = false; return; }
-    langGedrueckt = false;
-
+    if (art === "menue") {
+      const istQuest = el.dataset.art === "quest";
+      const eintrag = (istQuest ? S.quests : S.belohnungen).find((x) => x.id === el.dataset.id);
+      if (eintrag) sheetMenue(el.dataset.art, eintrag);
+      return;
+    }
     if (art === "punktwert" || art === "kosten" || art === "loeschen") {
       const liste = art === "kosten" || el.dataset.art === "belohnung" ? S.belohnungen : S.quests;
       const eintrag = liste.find((x) => x.id === el.dataset.id);
@@ -1345,6 +1416,31 @@ document.addEventListener("click", async (ev) => {
     toast(fehler.message, true);
   } finally {
     el.disabled = false;
+  }
+});
+
+/* ------------------------------------------------------------------ Suchen & Sortieren bedienen */
+
+function listeZeichnen() {
+  const behaelter = document.getElementById("liste");
+  if (!behaelter) return;
+  behaelter.innerHTML = ansicht === "quests" ? questListe() : belohnungsListe();
+}
+
+document.addEventListener("input", (ev) => {
+  const feld = ev.target.closest("#suchfeld");
+  if (!feld) return;
+  suche[feld.dataset.bereich] = feld.value;
+  listeZeichnen();
+
+  // Der Knopf zum Leeren erscheint und verschwindet, ohne das Feld neu zu bauen.
+  const zeile = feld.parentElement;
+  const vorhanden = zeile.querySelector(".leeren");
+  if (feld.value && !vorhanden) {
+    zeile.insertAdjacentHTML("beforeend",
+      `<button class="leeren" data-suche-leeren="${feld.dataset.bereich}" aria-label="Suche leeren">×</button>`);
+  } else if (!feld.value && vorhanden) {
+    vorhanden.remove();
   }
 });
 
