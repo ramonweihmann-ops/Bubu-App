@@ -233,6 +233,27 @@ function belohnungWert(belohnung, aktionen) {
 
 /* ------------------------------------------------------------------ Zustand */
 
+/**
+ * Zieht Abstimmungen nach, die schon entschieden sind, aber noch offen stehen.
+ * Nötig für alles, was vor der Reparatur oben hängen geblieben ist — und als
+ * Netz, falls eine Übernahme künftig einmal abbricht.
+ */
+async function abstimmungenNachziehen(env, paarId) {
+  const haengend = await env.DB.prepare(
+    `select p.* from proposals p
+      where p.couple_id = ?1 and p.status = 'offen'
+        and (select count(*) from proposal_votes v where v.proposal_id = p.id and v.answer = 1) >= 2`
+  ).bind(paarId).all();
+
+  for (const vorschlag of haengend.results) {
+    try {
+      await auszaehlen(env, vorschlag);
+    } catch {
+      // Eine kaputte Abstimmung darf das Laden der App nicht verhindern.
+    }
+  }
+}
+
 async function zustand(env, ich) {
   if (!ich.couple_id) {
     const eigener = await env.DB.prepare(
@@ -247,6 +268,8 @@ async function zustand(env, ich) {
   }
 
   const paar = ich.couple_id;
+  await abstimmungenNachziehen(env, paar);
+
   const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen] =
     await Promise.all([
       env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
@@ -692,22 +715,31 @@ async function auszaehlen(env, vorschlag) {
   }
   if (ja < 2) return "offen";
 
-  const anwenden = {
-    quest_points: env.DB.prepare("update quests set points = ?1 where id = ?2 and couple_id = ?3")
+  // Nur die Anweisung der tatsächlichen Art bauen. Vorher wurden alle Arten auf
+  // einmal erzeugt — bei einer Punktwertänderung sind die Felder einer Aktion leer,
+  // und ein leerer Wert in bind() lässt die ganze Auszählung scheitern.
+  const bauplan = {
+    quest_points: () => env.DB.prepare("update quests set points = ?1 where id = ?2 and couple_id = ?3")
       .bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
-    reward_cost: env.DB.prepare("update rewards set cost = ?1 where id = ?2 and couple_id = ?3")
+    reward_cost: () => env.DB.prepare("update rewards set cost = ?1 where id = ?2 and couple_id = ?3")
       .bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
-    new_quest: env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
-      .bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.category || "Sonstiges", vorschlag.new_value),
-    new_reward: env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
-      .bind(id(), vorschlag.couple_id, vorschlag.name, vorschlag.new_value),
+    // Der Vorschlag gibt dem neuen Eintrag seine Kennung. Damit kann dieselbe
+    // Abstimmung nie zwei Quests anlegen — ein zweiter Anlauf verletzt den
+    // Primärschlüssel, und der ganze Schritt wird zurückgerollt.
+    new_quest: () => env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
+      .bind(vorschlag.id, vorschlag.couple_id, vorschlag.name, vorschlag.category || "Sonstiges", vorschlag.new_value),
+    new_reward: () => env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
+      .bind(vorschlag.id, vorschlag.couple_id, vorschlag.name, vorschlag.new_value),
     // Nie hart löschen: der Verlauf soll lesbar bleiben.
-    delete_quest: env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
+    delete_quest: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
-    delete_reward: env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
+    delete_reward: () => env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
-    neue_aktion: aktionAnlegen(env, vorschlag)
+    neue_aktion: () => aktionAnlegen(env, vorschlag)
   }[vorschlag.kind];
+
+  if (!bauplan) throw new Fehler("Unbekannte Art von Vorschlag");
+  const anwenden = bauplan();
 
   await env.DB.batch([
     anwenden,
@@ -723,7 +755,7 @@ function aktionAnlegen(env, vorschlag) {
   return env.DB.prepare(
     `insert into aktionen (id, couple_id, art, prozent, kategorie, beginn, ende, created_by)
      values (?1, ?2, ?3, ?4, ?5, datetime('now'), datetime('now', '+${Number(tage)} days'), ?6)`
-  ).bind(id(), vorschlag.couple_id, daten.aktionsart, daten.prozent,
+  ).bind(vorschlag.id, vorschlag.couple_id, daten.aktionsart, daten.prozent,
          daten.kategorie || null, vorschlag.created_by);
 }
 

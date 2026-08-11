@@ -24,6 +24,10 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 | Vier Augen | Melden darf jeder, freigeben nur der andere. Ohne Bestätigung keine Punkte. |
 | Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**: nur mit Zustimmung von beiden. Ein Nein lässt alles beim Alten. |
 
+Die Übernahme selbst — neuer Punktwert, neuer Eintrag, Löschung, Aktion — passiert in derselben
+Transaktion wie das Schließen der Abstimmung: entweder beides oder nichts. Sollte eine Abstimmung
+doch einmal mit zwei Ja-Stimmen offen stehen bleiben, zieht die App sie beim nächsten Laden nach.
+
 Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer eine eigene Meldung
 bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
 Datenbank es abweist (CHECK in der Tabelle und Prüfung in `worker/api.js`). Punktestände werden nirgends
