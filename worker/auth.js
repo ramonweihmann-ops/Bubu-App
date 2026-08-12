@@ -112,9 +112,12 @@ async function callback(request, env, url) {
   const person = jwtInhalt(daten.id_token);
   if (!person || !person.sub) return fehlerseite("Die Antwort von Google war unvollständig.");
 
+  // Ein selbst gewählter Name bleibt stehen — sonst käme bei jeder Anmeldung
+  // wieder der aus dem Google-Konto zurück.
   await env.DB.prepare(
     `insert into users (id, email, name, avatar_url) values (?1, ?2, ?3, ?4)
-     on conflict(id) do update set email = ?2, name = ?3, avatar_url = ?4`
+     on conflict(id) do update set email = ?2, avatar_url = ?4,
+       name = case when users.name_gesetzt = 1 then users.name else ?3 end`
   ).bind(person.sub, person.email || "", person.name || person.email || "Unbekannt", person.picture || null).run();
 
   const token = zufall(32);

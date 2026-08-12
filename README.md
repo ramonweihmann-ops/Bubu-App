@@ -59,7 +59,8 @@ sind hier bereits belegt. Das fertige Postgres-Schema liegt für den Fall der F�
 ## Anmeldung
 
 Google Sign-In — kein eigenes Passwort, keine Registrierung. Übernommen werden Name, E-Mail
-und Profilbild.
+und Profilbild. Wer den Namen in den Einstellungen ändert, behält ihn: die nächste Anmeldung
+lässt ihn dann in Ruhe.
 
 Danach das **Pairing**: Der erste erzeugt einen sechsstelligen Code, der zweite gibt ihn ein.
 Der Code ist einmal einlösbar und verfällt nach 24 Stunden. Ein Konto kann in genau einem Paar
@@ -102,6 +103,25 @@ Filter nach Kategorie.
 Jeder Eintrag hat einen **Stift**, der ein Menü mit *Ändern* und *Löschen* öffnet. Beides geht
 weiterhin nur über die Abstimmung. Zwei getrennte Symbole je Zeile wären auf dem Handy zu
 kleine Ziele, und Löschen soll nicht direkt neben dem Melden liegen.
+
+## Einstellungen
+
+Das Zahnrad steht oben neben dem Verlauf, auf **Start** und auf **Wir**. Darunter liegen:
+
+| Einstellung | Reicht wie weit |
+| --- | --- |
+| **Anzeigename** | Gilt für beide — der Name steht auch in der App des anderen. Ändern darf ihn jeder für sich allein, das ist keine Sache für eine Abstimmung. |
+| **Dunkles Design** | Nur dieses Gerät. *System* folgt der Handy-Einstellung und wechselt mit ihr, *Hell* und *Dunkel* setzen sich darüber. |
+| **Benachrichtigungen** | Nur dieses Gerät. Zeigt auch, wenn der Browser sie blockiert — dann hilft nur dessen Berechtigungsdialog. |
+
+Der dunkle Satz ist dieselbe Marke mit getauschten Rollen: Navy als Grund, Weiß als Schrift.
+Das Rot bleibt, wird aber für Schrift aufgehellt und für gefüllte Knöpfe vertieft — sonst
+trägt weißer Text darauf nicht. Die Wahl liegt im Speicher des Browsers, nicht in der
+Datenbank, und wird schon im Kopf der Seite gesetzt, damit beim Öffnen kein Weiß aufblitzt.
+
+Die Fußleiste steht fest am unteren Rand: sie bleibt sichtbar, egal wie lang eine Liste ist.
+Auf Unterseiten — Verlauf, Auswertung, Einstellungen — leuchtet weiter der Reiter, aus dem sie
+hervorgehen, damit die Leiste nie erloschen wirkt.
 
 ## Auswertung
 

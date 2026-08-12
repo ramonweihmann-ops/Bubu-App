@@ -50,6 +50,7 @@ export async function handleApi(request, env, url) {
     if (pfad === "push/key") return json({ schluessel: (await vapid(env)).oeffentlich });
     if (pfad === "push/subscribe") return json(await geraetMerken(env, ich, koerper));
     if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
+    if (pfad === "profil") return json(await profilAendern(env, ich, koerper));
 
     if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
 
@@ -74,6 +75,20 @@ export async function handleApi(request, env, url) {
       : text;
     return json({ fehler: sauber }, fehler.status || 400);
   }
+}
+
+/* ------------------------------------------------------------------ Profil */
+
+/** Der Anzeigename gehört einem allein — das ist keine Sache für eine Abstimmung.
+ *  Gemerkt wird nur, dass er von Hand gesetzt wurde, damit die nächste Anmeldung
+ *  ihn nicht wieder mit dem Google-Namen überschreibt. */
+async function profilAendern(env, ich, { name }) {
+  const sauber = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+  if (sauber.length < 2) throw new Fehler("Der Name braucht mindestens zwei Zeichen");
+
+  await env.DB.prepare("update users set name = ?1, name_gesetzt = 1 where id = ?2")
+    .bind(sauber, ich.id).run();
+  return { ok: true, name: sauber };
 }
 
 /* ------------------------------------------------------------------ Paar */

@@ -2,7 +2,7 @@
 // Hält die Hülle der App offline verfügbar. Daten kommen immer frisch aus dem Netz;
 // gemeldete Quests werden vom Worker nachgereicht, wenn wieder Empfang da ist.
 
-const CACHE = "hq-shell-v2";
+const CACHE = "hq-shell-v3";
 const HUELLE = ["/", "/app/", "/app/app.css", "/app/app.js", "/logo.webp",
                 "/manifest.webmanifest", "/icons/icon-192.png"];
 

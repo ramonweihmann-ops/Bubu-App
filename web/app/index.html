@@ -10,6 +10,21 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="/app/app.css">
+<script>
+  /* Thema setzen, bevor das erste Pixel steht — sonst blitzt Weiß auf, wenn
+     Dunkel gewählt ist. „System“ wird hier gleich aufgelöst; app.js hört
+     danach auf Änderungen der Systemeinstellung. */
+  (function () {
+    try {
+      var wahl = localStorage.getItem("hq-thema") || "system";
+      var dunkel = wahl === "dunkel" ||
+        (wahl === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dunkel ? "dunkel" : "hell";
+      var marke = document.querySelector('meta[name="theme-color"]');
+      if (marke) marke.content = dunkel ? "#0f1c31" : "#ffffff";
+    } catch (e) { /* ohne Speicher bleibt es hell */ }
+  })();
+</script>
 </head>
 <body>
 
@@ -31,6 +46,9 @@
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M11 8l-4 4 4 4M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-stift" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14.5 5.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-zahnrad" viewBox="0 0 24 24"><path d="M 21.05 10.35 A 9.2 9.2 0 0 1 21.05 13.65 L 18.89 13.26 A 7 7 0 0 1 17.76 15.98 L 19.57 17.23 A 9.2 9.2 0 0 1 17.23 19.57 L 15.98 17.76 A 7 7 0 0 1 13.26 18.89 L 13.65 21.05 A 9.2 9.2 0 0 1 10.35 21.05 L 10.74 18.89 A 7 7 0 0 1 8.02 17.76 L 6.77 19.57 A 9.2 9.2 0 0 1 4.43 17.23 L 6.24 15.98 A 7 7 0 0 1 5.11 13.26 L 2.95 13.65 A 9.2 9.2 0 0 1 2.95 10.35 L 5.11 10.74 A 7 7 0 0 1 6.24 8.02 L 4.43 6.77 A 9.2 9.2 0 0 1 6.77 4.43 L 8.02 6.24 A 7 7 0 0 1 10.74 5.11 L 10.35 2.95 A 9.2 9.2 0 0 1 13.65 2.95 L 13.26 5.11 A 7 7 0 0 1 15.98 6.24 L 17.23 4.43 A 9.2 9.2 0 0 1 19.57 6.77 L 17.76 8.02 A 7 7 0 0 1 18.89 10.74 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-mond" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.6 20c.6-3.8 3.6-5.8 7.4-5.8s6.8 2 7.4 5.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-google" viewBox="0 0 24 24">

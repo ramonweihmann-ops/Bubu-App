@@ -1,4 +1,13 @@
-/* Haus-Quest – Oberfläche. Weiß, Navy, Rot. */
+/* Haus-Quest – Oberfläche. Weiß, Navy, Rot.
+ *
+ * Hell und dunkel liegen als zwei Sätze derselben Marken vor. Welcher gilt,
+ * entscheidet ein data-theme am <html> — gesetzt wird es vom kleinen Skript im
+ * Kopf der Seite, noch vor dem ersten Bild, damit nichts aufblitzt. „System“
+ * löst app.js zu hell oder dunkel auf; hier steht deshalb nur ein Zustand.
+ *
+ * --kontrast-* ist die Umkehrung des Hintergrunds: dunkle Fläche im hellen
+ * Modus, helle Fläche im dunklen. Damit bleiben Knöpfe und Chips in beiden
+ * Sätzen lesbar, ohne dass irgendwo eine Farbe hart im Code steht. */
 
 :root {
   --bg: #ffffff;
@@ -12,12 +21,43 @@
   --accent-tint: #fdecea;
   --navy-soft: #eaeff8;
 
+  --kontrast-bg: #152c4f;
+  --kontrast-ink: #ffffff;
+  --akzent-flaeche: #ec0f06;
+  --schleier: rgba(21, 44, 79, .5);
+
   --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-data: ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, monospace;
 
   --oben: env(safe-area-inset-top, 0px);
   --unten: env(safe-area-inset-bottom, 0px);
+}
+
+:root[data-theme="dunkel"] {
+  --bg: #0f1c31;
+  --tint: #17263e;
+  --tint-2: #1f3252;
+  --line: #27395a;
+  --ink: #e8eef8;
+  --ink-2: #a9bad4;
+  --ink-3: #7d8ea9;
+  --accent: #ff5a52;          /* das Marken-Rot, aufgehellt bis es auf Navy trägt */
+  --accent-tint: #3a1613;
+  --navy-soft: #1b2c48;
+
+  --kontrast-bg: #e8eef8;
+  --kontrast-ink: #0f1c31;
+  /* Gefüllte Flächen tragen weißen Text erst ab diesem Rot — das hellere
+     --accent bleibt für Schrift und Linien auf dunklem Grund. */
+  --akzent-flaeche: #d8271f;
+  --schleier: rgba(4, 9, 18, .66);
+
+  --reihe-ich: #6ba4ff;
+  --reihe-partner: #ff5a52;
+  --gitter: #26385a;
+
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -41,7 +81,11 @@ body {
   flex: none; padding: calc(var(--oben) + 14px) 16px 12px;
   display: flex; align-items: center; gap: 10px;
 }
-.appbar .title { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.025em; }
+.appbar > div { min-width: 0; }
+.appbar .title {
+  font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.025em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .appbar .sub { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
 .iconbtn {
   margin-left: auto; width: 38px; height: 38px; border-radius: 12px; flex: none;
@@ -49,13 +93,19 @@ body {
   display: grid; place-items: center; position: relative; color: var(--ink); cursor: pointer;
 }
 .iconbtn.links { margin-left: 0; margin-right: 2px; }
+/* Mehrere Knöpfe rechts: nur der erste schiebt sich nach außen. */
+.iconbtn + .iconbtn { margin-left: 0; }
 .iconbtn .ping { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
 
 .body {
-  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 16px 20px;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  /* Unten Platz für die Fußleiste, die über dem Inhalt steht. */
+  padding: 0 16px calc(var(--unten) + 84px);
   display: flex; flex-direction: column; gap: 12px;
   -webkit-overflow-scrolling: touch;
 }
+/* Ohne Fußleiste (Anmelden, Paar verbinden) reicht der normale Abstand. */
+.body.ohne-leiste { padding-bottom: 20px; }
 /* Im scrollenden Bereich darf nichts zusammengedrückt werden — sonst schrumpfen
    Zeilen mit eigenem Überlauf (etwa die Chip-Reihen) auf wenige Pixel. */
 .body > * { flex-shrink: 0; }
@@ -71,7 +121,7 @@ body {
 }
 .card.flat { background: var(--tint); border-color: transparent; }
 .card.alert { border-color: var(--accent); background: var(--accent-tint); }
-.card.navy { background: var(--ink); border-color: var(--ink); color: #fff; }
+.card.navy { background: var(--kontrast-bg); border-color: var(--kontrast-bg); color: var(--kontrast-ink); }
 
 .accounts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .account {
@@ -107,7 +157,7 @@ body {
 }
 .chip { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 4px; }
 .chip.wait { background: var(--accent-tint); color: var(--accent); }
-.chip.done { background: var(--ink); color: #fff; }
+.chip.done { background: var(--kontrast-bg); color: var(--kontrast-ink); }
 .chip.open { background: var(--tint-2); color: var(--ink-2); }
 
 .btn {
@@ -115,8 +165,8 @@ body {
   padding: 14px 16px; border: 1px solid transparent; cursor: pointer; text-align: center;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink);
 }
-.btn.primary { background: var(--accent); color: #fff; }
-.btn.dark { background: var(--ink); color: #fff; }
+.btn.primary { background: var(--akzent-flaeche); color: #fff; }
+.btn.dark { background: var(--kontrast-bg); color: var(--kontrast-ink); }
 .btn.ghost { background: var(--bg); border-color: var(--line); }
 .btn.text { background: none; color: var(--ink-2); padding: 10px; font-weight: 600; }
 .btn.block { width: 100%; }
@@ -149,7 +199,7 @@ body {
   border: 1px solid var(--line); background: var(--bg); color: var(--ink-2);
   border-radius: 999px; padding: 7px 13px;
 }
-.filters button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.filters button[aria-pressed="true"] { background: var(--kontrast-bg); border-color: var(--kontrast-bg); color: var(--kontrast-ink); }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-family: var(--font-data); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
@@ -207,8 +257,11 @@ body {
 .leer .t { font-size: 13px; color: var(--ink-2); max-width: 26ch; }
 
 /* ---------- Fußleiste ---------- */
+/* Fest am unteren Rand: sie soll immer da sein, egal wie weit der Inhalt läuft
+   oder wie das Handy seine Adressleiste ein- und ausfährt. */
 .navbar {
-  flex: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px;
   border-top: 1px solid var(--line); padding: 8px 6px calc(var(--unten) + 10px); background: var(--bg);
 }
 .navbar button {
@@ -219,7 +272,7 @@ body {
 .navbar button[aria-current="true"] { color: var(--accent); }
 .navbar .badge-n {
   position: absolute; top: -2px; right: 50%; transform: translateX(20px);
-  background: var(--accent); color: #fff; font-family: var(--font-data); font-size: 9px; font-weight: 700;
+  background: var(--akzent-flaeche); color: #fff; font-family: var(--font-data); font-size: 9px; font-weight: 700;
   min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px;
 }
 
@@ -298,7 +351,7 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 
 /* ---------- Overlays ---------- */
 .scrim {
-  position: fixed; inset: 0; background: rgba(21, 44, 79, .5); display: none;
+  position: fixed; inset: 0; background: var(--schleier); display: none;
   align-items: flex-end; z-index: 20;
 }
 .scrim[data-open] { display: flex; }
@@ -344,12 +397,12 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 
 .toast {
   position: fixed; left: 16px; right: 16px; bottom: calc(var(--unten) + 84px); z-index: 25;
-  background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 15px;
+  background: var(--kontrast-bg); color: var(--kontrast-ink); border-radius: 14px; padding: 14px 15px;
   font-size: 13.5px; display: none; gap: 10px; align-items: center;
   box-shadow: 0 12px 34px -14px rgba(0, 0, 0, .6);
 }
 .toast[data-open] { display: flex; }
-.toast.fehler { background: var(--accent); }
+.toast.fehler { background: var(--akzent-flaeche); color: #fff; }
 .toast svg { flex: none; }
 
 /* ---------- Anmeldung & Verbinden ---------- */

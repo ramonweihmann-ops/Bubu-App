@@ -50,6 +50,40 @@ function bild(person, groesse = "") {
     onerror="this.src='${ersatz}'"></span>`;
 }
 
+/* ------------------------------------------------------------------ Darstellung */
+//
+// Hell oder dunkel ist Sache des Geräts, nicht des Paars — die Wahl liegt
+// deshalb im Speicher des Browsers und wandert nicht in die Datenbank.
+// Gesetzt wird sie bereits im Kopf der Seite; hier wird sie nur noch geändert
+// und der Systemeinstellung nachgeführt, solange „System“ gewählt ist.
+
+const THEMEN = [
+  { id: "system", label: "System" },
+  { id: "hell", label: "Hell" },
+  { id: "dunkel", label: "Dunkel" }
+];
+
+const systemDunkel = matchMedia("(prefers-color-scheme: dark)");
+
+function themaWahl() {
+  try { return localStorage.getItem("hq-thema") || "system"; } catch { return "system"; }
+}
+
+function themaAnwenden() {
+  const wahl = themaWahl();
+  const dunkel = wahl === "dunkel" || (wahl === "system" && systemDunkel.matches);
+  document.documentElement.dataset.theme = dunkel ? "dunkel" : "hell";
+  const marke = document.querySelector('meta[name="theme-color"]');
+  if (marke) marke.content = dunkel ? "#0f1c31" : "#ffffff";
+}
+
+function themaSetzen(wahl) {
+  try { localStorage.setItem("hq-thema", wahl); } catch { /* dann gilt es nur für dieses Mal */ }
+  themaAnwenden();
+}
+
+systemDunkel.addEventListener("change", () => { if (themaWahl() === "system") themaAnwenden(); });
+
 /* ------------------------------------------------------------------ Rückmeldung */
 
 let toastTimer;
@@ -171,13 +205,17 @@ function zeichne() {
   const inhalt = {
     start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
     belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
-    statistik: schirmStatistik
+    statistik: schirmStatistik, einstellungen: schirmEinstellungen
   }[ansicht] || schirmStart;
+
+  // Unterseiten haben keinen eigenen Knopf in der Leiste. Damit trotzdem immer
+  // ein Reiter leuchtet, zeigen sie auf den, aus dem sie hervorgehen.
+  const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start" }[ansicht] || ansicht;
 
   app.innerHTML = inhalt() + `
     <nav class="navbar">
       ${nav.map((n) => `
-        <button data-go="${n.id}" aria-current="${ansicht === n.id}">
+        <button data-go="${n.id}" aria-current="${aktiv === n.id}">
           ${n.badge ? `<span class="badge-n">${n.badge}</span>` : ""}
           ${icon(n.icon, 21)}${n.label}
         </button>`).join("")}
@@ -205,7 +243,7 @@ function verbinden() {
     <div class="appbar"><div><div class="title">Paar verbinden</div>
       <div class="sub">Angemeldet als ${esc(S.ich.name)}</div></div>
       <button class="iconbtn" data-abmelden aria-label="Abmelden">${icon("i-out", 18)}</button></div>
-    <div class="body">
+    <div class="body ohne-leiste">
       <div class="card flat leer">
         <img src="/logo.webp" alt="">
         <div class="t">Ohne zweite Person geht hier nichts: Bestätigen und Abstimmen brauchen zwei.</div>
@@ -296,6 +334,7 @@ function schirmStart() {
         <div class="sub">${new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
       </div>
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
+      <button class="iconbtn" data-go="einstellungen" aria-label="Einstellungen">${icon("i-zahnrad", 18)}</button>
     </div>
     <div class="body">
       <div class="accounts">
@@ -656,6 +695,7 @@ function schirmWir() {
       <div><div class="title">Wir</div>
         <div class="sub">${esc(S.ich.name.split(" ")[0])} &amp; ${esc(S.partner.name.split(" ")[0])}</div></div>
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
+      <button class="iconbtn" data-go="einstellungen" aria-label="Einstellungen">${icon("i-zahnrad", 18)}</button>
     </div>
     <div class="body">
       ${aktionsBanner()}
@@ -871,6 +911,83 @@ function schirmStatistik() {
           ${meins.schnitt > 0 && Math.ceil(statistik.naechsteBelohnung.fehlt / meins.schnitt) === 1 ? "Tag" : "Tagen"} drin.
         </div>
       </div>` : ""}
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Einstellungen */
+
+function schirmEinstellungen() {
+  const wahl = themaWahl();
+  const kurz = S.partner.name.split(" ")[0];
+
+  const pushZeile = !pushMoeglich()
+    ? { text: "Dieses Gerät kann keine Benachrichtigungen", knopf: false }
+    : Notification.permission === "granted"
+    ? { text: "Eingeschaltet — du erfährst sofort, wenn etwas entschieden wird", knopf: false }
+    : Notification.permission === "denied"
+    ? { text: "Im Browser blockiert. Dort unter „Berechtigungen“ wieder erlauben.", knopf: false }
+    : { text: `Damit du merkst, wenn ${kurz} etwas meldet`, knopf: true };
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Einstellungen</div><div class="sub">Dein Konto und dieses Gerät</div></div>
+    </div>
+    <div class="body">
+      <p class="section-label">Dein Name</p>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${bild(S.ich)}
+          <span style="flex:1;min-width:0">
+            <span style="font-size:14.5px;font-weight:700;display:block">${esc(S.ich.name)}</span>
+            <span style="font-size:12px;color:var(--ink-3)">So steht dein Name auch bei ${esc(kurz)}</span>
+          </span>
+        </div>
+        <div class="field">
+          <label>Anzeigename</label>
+          <input id="name-feld" maxlength="40" autocomplete="off"
+            value="${esc(S.ich.name)}" placeholder="Wie sollen wir dich nennen?">
+        </div>
+        <button class="btn dark block" data-senden="name">Name speichern</button>
+      </div>
+      <div class="note">${icon("i-info", 16)}<span>Den Namen änderst du allein — dafür braucht es keine
+        Abstimmung. E-Mail und Profilbild kommen weiter aus deinem Google-Konto.</span></div>
+
+      <p class="section-label">Darstellung</p>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="avatar sm" style="background:var(--tint);color:var(--ink-2)">${icon("i-mond", 17)}</span>
+          <span style="flex:1">
+            <span style="font-size:14.5px;font-weight:600;display:block">Dunkles Design</span>
+            <span style="font-size:12px;color:var(--ink-3)">„System“ folgt der Einstellung deines Handys</span>
+          </span>
+        </div>
+        <div class="filters">
+          ${THEMEN.map((t) => `<button data-thema="${t.id}" aria-pressed="${wahl === t.id}">${t.label}</button>`).join("")}
+        </div>
+        <div style="font-size:12px;color:var(--ink-3)">Gilt nur auf diesem Gerät.</div>
+      </div>
+
+      <p class="section-label">Benachrichtigungen</p>
+      ${pushZeile.knopf ? `
+      <button class="rowlink" data-push>
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-bell", 18)}</span>
+        <span class="grow"><span class="t">Einschalten</span>
+          <span class="m">${esc(pushZeile.text)}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>` : `
+      <div class="card" style="flex-direction:row;align-items:center;gap:12px">
+        <span class="avatar sm" style="background:var(--tint);color:var(--ink-2)">${icon("i-bell", 18)}</span>
+        <span style="flex:1;font-size:13px;color:var(--ink-2)">${esc(pushZeile.text)}</span>
+      </div>`}
+
+      <p class="section-label">Konto</p>
+      <button class="rowlink" data-export>
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-down", 17)}</span>
+        <span class="grow"><span class="t">Alles exportieren</span>
+          <span class="m">Kompletter Stand als Datei</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
+      <button class="btn text block" data-abmelden>Abmelden</button>
     </div>`;
 }
 
@@ -1161,7 +1278,7 @@ function sheetPunktwert(quest) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -1187,6 +1304,12 @@ document.addEventListener("click", async (ev) => {
 
   if (el.dataset.sucheLeeren) {
     suche[el.dataset.sucheLeeren] = "";
+    zeichne();
+    return;
+  }
+
+  if (el.dataset.thema) {
+    themaSetzen(el.dataset.thema);
     zeichne();
     return;
   }
@@ -1269,6 +1392,12 @@ document.addEventListener("click", async (ev) => {
   try {
     el.disabled = true;
 
+    if (el.dataset.senden === "name") {
+      const ergebnis = await api("profil", { name: document.getElementById("name-feld")?.value || "" });
+      await laden();
+      toast(`Name geändert: ${ergebnis.name}`);
+      return;
+    }
     if (el.dataset.senden === "melden") {
       await api("claims", { questId: el.dataset.id, anzahl: zahl("menge"), notiz: wert("notiz") });
       sheetZu(); await laden();
