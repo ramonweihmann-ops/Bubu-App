@@ -486,3 +486,52 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.03em;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Haushaltsplan ---------- */
+/* Der Balken zeigt, wie viel vom Zeitraum verbraucht ist: ruhiges Blau, solange
+   Zeit bleibt, Bernstein kurz vor Schluss, Rot ab überfällig. Kein Ampelbunt —
+   drei Zustände reichen, und alle drei tragen im hellen wie im dunklen Satz. */
+:root { --ruhig: #2f6fd0; --bald: #c47a00; }
+:root[data-theme="dunkel"] { --ruhig: #6ba4ff; --bald: #e0a53a; }
+
+.aufgabe {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 11px 12px;
+  cursor: pointer; font: inherit; color: inherit; text-align: left;
+  display: flex; align-items: center; gap: 11px; width: 100%;
+}
+.aufgabe:active { background: var(--tint); }
+.aufgabe .n { flex: 1; min-width: 0; }
+.aufgabe .t { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aufgabe .m { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aufgabe[data-gesperrt] { opacity: .6; }
+
+.frist { flex: none; width: 98px; text-align: right; }
+.balken { height: 11px; border-radius: 999px; background: var(--tint-2); overflow: hidden; display: flex; }
+.balken i { display: block; height: 100%; border-radius: 999px; }
+.frist .w { font-size: 10.5px; font-family: var(--font-data); margin-top: 4px; display: block; white-space: nowrap; }
+.w.rot { color: var(--accent); font-weight: 700; }
+.w.gelb { color: var(--bald); font-weight: 700; }
+.w.ruhig { color: var(--ink-3); }
+
+/* ---------- Rangliste und Zähler ---------- */
+.rang {
+  display: flex; align-items: center; gap: 9px; padding: 11px 10px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+}
+.rang[data-erster] { border-color: var(--accent); background: var(--accent-tint); }
+.rang .platz { font-family: var(--font-display); font-weight: 800; font-size: 19px; width: 22px; text-align: center; color: var(--ink-3); }
+.rang[data-erster] .platz { color: var(--accent); }
+.rang .n { flex: 1; min-width: 0; }
+.rang .t { display: block; font-size: 14px; font-weight: 700; }
+.rang .m { display: block; font-size: 11px; color: var(--ink-3); }
+.zahlen { display: flex; gap: 6px; flex: none; }
+.zahl { background: var(--tint); border-radius: 9px; padding: 4px 6px; text-align: center; min-width: 36px; }
+.zahl b { display: block; font-family: var(--font-data); font-size: 13px; line-height: 1.1; }
+.zahl span { display: block; font-size: 8px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+
+.rhythmuswahl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.rhythmuswahl button {
+  font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 11px;
+  padding: 9px 3px; background: var(--bg); color: var(--ink-2); cursor: pointer; line-height: 1.25;
+}
+.rhythmuswahl button[aria-pressed="true"] { background: var(--kontrast-bg); border-color: var(--kontrast-bg); color: var(--kontrast-ink); }

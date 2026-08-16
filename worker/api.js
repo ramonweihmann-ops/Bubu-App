@@ -5,7 +5,13 @@
 
 import { angemeldet } from "./auth.js";
 import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND, RAUMVORSCHLAEGE } from "./startdaten.js";
-import { sendePush, vapid } from "./push.js";
+import { vapid } from "./push.js";
+import { melde, meldeAlle } from "./melden.js";
+import {
+  RHYTHMEN, planListe, planNachziehen, aufgabeDetail, bewerben, bewerbungZurueck,
+  vergabeEntscheiden, erledigtMelden, erledigungEntscheiden,
+  aufgabeAnlegen, aufgabeAendern, aufgabeLoeschen
+} from "./plan.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -65,6 +71,13 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "transfers" && teile[2] === "decide") return json(await uebertragungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
+
+    if (teile[0] === "plan" && teile[1] && !teile[2]) return json(await aufgabeDetail(env, ich, teile[1]));
+    if (teile[0] === "plan" && teile[2] === "bewerben") return json(await bewerben(env, ich, teile[1]));
+    if (teile[0] === "plan" && teile[2] === "zurueckziehen") return json(await bewerbungZurueck(env, ich, teile[1]));
+    if (teile[0] === "plan" && teile[2] === "vergabe") return json(await vergabeEntscheiden(env, ich, teile[1], !!koerper.annehmen));
+    if (teile[0] === "plan" && teile[2] === "erledigt") return json(await erledigtMelden(env, ich, teile[1], koerper));
+    if (teile[0] === "erledigungen" && teile[2] === "decide") return json(await erledigungEntscheiden(env, ich, teile[1], koerper.status));
     if (teile[0] === "quests" && teile[2] === "raum") return json(await questRaum(env, ich, teile[1], koerper.raum));
     if (pfad === "raeume") return json(await raumAnlegen(env, ich, koerper));
     if (teile[0] === "raeume" && teile[1]) return json(await raumAendern(env, ich, teile[1], koerper));
@@ -182,8 +195,16 @@ async function haushaltEinrichten(env, ich, daten) {
 }
 
 /** Art und Größe später ändern — das darf nur, wer verwaltet. */
-async function haushaltAendern(env, ich, { art, erwachsene, kinder, personen }) {
+async function haushaltAendern(env, ich, { art, erwachsene, kinder, personen, strafe }) {
   await nurVerwalter(env, ich);
+
+  if (strafe !== undefined) {
+    await env.DB.prepare("update couples set strafe_an = ?1 where id = ?2")
+      .bind(strafe ? 1 : 0, ich.couple_id).run();
+    if (art === undefined && personen === undefined && erwachsene === undefined && kinder === undefined) {
+      return { ok: true };
+    }
+  }
 
   const jetzt = await env.DB.prepare("select * from couples where id = ?1").bind(ich.couple_id).first();
   const neueArt = art === undefined ? jetzt.art : art;
@@ -372,26 +393,6 @@ async function ereignisseGelesen(env, ich, ids) {
   return { ok: true };
 }
 
-/**
- * Legt ein Ereignis für die andere Person an und schickt die Benachrichtigung.
- * Das Ereignis ist das Verlässliche: es zeigt den Vollbild-Moment auch dann,
- * wenn die Push-Nachricht nie ankam.
- */
-async function melde(env, paarId, empfaengerId, ereignis) {
-  await env.DB.prepare(
-    `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte)
-     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id(), paarId, empfaengerId, ereignis.art, ereignis.titel,
-         ereignis.text || null, ereignis.punkte ?? null).run();
-
-  await sendePush(env, empfaengerId, {
-    titel: ereignis.titel,
-    text: ereignis.text || "",
-    url: "/app/",
-    tag: ereignis.art
-  });
-}
-
 /** Alle außer mir — in einer WG sind das mehrere. */
 async function andereVon(env, ich) {
   const treffer = await env.DB.prepare(
@@ -400,13 +401,7 @@ async function andereVon(env, ich) {
   return treffer.results.map((r) => r.user_id);
 }
 
-/** Dasselbe Ereignis an alle anderen. Wer etwas meldet, muss nicht wissen,
- *  wer gerade Zeit hat — jeder darf bestätigen, also erfährt es jeder. */
-async function meldeAllen(env, ich, ereignis) {
-  for (const wer of await andereVon(env, ich)) {
-    await melde(env, ich.couple_id, wer, ereignis);
-  }
-}
+const meldeAllen = (env, ich, ereignis) => meldeAlle(env, ich.couple_id, ich.id, ereignis);
 
 /* ------------------------------------------------------------------ Aktionen */
 
@@ -481,6 +476,7 @@ async function zustand(env, ich) {
   }
 
   await abstimmungenNachziehen(env, paar);
+  await planNachziehen(env, paar);
 
   const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume] =
     await Promise.all([
@@ -539,7 +535,8 @@ async function zustand(env, ich) {
     code: mit.length < haus.groesse ? haus.pair_code : null,
     haushalt: {
       art: haus.art, groesse: haus.groesse, erwachsene: haus.erwachsene, kinder: haus.kinder,
-      belegt: mit.length, ichVerwalte: mein.rolle === "verwalter"
+      belegt: mit.length, ichVerwalte: mein.rolle === "verwalter",
+      strafe: !!haus.strafe_an
     },
     ich: mein,
     mitglieder: mit,
@@ -554,6 +551,7 @@ async function zustand(env, ich) {
       return { ...b, kosten_jetzt: wert, rabatt: aktion ? aktion.prozent : 0 };
     }),
     aktionen: aktionen.results,
+    plan: await planListe(env, paar, ich.id),
     meldungen: meldungen.results,
     antraege: antraege.results,
     uebertragungen: uebertragungen.results,
@@ -789,10 +787,14 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
 
 async function vorschlagen(env, ich, daten) {
   const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "" } = daten;
-  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward", "neue_aktion"];
+  const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
+                 "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
   if (art === "neue_aktion") return aktionVorschlagen(env, ich, daten);
+  if (art === "neue_aufgabe" || art === "aufgabe_aendern" || art === "delete_aufgabe") {
+    return aufgabeVorschlagen(env, ich, daten);
+  }
 
   const loeschen = art === "delete_quest" || art === "delete_reward";
   const neu = loeschen ? 0 : Math.floor(Number(wert));
@@ -915,6 +917,49 @@ async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = ""
   return { ok: true };
 }
 
+/** Eine wiederkehrende Aufgabe anlegen, ändern oder löschen — wie alles, was
+ *  Punkte bewegt, nur gemeinsam. Rhythmus und Raum reisen im Anhang mit. */
+async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum = "Sonstiges", rhythmus = "1× pro Woche", grund = "" }) {
+  if (art !== "delete_aufgabe" && !RHYTHMEN[rhythmus]) throw new Fehler("Unbekannter Rhythmus");
+
+  let ziel = null;
+  if (art !== "neue_aufgabe") {
+    ziel = await env.DB.prepare("select * from plan_aufgaben where id = ?1 and couple_id = ?2 and aktiv = 1")
+      .bind(zielId, ich.couple_id).first();
+    if (!ziel) throw new Fehler("Diese Aufgabe gibt es nicht");
+
+    const schonOffen = await env.DB.prepare(
+      "select 1 as da from proposals where couple_id = ?1 and target_id = ?2 and status = 'offen'"
+    ).bind(ich.couple_id, zielId).first();
+    if (schonOffen) throw new Fehler("Dazu läuft schon eine Abstimmung");
+  }
+
+  const punkte = art === "delete_aufgabe" ? (ziel.punkte || 1) : Math.floor(Number(wert));
+  if (!(punkte > 0)) throw new Fehler("Der Punktwert muss größer als null sein");
+  const titel = art === "neue_aufgabe" ? String(name).trim().slice(0, 60) : ziel.name;
+  if (!titel) throw new Fehler("Ein Name fehlt");
+
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, target_id, old_value, new_value, name, category, reason, payload, created_by)
+       values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
+    ).bind(vorschlag, ich.couple_id, art, zielId || null, ziel ? ziel.punkte : null, punkte,
+           titel, raum || "Sonstiges", String(grund).slice(0, 300),
+           JSON.stringify({ raum: raum || "Sonstiges", rhythmus }), ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+
+  await meldeAllen(env, ich, {
+    art: "info",
+    titel: `${vorname(ich.name)} schlägt etwas für den Plan vor`,
+    text: art === "delete_aufgabe" ? `${titel} soll aus dem Plan — deine Stimme fehlt.`
+        : `${titel} · ${rhythmus} · ${punkte} Punkte — deine Stimme fehlt.`
+  });
+  return { ok: true };
+}
+
 /** Ein Nein beendet den Vorschlag sofort, der alte Wert gilt weiter.
  *  Übernommen wird er erst, wenn beide zugestimmt haben. */
 async function auszaehlen(env, vorschlag) {
@@ -958,7 +1003,10 @@ async function auszaehlen(env, vorschlag) {
       .bind(vorschlag.target_id, vorschlag.couple_id),
     delete_reward: () => env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
-    neue_aktion: () => aktionAnlegen(env, vorschlag)
+    neue_aktion: () => aktionAnlegen(env, vorschlag),
+    neue_aufgabe: () => aufgabeAnlegen(env, vorschlag),
+    aufgabe_aendern: () => aufgabeAendern(env, vorschlag),
+    delete_aufgabe: () => aufgabeLoeschen(env, vorschlag)
   }[vorschlag.kind];
 
   if (!bauplan) throw new Fehler("Unbekannte Art von Vorschlag");
@@ -1121,6 +1169,8 @@ async function ausgabe(env, ich) {
     antraege: await hole("select * from requests where couple_id = ?1"),
     uebertragungen: await hole("select * from transfers where couple_id = ?1"),
     abstimmungen: await hole("select * from proposals where couple_id = ?1"),
+    plan: await hole("select * from plan_aufgaben where couple_id = ?1"),
+    plan_erledigungen: await hole("select * from plan_erledigungen where couple_id = ?1"),
     buchungen: await hole("select * from ledger where couple_id = ?1 order by created_at")
   };
 }

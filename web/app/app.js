@@ -256,13 +256,14 @@ function zeichne() {
     start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
     belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
     statistik: schirmStatistik, einstellungen: schirmEinstellungen,
-    raeume: schirmRaeume, haushalt: schirmHaushalt
+    raeume: schirmRaeume, haushalt: schirmHaushalt,
+    plan: schirmPlan, aufgabe: schirmAufgabe
   }[ansicht] || schirmStart;
 
   // Unterseiten haben keinen eigenen Knopf in der Leiste. Damit trotzdem immer
   // ein Reiter leuchtet, zeigen sie auf den, aus dem sie hervorgehen.
   const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start",
-                  raeume: "start", haushalt: "start" }[ansicht] || ansicht;
+                  raeume: "start", haushalt: "start", plan: "start", aufgabe: "start" }[ansicht] || ansicht;
 
   app.innerHTML = inhalt() + `
     <nav class="navbar">
@@ -556,9 +557,36 @@ function eCodeSchirm() {
 
 const zuPruefen = () => [
   ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id).map((m) => ({ ...m, art: "meldung" })),
+  ...planPruefungen().filter((e) => e.von !== S.ich.id).map((e) => ({ ...e, art: "plan" })),
   ...S.antraege.filter((a) => a.requested_by !== S.ich.id).map((a) => ({ ...a, art: "antrag" })),
   ...S.uebertragungen.filter((u) => u.to_member === S.ich.id).map((u) => ({ ...u, art: "uebertragung" }))
 ];
+
+/* ---------- Haushaltsplan ---------- */
+
+const plan = () => S.plan || [];
+const planPruefungen = () => plan().filter((a) => a.pruefung)
+  .map((a) => ({ ...a.pruefung, aufgabe: a.name, raum: a.raum }));
+const ueberfaellig = () => plan().filter((a) => a.offen < 0 && !a.pruefung);
+/** Wo ich selbst gefragt bin: entscheiden, erledigen oder eine Meldung prüfen. */
+const meinePlanSachen = () => plan().filter((a) =>
+  a.dran === S.ich.id || (a.zugewiesen === S.ich.id && a.offen <= 0 && !a.pruefung));
+
+const RHYTHMEN = ["1× pro Woche", "2× pro Woche", "3× pro Woche", "1× alle 2 Wochen", "1× im Monat", "1× im Quartal"];
+const RHYTHMUS_TAGE = { "1× pro Woche": 7, "2× pro Woche": 3, "3× pro Woche": 2,
+                        "1× alle 2 Wochen": 14, "1× im Monat": 30, "1× im Quartal": 90 };
+
+function fristText(offen) {
+  if (offen < 0) return { text: `${-offen} ${-offen === 1 ? "Tag" : "Tage"} überfällig`, art: "rot" };
+  if (offen === 0) return { text: "Heute fällig", art: "gelb" };
+  return { text: `Fällig in ${offen} ${offen === 1 ? "Tag" : "Tagen"}`, art: "ruhig" };
+}
+
+function planBalken(a) {
+  const anteil = a.offen < 0 ? 1 : Math.max(0, Math.min(1, (a.tage - a.offen) / a.tage));
+  const farbe = a.offen < 0 ? "var(--accent)" : a.offen <= 2 ? "var(--bald)" : "var(--ruhig)";
+  return `<span class="balken"><i style="width:${Math.round(anteil * 100)}%;background:${farbe}"></i></span>`;
+}
 
 const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
 const offeneAbstimmungen = () => S.abstimmungen.filter((a) => a.status === "offen");
@@ -628,6 +656,25 @@ function schirmStart() {
         <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
       </div>` : ""}
 
+      ${ueberfaellig().length ? `
+      <div class="card alert">
+        <div style="font-size:14.5px;font-weight:700">
+          ${ueberfaellig().length} ${ueberfaellig().length === 1 ? "Aufgabe ist" : "Aufgaben sind"} überfällig</div>
+        <div style="font-size:12.5px;color:var(--ink-2)">
+          ${ueberfaellig().slice(0, 3).map((a) => `${esc(a.name)} seit ${-a.offen} ${-a.offen === 1 ? "Tag" : "Tagen"}`).join(", ")}.
+          ${ueberfaellig().some((a) => a.offen <= -5) ? "Ab sieben Tagen kostet es die ganze Gruppe Punkte." : ""}</div>
+        <button class="btn primary block" data-go="plan">Zum Haushaltsplan</button>
+      </div>` : ""}
+
+      ${meinePlanSachen().map((a) => `
+      <button class="rowlink" data-plan="${a.id}" style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-shield", 18)}</span>
+        <span class="grow"><span class="t">${a.dran === S.ich.id ? "Du bist dran" : "Gehört dir"}: ${esc(a.name)}</span>
+          <span class="m">${a.dran === S.ich.id ? "Annehmen oder weiterreichen" : "Erledigt melden"}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>`).join("")}
+
+
       ${S.haushalt.belegt < S.haushalt.groesse ? `
       <button class="rowlink" data-go="einladen" style="border-color:var(--accent)">
         <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-plus", 18)}</span>
@@ -674,6 +721,14 @@ function schirmStart() {
 
       <p class="section-label">Offene Abstimmungen</p>
       ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
+
+      <button class="rowlink" data-go="plan">
+        <span class="avatar sm" style="background:var(--tint);color:var(--ruhig)">${icon("i-broom", 18)}</span>
+        <span class="grow"><span class="t">Haushaltsplan</span>
+          <span class="m">${plan().length} wiederkehrende ${plan().length === 1 ? "Aufgabe" : "Aufgaben"}${
+            ueberfaellig().length ? ` · ${ueberfaellig().length} überfällig` : ""}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
 
       <button class="rowlink" data-go="statistik">
         <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
@@ -827,6 +882,25 @@ function schirmPruefen() {
               <button class="btn ghost" data-entscheiden="claims" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
             </div>
           </div>`;
+        if (e.art === "plan") return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              ${bild(mitglied(e.von), "sm")}
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.von))} meldet · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">${esc(e.aufgabe)}</span>
+              </span>
+              <span class="pts-pill">+${e.punkte}</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap">
+              <span class="chip open">Haushaltsplan · ${esc(e.raum)}</span>
+              ${e.grund ? `<span class="chip wait">Vorzeitig</span><span>„${esc(e.grund)}“</span>` : ""}
+            </div>
+            <div class="btnrow">
+              <button class="btn primary" data-entscheiden="erledigungen" data-id="${e.id}" data-status="bestaetigt">Bestätigen</button>
+              <button class="btn ghost" data-entscheiden="erledigungen" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
+            </div>
+          </div>`;
         if (e.art === "antrag") return `
           <div class="card">
             <div style="display:flex;gap:11px;align-items:center">
@@ -937,7 +1011,14 @@ function abstimmungKarte(a) {
           ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
       </div>
       <div class="change">
-        ${a.art === "neue_aktion"
+        ${a.art === "neue_aufgabe"
+          ? `<span class="new">${a.neu} Punkte</span>
+             <span style="color:var(--ink-2);font-weight:400">· ${esc(a.raum || "")}</span>`
+          : a.art === "aufgabe_aendern"
+          ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
+          : a.art === "delete_aufgabe"
+          ? `<span class="old">im Plan</span>→<span class="new">löschen</span>`
+          : a.art === "neue_aktion"
           ? `<span class="new">${a.titel.startsWith("Rabatt") ? `${a.neu} % Rabatt` : `+${a.neu} % Punkte`}</span>
              <span style="color:var(--ink-2);font-weight:400">${a.raum ? `· ${esc(a.raum)}` : "· alles"}
              ${a.tage ? `· ${a.tage === 1 ? "heute" : a.tage + " Tage"}` : ""}</span>`
@@ -1189,6 +1270,277 @@ function schirmStatistik() {
         </div>
       </div>` : ""}
     </div>`;
+}
+
+/* ------------------------------------------------------------------ Haushaltsplan */
+
+let planGruppiert = false;
+
+function planZeile(a) {
+  const f = fristText(a.offen);
+  // Blass wird nur, was gerade nicht deine Sache ist. Dass eine Aufgabe noch
+  // nicht dran ist, sagt der Balken — dafür muss nicht die halbe Liste grau sein.
+  const fremd = a.pruefung || (a.zugewiesen && a.zugewiesen !== S.ich.id);
+  return `
+    <button class="aufgabe" data-plan="${a.id}" ${fremd ? "data-gesperrt" : ""}>
+      <span class="n">
+        <span class="t">${esc(a.name)}</span>
+        <span class="m">${planGruppiert ? "" : esc(a.raum) + " · "}${esc(a.rhythmus)}${
+          a.pruefung ? " · wartet auf Bestätigung"
+          : a.zugewiesen ? ` · ${esc(nameVon(a.zugewiesen))}`
+          : a.dran ? ` · ${esc(nameVon(a.dran))} entscheidet`
+          : a.bewerber ? ` · ${a.bewerber} ${a.bewerber === 1 ? "Bewerbung" : "Bewerbungen"}` : ""}</span>
+      </span>
+      <span class="frist">
+        ${planBalken(a)}
+        <span class="w ${f.art}">${a.pruefung ? "gemeldet" : f.text}</span>
+      </span>
+    </button>`;
+}
+
+function schirmPlan() {
+  const liste = [...plan()].sort((a, b) => a.offen - b.offen || a.name.localeCompare(b.name, "de"));
+  const raeume = [...new Set(liste.map((a) => a.raum))];
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Haushaltsplan</div>
+        <div class="sub">${planGruppiert ? "Nach Räumen" : "Das Dringendste oben"}</div></div>
+      <button class="iconbtn" data-sheet="neue-aufgabe" aria-label="Aufgabe vorschlagen">${icon("i-plus", 18)}</button>
+    </div>
+    <div class="body">
+      ${liste.length ? `
+      <div class="btnrow">
+        <button class="btn ${planGruppiert ? "ghost" : "dark"}" style="font-size:13px;padding:9px"
+          data-plansicht="frist">Nach Fälligkeit</button>
+        <button class="btn ${planGruppiert ? "dark" : "ghost"}" style="font-size:13px;padding:9px"
+          data-plansicht="raum">Nach Raum</button>
+      </div>
+      ${planGruppiert
+        ? raeume.map((r) => `<p class="section-label">${esc(r)}</p>
+            ${liste.filter((a) => a.raum === r).map(planZeile).join("")}`).join("")
+        : liste.map(planZeile).join("")}
+      <div class="note">${icon("i-info", 16)}<span>Wer eine Aufgabe erledigt, sperrt sie für alle,
+        bis der Zeitraum um ist. Bei mehreren Bewerbern entscheidet die Rangliste einen Tag vor
+        Fälligkeit.</span></div>`
+      : `<div class="card flat leer"><img src="/logo.webp" alt="">
+           <div class="h">Noch kein Plan</div>
+           <div class="t">Über das Plus oben kommt die erste wiederkehrende Aufgabe dazu —
+             sie geht wie alles in die Abstimmung.</div></div>`}
+    </div>`;
+}
+
+/* ---------- Eine Aufgabe ---------- */
+
+let aufgabe = null;                       // Detail vom Server, inklusive Zählern
+
+async function aufgabeLaden(id) {
+  aufgabe = await api(`plan/${id}`);
+}
+
+function zaehlerZeile(m, platz = null) {
+  return `
+    <div class="rang" ${platz === 1 ? "data-erster" : ""}>
+      ${platz ? `<span class="platz">${platz}</span>` : ""}
+      ${bild(m, "sm")}
+      <span class="n">
+        <span class="t">${esc(vorname(m.name))}${m.id === S.ich.id ? " (du)" : ""}</span>
+        ${platz === 1 ? '<span class="m">ist dran</span>' : ""}
+      </span>
+      <span class="zahlen">
+        <span class="zahl"><b>${m.stueck}</b><span>Stück</span></span>
+        <span class="zahl"><b>${m.jahr}</b><span>Jahr</span></span>
+      </span>
+    </div>`;
+}
+
+function schirmAufgabe() {
+  if (!aufgabe) {
+    return `
+      <div class="appbar">
+        <button class="iconbtn links" data-go="plan" aria-label="Zurück">‹</button>
+        <div><div class="title">Aufgabe</div><div class="sub">wird geladen …</div></div>
+      </div>
+      <div class="body"><div class="lader"><img src="/logo.webp" alt="" width="110"></div></div>`;
+  }
+
+  const a = aufgabe;
+  const f = fristText(a.offen);
+  const gesperrt = a.offen > 0;
+  const ichDran = a.dran === S.ich.id;
+  const ichHabe = a.zugewiesen === S.ich.id;
+  const jemandAnders = a.zugewiesen && !ichHabe;
+  const rang = a.rangliste ? a.rangliste.map((wer) => a.mitglieder.find((m) => m.id === wer)) : null;
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="plan" aria-label="Zurück">‹</button>
+      <div><div class="title">${esc(a.name)}</div>
+        <div class="sub">${esc(a.raum)} · ${esc(a.rhythmus)}</div></div>
+      <button class="iconbtn" data-sheet="aufgabe-menue" data-id="${a.id}"
+        aria-label="Ändern oder löschen">${icon("i-stift", 18)}</button>
+    </div>
+    <div class="body">
+      <div class="card ${a.offen < 0 ? "alert" : ""}" style="gap:7px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="flex:1;font-size:14.5px;font-weight:700">${esc(f.text)}</span>
+          <span class="pts-pill">+${a.punkte}</span>
+        </div>
+        ${planBalken(a)}
+        <div style="font-size:12.5px;color:var(--ink-2)">
+          ${a.zuletzt ? `Zuletzt: ${esc(nameVon(a.zuletzt.member_id))}, ${zeitpunkt(a.zuletzt.created_at)}`
+                      : "Noch nie erledigt."}</div>
+      </div>
+
+      ${rang ? `
+      <p class="section-label">Rangliste — wer ist dran?</p>
+      ${rang.map((m, i) => zaehlerZeile(m, i + 1)).join("")}
+      ${ichDran ? `
+      <div class="btnrow">
+        <button class="btn primary" data-vergabe="${a.id}" data-annehmen="ja">Annehmen</button>
+        <button class="btn ghost" data-vergabe="${a.id}" data-annehmen="nein">Ablehnen</button>
+      </div>`
+      : a.dran ? `<div class="card flat" style="font-size:13px;color:var(--ink-2)">
+          ${esc(nameVon(a.dran))} steht oben und entscheidet. Du erfährst es, sobald es feststeht.</div>` : ""}`
+      : `
+      <p class="section-label">Wer war wie oft dran</p>
+      ${a.mitglieder.map((m) => zaehlerZeile(m)).join("")}
+      <div class="note">${icon("i-info", 16)}<span>Die linke Zahl entscheidet: wer am wenigsten
+        <b>am Stück</b> dran war, steht in der Rangliste oben. Bei Gleichstand zählt die rechte.</span></div>`}
+
+      ${jemandAnders ? `
+      <div class="card flat" style="font-size:13px;color:var(--ink-2)">
+        Diese Runde gehört ${esc(nameVon(a.zugewiesen))}.</div>` : ""}
+
+      ${!rang && !a.zugewiesen ? `
+      <p class="section-label">Bewerbung</p>
+      <div class="card" style="gap:9px">
+        <div style="font-size:13px;color:var(--ink-2)">
+          ${a.bewerber.length
+            ? `${a.bewerber.map((wer) => esc(nameVon(wer))).join(", ")} ${a.bewerber.length === 1 ? "hat sich" : "haben sich"} beworben.`
+            : "Noch niemand beworben. Wer sich meldet und allein bleibt, bekommt sie ohne Rangliste."}
+        </div>
+        ${a.ichBeworben
+          ? `<button class="btn ghost block" data-bewerbung="zurueck" data-id="${a.id}">Bewerbung zurückziehen</button>`
+          : `<button class="btn dark block" data-bewerbung="ja" data-id="${a.id}">Ich übernehme das</button>`}
+      </div>` : ""}
+
+      ${a.pruefung ? "" : `
+      <button class="btn ${gesperrt ? "ghost" : "primary"} block" data-sheet="erledigt" data-id="${a.id}"
+        ${jemandAnders ? "disabled" : ""}>
+        ${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</button>`}
+
+      ${gesperrt ? `<div class="note">${icon("i-lock", 16)}<span>Gesperrt bis
+        <b>${esc(a.faellig_am)}</b>. Für besondere Umstände geht es trotzdem — mit Begründung, und
+        jemand anderes muss bestätigen.</span></div>` : ""}
+    </div>`;
+}
+
+function sheetNeueAufgabe() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Wiederkehrende Aufgabe</h3>
+    <div class="field"><label>Name</label><input id="aname" placeholder="z. B. Wohnung saugen"></div>
+    <div class="field"><label>Raum</label>
+      <select id="araum">${raumListe().map((r) => `<option>${esc(r)}</option>`).join("")}</select></div>
+    <div class="field">
+      <label>Punktwert</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">6</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Wie oft</label>
+      <div class="rhythmuswahl" id="rhythmus">
+        ${RHYTHMEN.map((r, i) => `<button data-rhythmus="${esc(r)}" aria-pressed="${i === 0}">${esc(r)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="note">${icon("i-info", 16)}<span>Daraus ergibt sich die Sperre: nach dem Erledigen
+      ist die Aufgabe für alle gesperrt, bis der Zeitraum um ist.</span></div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum braucht ihr das?"></textarea></div>
+    <button class="btn primary block" data-senden="neue-aufgabe">Zur Abstimmung geben</button>`);
+}
+
+function sheetAufgabeMenue(a) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(a.name)}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:13px;color:var(--ink-2)">${esc(a.raum)} · ${esc(a.rhythmus)}</span>
+      <span class="pts-pill">${a.punkte} Punkte</span>
+    </div>
+    <button class="btn ghost block" data-sheet="aufgabe-aendern" data-id="${a.id}">Punkte oder Rhythmus ändern</button>
+    <button class="btn ghost block" data-sheet="aufgabe-loeschen" data-id="${a.id}"
+      style="color:var(--accent);border-color:var(--accent)">Aus dem Plan nehmen</button>
+    <div class="note">${icon("i-vote", 16)}<span>Beides geht nur gemeinsam:
+      ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen.</span></div>`);
+}
+
+function sheetAufgabeAendern(a) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Aufgabe ändern</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
+      <span class="pts-pill">jetzt ${a.punkte}</span>
+    </div>
+    <div class="field"><label>Raum</label>
+      <select id="araum">${raumListe().map((r) => `<option ${r === a.raum ? "selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
+    <div class="field">
+      <label>Neuer Punktwert</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">${a.punkte}</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Wie oft</label>
+      <div class="rhythmuswahl" id="rhythmus">
+        ${RHYTHMEN.map((r) => `<button data-rhythmus="${esc(r)}" aria-pressed="${r === a.rhythmus}">${esc(r)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt es nicht mehr?"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn alle zustimmen.</span></div>
+    <button class="btn primary block" data-senden="aufgabe-aendern" data-id="${a.id}">Zur Abstimmung geben</button>`);
+}
+
+function sheetAufgabeLoeschen(a) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Aus dem Plan nehmen</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
+      <span class="pts-pill">${a.punkte}</span>
+    </div>
+    <div class="field"><label>Begründung</label>
+      <textarea id="grund" placeholder="Warum braucht ihr das nicht mehr?"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Die Aufgabe verschwindet nur aus dem Plan.
+      Bereits gebuchte Punkte und der Verlauf bleiben unangetastet.</span></div>
+    <button class="btn primary block" data-senden="aufgabe-loeschen" data-id="${a.id}">Zur Abstimmung geben</button>`);
+}
+
+function sheetErledigt(a) {
+  const gesperrt = a.offen > 0;
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
+      <span class="pts-pill">+${a.punkte}</span>
+    </div>
+    ${gesperrt ? `
+    <div class="note">${icon("i-lock", 16)}<span>Sie ist noch bis <b>${esc(a.faellig_am)}</b> gesperrt.
+      Besondere Umstände brauchen eine Begründung — und jemand anderes muss trotzdem bestätigen.</span></div>
+    <div class="field"><label>Warum jetzt schon</label>
+      <textarea id="grund" placeholder="z. B. Besuch kommt kurzfristig"></textarea></div>` : `
+    <div class="note">${icon("i-info", 16)}<span>${esc(andereName())} ${beugung("bestätigt", "bestätigen")} —
+      erst dann gibt es die Punkte. Danach ist die Aufgabe für ${a.tage} Tage gesperrt.</span></div>`}
+    <button class="btn primary block" data-senden="erledigt" data-id="${a.id}"
+      data-trotzdem="${gesperrt ? "ja" : "nein"}">Zur Bestätigung senden</button>`);
 }
 
 /* ------------------------------------------------------------------ Einstellungen */
@@ -1675,6 +2027,21 @@ function schirmHaushalt() {
         </div>
       </div>
 
+      <p class="section-label">Gruppenstrafe</p>
+      <div class="card" style="gap:9px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-shield", 17)}</span>
+          <span style="flex:1">
+            <span style="font-size:14px;font-weight:600;display:block">Nach sieben überfälligen Tagen</span>
+            <span style="font-size:12px;color:var(--ink-3)">Jeder verliert den Punktwert der Aufgabe</span>
+          </span>
+        </div>
+        <div class="filters">
+          <button data-strafe="an" aria-pressed="${h.strafe}" ${h.ichVerwalte ? "" : "disabled"}>An</button>
+          <button data-strafe="aus" aria-pressed="${!h.strafe}" ${h.ichVerwalte ? "" : "disabled"}>Aus</button>
+        </div>
+      </div>
+
       <p class="section-label">Wer dabei ist</p>
       ${S.mitglieder.map((m) => `
         <div class="rowlink" style="cursor:default">
@@ -1698,7 +2065,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -1731,6 +2098,22 @@ document.addEventListener("click", async (ev) => {
   if (el.dataset.thema) {
     themaSetzen(el.dataset.thema);
     zeichne();
+    return;
+  }
+
+  if (el.dataset.plansicht) { planGruppiert = el.dataset.plansicht === "raum"; zeichne(); return; }
+
+  if (el.dataset.plan) {
+    ansicht = "aufgabe";
+    aufgabe = null;
+    sheetZu();
+    zeichne();
+    aufgabeLaden(el.dataset.plan).then(zeichne).catch((f) => toast(f.message, true));
+    return;
+  }
+
+  if (el.dataset.rhythmus) {
+    scrim.querySelectorAll("[data-rhythmus]").forEach((b) => b.setAttribute("aria-pressed", b === el));
     return;
   }
 
@@ -1793,6 +2176,19 @@ document.addEventListener("click", async (ev) => {
       if (!quest) return;
       sheetZu();
       sheetRaum(quest);
+      return;
+    }
+    if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
+    if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
+    if (art === "aufgabe-aendern" || art === "aufgabe-loeschen") {
+      if (!aufgabe) return;
+      sheetZu();
+      art === "aufgabe-aendern" ? sheetAufgabeAendern(aufgabe) : sheetAufgabeLoeschen(aufgabe);
+      return;
+    }
+    if (art === "erledigt") {
+      const eintrag = aufgabe && aufgabe.id === el.dataset.id ? aufgabe : plan().find((x) => x.id === el.dataset.id);
+      if (eintrag) sheetErledigt(eintrag);
       return;
     }
     if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
@@ -1920,6 +2316,68 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
+    if (el.dataset.bewerbung) {
+      const weg = el.dataset.bewerbung === "zurueck";
+      await api(`plan/${el.dataset.id}/${weg ? "zurueckziehen" : "bewerben"}`, {});
+      await aufgabeLaden(el.dataset.id);
+      await laden();
+      toast(weg ? "Bewerbung zurückgezogen." : "Beworben — bis morgen können sich die anderen melden.");
+      return;
+    }
+
+    if (el.dataset.vergabe) {
+      const ja = el.dataset.annehmen === "ja";
+      const ergebnis = await api(`plan/${el.dataset.vergabe}/vergabe`, { annehmen: ja });
+      await aufgabeLaden(el.dataset.vergabe);
+      await laden();
+      toast(ja ? "Die Aufgabe gehört dir."
+           : ergebnis.status === "offen" ? "Abgelehnt — jetzt ist sie wieder für alle offen."
+           : "Weitergereicht an den Nächsten.");
+      return;
+    }
+
+    if (el.dataset.senden === "neue-aufgabe" || el.dataset.senden === "aufgabe-aendern") {
+      const neu = el.dataset.senden === "neue-aufgabe";
+      if (neu && !wert("aname")) throw new Error("Ein Name fehlt");
+      await api("proposals", {
+        art: neu ? "neue_aufgabe" : "aufgabe_aendern",
+        zielId: el.dataset.id,
+        wert: zahl("menge"),
+        name: wert("aname"),
+        raum: wert("araum"),
+        rhythmus: scrim.querySelector('[data-rhythmus][aria-pressed="true"]')?.dataset.rhythmus || "1× pro Woche",
+        grund: wert("grund")
+      });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+
+    if (el.dataset.senden === "aufgabe-loeschen") {
+      await api("proposals", { art: "delete_aufgabe", zielId: el.dataset.id, grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Löschen steht zur Abstimmung.");
+      return;
+    }
+
+    if (el.dataset.senden === "erledigt") {
+      await api(`plan/${el.dataset.id}/erledigt`, {
+        trotzdem: el.dataset.trotzdem === "ja",
+        grund: wert("grund")
+      });
+      sheetZu();
+      await aufgabeLaden(el.dataset.id).catch(() => {});
+      await laden();
+      toast(`Gemeldet — ${andereName()} ${beugung("muss", "müssen")} bestätigen.`);
+      return;
+    }
+
+    if (el.dataset.strafe !== undefined) {
+      await api("haushalt", { strafe: el.dataset.strafe === "an" });
+      await laden();
+      return;
+    }
+
     if (el.dataset.senden === "name") {
       const ergebnis = await api("profil", { name: document.getElementById("name-feld")?.value || "" });
       await laden();
@@ -2002,6 +2460,7 @@ document.addEventListener("click", async (ev) => {
       await laden();
       if (status === "bestaetigt") {
         if (bereich === "claims") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.quest });
+        else if (bereich === "erledigungen") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.aufgabe });
         else if (bereich === "requests") toast(`${ergebnis.belohnung} genehmigt.`);
         else toast("Punkte angenommen.");
       } else {

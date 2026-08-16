@@ -16,7 +16,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Erster Start":** [`web/mockup/`](./web/mockup) — live unter `haus-quest.com/mockup/`.
   Der Entwurf, aus dem die Einrichtung entstanden ist.
 - **Mockup „Wiederkehrende Aufgaben":** [`web/mockup-plan/`](./web/mockup-plan) — live unter
-  `haus-quest.com/mockup-plan/`. Haushaltsplan, Bewerbungsverfahren, Sperre. Noch nichts davon ist gebaut.
+  `haus-quest.com/mockup-plan/`. Der Entwurf, aus dem der Haushaltsplan entstanden ist.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
@@ -174,6 +174,32 @@ Die Fußleiste steht fest am unteren Rand: sie bleibt sichtbar, egal wie lang ei
 Auf Unterseiten — Verlauf, Auswertung, Einstellungen — leuchtet weiter der Reiter, aus dem sie
 hervorgehen, damit die Leiste nie erloschen wirkt.
 
+## Haushaltsplan
+
+Wiederkehrende Aufgaben — getrennt von den Quests, die unangetastet bleiben. Zu finden auf
+der Startseite über der Auswertung; ist etwas überfällig, springt eine rote Karte davor.
+
+| Sache | Wie es läuft |
+| --- | --- |
+| **Rhythmus** | *1× pro Woche* bis *1× im Quartal*. Daraus folgt alles Weitere. |
+| **Sperre** | Nach dem Erledigen springt das Fälligkeitsdatum um genau den Rhythmus nach vorn. Bis dahin kann sie niemand noch einmal melden. Für besondere Umstände gibt es **Trotzdem erledigen** — mit Begründung, und jemand anderes muss trotzdem bestätigen. |
+| **Punkte** | Wie bei einer Quest: melden, jemand anderes bestätigt, dann gibt es sie. |
+| **Bewerbung** | Bewerben kann sich jeder. Einen Tag vor Fälligkeit friert die App die Reihenfolge ein und zeigt allen Bewerbern dieselbe Liste. |
+| **Reihenfolge** | Wer am wenigsten **am Stück** dran war, steht oben. Bei Gleichstand die kleinere Jahreszahl. Wer zuletzt dran war, rutscht nach unten — genau das sorgt für den Wechsel. |
+| **Annehmen** | Nur wer oben steht. Ablehnen reicht an Platz 2 weiter; lehnen alle ab, ist die Aufgabe wieder für jeden offen. |
+| **Ein Bewerber** | Bekommt sie ohne Rangliste. Bewirbt sich niemand, macht sie, wer sie macht. |
+| **Überfällig** | Ab dem ersten Tag Benachrichtigung an alle. Nach sieben Tagen verliert jeder den Punktwert der Aufgabe — abschaltbar unter Einstellungen → Haushalt. |
+
+„Am Stück" kann nur die Person haben, die zuletzt dran war: sobald jemand anderes erledigt,
+fängt der Zähler aller anderen wieder bei null an. Beide Zahlen stehen offen in der Aufgabe,
+damit die Reihenfolge nachvollziehbar bleibt.
+
+Anlegen, ändern und aus dem Plan nehmen geht wie alles andere nur über eine **Abstimmung**.
+
+Einen Zeitplan gibt es auf einem Worker nicht. Die Vergabe, die Mahnung und die Strafe
+laufen deshalb beim Laden der App nach — jede genau einmal je Runde, festgehalten am
+Fälligkeitsdatum.
+
 ## Auswertung
 
 Punkte je Tag der letzten zwei Wochen als Balken — du und alle anderen zusammen, dazu
@@ -217,7 +243,8 @@ hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
 worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln),
-                push.js (Benachrichtigungen)
+                plan.js (wiederkehrende Aufgaben), melden.js und push.js
+                (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 docs/           Mockup und Anleitungen
 ```
