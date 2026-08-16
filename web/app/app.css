@@ -535,3 +535,15 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   padding: 9px 3px; background: var(--bg); color: var(--ink-2); cursor: pointer; line-height: 1.25;
 }
 .rhythmuswahl button[aria-pressed="true"] { background: var(--kontrast-bg); border-color: var(--kontrast-bg); color: var(--kontrast-ink); }
+
+/* ---------- Haken zum Umschalten ---------- */
+.schalter {
+  display: flex; align-items: center; gap: 11px; cursor: pointer; padding: 4px 0;
+  background: none; border: none; font: inherit; color: inherit; text-align: left; width: 100%;
+}
+.schalter .box {
+  width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); flex: none;
+  display: grid; place-items: center; color: #fff; font-size: 13px;
+}
+.schalter[aria-pressed="true"] .box { background: var(--akzent-flaeche); border-color: var(--akzent-flaeche); }
+.schalter .t { font-size: 14px; font-weight: 600; }

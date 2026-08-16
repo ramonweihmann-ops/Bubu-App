@@ -140,7 +140,9 @@ verpacken, ohne den Code neu zu schreiben. Das Google-Entwicklerkonto kostet ein
 ## Figuren und Namen
 
 Fuchs und Wolf liegen als Bilddateien in `web/` (`logo.webp`, `fox.webp`, `wolf.webp`) und
-in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden.
+in `docs/assets/`. Sie können bleiben oder in einem Zug getauscht werden. Das **App-Symbol**
+in `web/icons/` ist davon unabhängig: es entsteht aus `docs/assets/grafik.png` und zeigt
+beide Figuren nebeneinander.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
@@ -196,9 +198,34 @@ damit die Reihenfolge nachvollziehbar bleibt.
 
 Anlegen, ändern und aus dem Plan nehmen geht wie alles andere nur über eine **Abstimmung**.
 
-Einen Zeitplan gibt es auf einem Worker nicht. Die Vergabe, die Mahnung und die Strafe
-laufen deshalb beim Laden der App nach — jede genau einmal je Runde, festgehalten am
-Fälligkeitsdatum.
+Vergabe, Mahnung und Strafe hängen am Kalender, nicht an einer Bedienung. Ein **Cron**
+weckt den Worker deshalb jeden Morgen um 6 Uhr UTC und zieht sie für alle Haushalte nach;
+beim Laden der App passiert dasselbe noch einmal. Doppelt schadet nicht, weil jeder Schritt
+am Fälligkeitsdatum festhält, dass er gelaufen ist.
+
+## Rückfragen
+
+Auf eine Meldung oder einen Antrag gab es lange nur Ja oder Nein. Passt bloß der Termin
+nicht, ist beides falsch. Deshalb steht im Prüfen-Stapel ein dritter Weg: **Nachfragen**.
+
+Der Antrag bleibt dabei offen — er wird weder genehmigt noch abgelehnt. Die Frage hängt
+daran, samt Terminvorschlag; wer den Antrag gestellt hat, sieht sie auf der Startseite,
+antwortet und schickt ihn erneut. Danach steht er wieder zur Entscheidung.
+
+## Belohnungen: zugesagt ist noch nicht erhalten
+
+Nach der Genehmigung sind die Punkte weg — die Belohnung selbst kommt erst noch. Deshalb
+bestätigt, **wer sie eingelöst hat**, dass sie tatsächlich kam.
+
+| Fall | Was passiert |
+| --- | --- |
+| **Bekommen** | Fertig. |
+| **Kam nicht** | Wer zugesagt hat, verliert denselben Betrag. Die Einlösung wird nicht rückgängig gemacht: bezahlt und nichts bekommen ist der Schaden, deshalb steht die Strafe auf der anderen Seite. |
+| **Doch noch geliefert** | Binnen **drei Tagen** kann die zusagende Person *Habe ich nachgeholt* melden. Bestätigt der Empfänger, sind die Punkte wieder da. Danach ist es endgültig. |
+
+Ausnahme- und Vetoanträge haben nichts zu liefern — für sie entfällt die Bestätigung.
+Beim Anlegen oder Ändern einer Belohnung steht dafür ein Haken bereit, der wie alles
+andere über eine Abstimmung gesetzt wird.
 
 ## Auswertung
 
@@ -242,9 +269,10 @@ hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
 ```
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
-worker/         Schnittstelle: index.js (Router), auth.js (Google), api.js (Regeln),
-                plan.js (wiederkehrende Aufgaben), melden.js und push.js
-                (Benachrichtigungen)
+worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
+                api.js (Regeln), plan.js (wiederkehrende Aufgaben),
+                rueckmeldung.js (Rückfragen, Empfang, Strafe),
+                melden.js und push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 docs/           Mockup und Anleitungen
 ```

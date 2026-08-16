@@ -556,9 +556,13 @@ function eCodeSchirm() {
 /* ------------------------------------------------------------------ Hilfen zum Zustand */
 
 const zuPruefen = () => [
-  ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id).map((m) => ({ ...m, art: "meldung" })),
+  ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id && !m.rueckfrage).map((m) => ({ ...m, art: "meldung" })),
+  ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "offen")
+    .map((r) => ({ ...r, art: "empfang" })),
+  ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "nachgeholt")
+    .map((r) => ({ ...r, art: "nachhol" })),
   ...planPruefungen().filter((e) => e.von !== S.ich.id).map((e) => ({ ...e, art: "plan" })),
-  ...S.antraege.filter((a) => a.requested_by !== S.ich.id).map((a) => ({ ...a, art: "antrag" })),
+  ...S.antraege.filter((a) => a.requested_by !== S.ich.id && !a.rueckfrage).map((a) => ({ ...a, art: "antrag" })),
   ...S.uebertragungen.filter((u) => u.to_member === S.ich.id).map((u) => ({ ...u, art: "uebertragung" }))
 ];
 
@@ -589,6 +593,15 @@ function planBalken(a) {
 }
 
 const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
+const belohnungenOffen = () => S.belohnungenOffen || [];
+/** Rückfragen, auf die ich antworten muss — an meinen eigenen Anträgen. */
+const meineRueckfragen = () => [
+  ...S.meldungen.filter((m) => m.claimed_by === S.ich.id && m.rueckfrage).map((m) => ({ ...m, bereich: "claims", titel: m.quest })),
+  ...S.antraege.filter((a) => a.requested_by === S.ich.id && a.rueckfrage).map((a) => ({ ...a, bereich: "requests", titel: a.belohnung }))
+];
+/** Was ich zugesagt habe und noch schulde. */
+const meineZusagen = () => belohnungenOffen().filter((r) => r.decided_by === S.ich.id
+  && (r.erfuellt === "offen" || (r.erfuellt === "nicht_erhalten" && r.nachholbar)));
 const offeneAbstimmungen = () => S.abstimmungen.filter((a) => a.status === "offen");
 
 /* ------------------------------------------------------------------ Aktionen */
@@ -655,6 +668,33 @@ function schirmStart() {
         </div>
         <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
       </div>` : ""}
+
+      ${meineRueckfragen().map((r) => `
+      <div class="card alert">
+        <div style="display:flex;gap:11px;align-items:center">
+          ${bild(mitglied(r.rueckfrage_von), "sm")}
+          <span style="flex:1">
+            <span style="font-size:12px;color:var(--ink-3);display:block">
+              ${esc(nameVon(r.rueckfrage_von))} fragt nach · ${zeitpunkt(r.rueckfrage_am)}</span>
+            <span style="font-size:14.5px;font-weight:700;display:block">${esc(r.titel)}</span>
+          </span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2)">„${esc(r.rueckfrage)}“${
+          r.vorschlag_datum ? ` · Vorschlag: <b>${esc(r.vorschlag_datum)}</b>` : ""}</div>
+        <button class="btn primary block" data-sheet="antwort" data-bereich="${r.bereich}" data-id="${r.id}">Antworten</button>
+      </div>`).join("")}
+
+      ${meineZusagen().map((r) => `
+      <button class="rowlink" data-sheet="zusage" data-id="${r.id}"
+        style="border-color:${r.erfuellt === "nicht_erhalten" ? "var(--accent)" : "var(--line)"}">
+        <span class="avatar sm" style="background:var(--tint);color:var(--accent)">${icon("i-gift", 18)}</span>
+        <span class="grow"><span class="t">${r.erfuellt === "nicht_erhalten"
+            ? `${esc(r.belohnung)} — nachholen?` : `Du schuldest: ${esc(r.belohnung)}`}</span>
+          <span class="m">${r.erfuellt === "nicht_erhalten"
+            ? `${r.cost} Punkte ab · noch rückholbar`
+            : `für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · ${esc(r.wish_date)}` : ""}`}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>`).join("")}
 
       ${ueberfaellig().length ? `
       <div class="card alert">
@@ -881,6 +921,46 @@ function schirmPruefen() {
               <button class="btn primary" data-entscheiden="claims" data-id="${e.id}" data-status="bestaetigt">Bestätigen</button>
               <button class="btn ghost" data-entscheiden="claims" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
             </div>
+            <button class="btn text block" data-sheet="rueckfrage" data-bereich="claims" data-id="${e.id}">Nachfragen</button>
+          </div>`;
+        if (e.art === "empfang") return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              <span class="avatar sm" style="background:var(--tint);color:var(--accent)">${icon("i-gift", 18)}</span>
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">
+                  ${esc(nameVon(e.decided_by))} hat zugesagt · ${zeitpunkt(e.decided_at)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
+              </span>
+              <span class="pts-pill">−${e.cost}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink-2)">
+              ${e.wish_date ? `<b>${esc(e.wish_date)}</b> · ` : ""}Hast du sie bekommen?</div>
+            <div class="btnrow">
+              <button class="btn primary" data-empfang="${e.id}" data-erhalten="ja">Bekommen</button>
+              <button class="btn ghost" data-empfang="${e.id}" data-erhalten="nein">Kam nicht</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--ink-3)">
+              „Kam nicht“ kostet ${esc(nameVon(e.decided_by))} ${e.cost} Punkte — rückholbar,
+              wenn es binnen drei Tagen doch noch passiert.</div>
+          </div>`;
+        if (e.art === "nachhol") return `
+          <div class="card">
+            <div style="display:flex;gap:11px;align-items:center">
+              ${bild(mitglied(e.nachhol_von), "sm")}
+              <span style="flex:1">
+                <span style="font-size:12px;color:var(--ink-3);display:block">
+                  ${esc(nameVon(e.nachhol_von))} hat nachgeholt · ${zeitpunkt(e.nachhol_am)}</span>
+                <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
+              </span>
+              <span class="pts-pill">+${e.cost}</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Stimmt das? Dann bekommt
+              ${esc(nameVon(e.nachhol_von))} die ${e.cost} Punkte zurück.</div>
+            <div class="btnrow">
+              <button class="btn primary" data-nachhol="${e.id}" data-ja="ja">Stimmt</button>
+              <button class="btn ghost" data-nachhol="${e.id}" data-ja="nein">Kam trotzdem nicht</button>
+            </div>
           </div>`;
         if (e.art === "plan") return `
           <div class="card">
@@ -917,6 +997,8 @@ function schirmPruefen() {
               <button class="btn primary" data-entscheiden="requests" data-id="${e.id}" data-status="bestaetigt">Genehmigen</button>
               <button class="btn ghost" data-entscheiden="requests" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
             </div>
+            <button class="btn text block" data-sheet="rueckfrage" data-bereich="requests" data-id="${e.id}"
+              data-termin="${esc(e.wish_date || "")}">Termin passt nicht — nachfragen</button>
           </div>`;
         return `
           <div class="card">
@@ -1270,6 +1352,61 @@ function schirmStatistik() {
         </div>
       </div>` : ""}
     </div>`;
+}
+
+function sheetRueckfrage(bereich, satzId, termin) {
+  const belohnung = bereich === "requests";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Nachfragen</h3>
+    <div class="note">${icon("i-info", 16)}<span>Der Antrag bleibt offen — er wird weder genehmigt
+      noch abgelehnt. Wer ihn gestellt hat, antwortet und schickt ihn erneut.</span></div>
+    ${belohnung ? `
+    <div class="field"><label>Anderer Termin (Vorschlag)</label>
+      <input id="rtermin" value="${esc(termin || "")}" placeholder="z. B. Samstag Abend"></div>` : ""}
+    <div class="field"><label>Deine Frage</label>
+      <textarea id="rtext" placeholder="${belohnung ? "z. B. Am Freitag schaffe ich es nicht." : "z. B. War die Küche auch dabei?"}"></textarea></div>
+    <button class="btn primary block" data-senden="rueckfrage" data-bereich="${bereich}" data-id="${satzId}">
+      Rückfrage schicken</button>`);
+}
+
+function sheetAntwort(bereich, satz) {
+  const belohnung = bereich === "requests";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Antworten</h3>
+    <div class="card flat" style="gap:6px">
+      <span style="font-size:14px;font-weight:600">${esc(satz.titel)}</span>
+      <span style="font-size:12.5px;color:var(--ink-2)">
+        ${esc(nameVon(satz.rueckfrage_von))}: „${esc(satz.rueckfrage)}“</span>
+    </div>
+    ${belohnung ? `
+    <div class="field"><label>Terminwunsch</label>
+      <input id="atermin" value="${esc(satz.vorschlag_datum || satz.wish_date || "")}"></div>` : ""}
+    <div class="field"><label>Deine Antwort</label><textarea id="atext" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Danach steht der Antrag wieder zur Entscheidung.</span></div>
+    <button class="btn primary block" data-senden="antwort" data-bereich="${bereich}" data-id="${satz.id}">
+      Erneut schicken</button>`);
+}
+
+function sheetZusage(r) {
+  const gestraft = r.erfuellt === "nicht_erhalten";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${gestraft ? "Doch noch nachholen" : "Deine Zusage"}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(r.belohnung)}</span>
+      <span class="pts-pill">${gestraft ? "−" : ""}${r.cost}</span>
+    </div>
+    <div style="font-size:13px;color:var(--ink-2)">
+      Für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · <b>${esc(r.wish_date)}</b>` : ""}.
+      ${r.message ? `„${esc(r.message)}“` : ""}</div>
+    ${gestraft ? `
+    <div class="note">${icon("i-info", 16)}<span>Die ${r.cost} Punkte sind ab. Wenn du es jetzt
+      machst und ${esc(nameVon(r.requested_by))} bestätigt, kommen sie zurück.</span></div>
+    <button class="btn primary block" data-nachholen="${r.id}">Habe ich nachgeholt</button>`
+    : `<div class="note">${icon("i-info", 16)}<span>Bestätigen kann nur
+      ${esc(nameVon(r.requested_by))} — du siehst hier nur, was noch offen ist.</span></div>`}`);
 }
 
 /* ------------------------------------------------------------------ Haushaltsplan */
@@ -1891,6 +2028,13 @@ function sheetNeueBelohnung() {
         <button data-menge="1" aria-label="mehr">+</button>
       </div>
     </div>
+    <button class="schalter" data-bestaetigen aria-pressed="true">
+      <span class="box">✓</span>
+      <span class="t">Empfang muss bestätigt werden</span>
+    </button>
+    <div style="font-size:11.5px;color:var(--ink-3);margin-top:-4px">
+      Für alles, was jemand ausführt — Massage, Frühstück, Film aussuchen. Bei Ausnahme- und
+      Vetoanträgen aus, dort gibt es nichts zu liefern.</div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="optional"></textarea></div>
     <div class="note">${icon("i-vote", 16)}<span>Neue Belohnungen gehen in die Abstimmung.
       Übernommen wird der Vorschlag erst, wenn ${esc(andereName())} ${beugung("zustimmt", "zustimmen")}.</span></div>
@@ -1913,8 +2057,14 @@ function sheetKosten(belohnung) {
         <button data-menge="1" aria-label="mehr">+</button>
       </div>
     </div>
+    <button class="schalter" data-bestaetigen aria-pressed="${belohnung.bestaetigen ? "true" : "false"}">
+      <span class="box">${belohnung.bestaetigen ? "✓" : ""}</span>
+      <span class="t">Empfang muss bestätigt werden</span>
+    </button>
+    <div style="font-size:11.5px;color:var(--ink-3);margin-top:-4px">
+      Aus für Ausnahme- und Vetoanträge — dort gibt es nichts zu liefern.</div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt der alte Wert nicht mehr?"></textarea></div>
-    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn beide zustimmen — und nie rückwirkend.</span></div>
+    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn alle zustimmen — und nie rückwirkend.</span></div>
     <button class="btn primary block" data-senden="kosten" data-id="${belohnung.id}">Zur Abstimmung geben</button>`);
 }
 
@@ -2065,7 +2215,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2102,6 +2252,13 @@ document.addEventListener("click", async (ev) => {
   }
 
   if (el.dataset.plansicht) { planGruppiert = el.dataset.plansicht === "raum"; zeichne(); return; }
+
+  if (el.hasAttribute("data-bestaetigen")) {
+    const an = el.getAttribute("aria-pressed") !== "true";
+    el.setAttribute("aria-pressed", an);
+    el.querySelector(".box").textContent = an ? "✓" : "";
+    return;
+  }
 
   if (el.dataset.plan) {
     ansicht = "aufgabe";
@@ -2176,6 +2333,17 @@ document.addEventListener("click", async (ev) => {
       if (!quest) return;
       sheetZu();
       sheetRaum(quest);
+      return;
+    }
+    if (art === "rueckfrage") { sheetRueckfrage(el.dataset.bereich, el.dataset.id, el.dataset.termin); return; }
+    if (art === "antwort") {
+      const satz = meineRueckfragen().find((r) => r.id === el.dataset.id);
+      if (satz) sheetAntwort(el.dataset.bereich, satz);
+      return;
+    }
+    if (art === "zusage") {
+      const r = belohnungenOffen().find((x) => x.id === el.dataset.id);
+      if (r) sheetZusage(r);
       return;
     }
     if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
@@ -2316,6 +2484,47 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
+    if (el.dataset.senden === "rueckfrage") {
+      await api(`${el.dataset.bereich}/${el.dataset.id}/rueckfrage`, {
+        text: wert("rtext"), termin: wert("rtermin")
+      });
+      sheetZu(); await laden();
+      toast("Rückfrage geschickt.");
+      return;
+    }
+
+    if (el.dataset.senden === "antwort") {
+      await api(`${el.dataset.bereich}/${el.dataset.id}/antwort`, {
+        termin: wert("atermin"), nachricht: wert("atext")
+      });
+      sheetZu(); await laden();
+      toast("Antwort raus — der Antrag steht wieder zur Entscheidung.");
+      return;
+    }
+
+    if (el.dataset.empfang) {
+      const ja = el.dataset.erhalten === "ja";
+      const ergebnis = await api(`requests/${el.dataset.empfang}/empfang`, { erhalten: ja });
+      await laden();
+      if (ja) toast("Schön — bestätigt.");
+      else toast("Vermerkt. Die Punkte sind ab, drei Tage bleiben zum Nachholen.", true);
+      return;
+    }
+
+    if (el.dataset.nachhol) {
+      await api(`requests/${el.dataset.nachhol}/nachhol-pruefen`, { ja: el.dataset.ja === "ja" });
+      await laden();
+      toast(el.dataset.ja === "ja" ? "Die Punkte sind zurück." : "Vermerkt — die Punkte bleiben ab.");
+      return;
+    }
+
+    if (el.dataset.nachholen) {
+      await api(`requests/${el.dataset.nachholen}/nachholen`, {});
+      sheetZu(); await laden();
+      toast("Gemeldet — es fehlt noch die Bestätigung.");
+      return;
+    }
+
     if (el.dataset.bewerbung) {
       const weg = el.dataset.bewerbung === "zurueck";
       await api(`plan/${el.dataset.id}/${weg ? "zurueckziehen" : "bewerben"}`, {});
@@ -2428,13 +2637,17 @@ document.addEventListener("click", async (ev) => {
     }
     if (el.dataset.senden === "neue-belohnung") {
       if (!wert("bname")) throw new Error("Ein Name fehlt");
-      await api("proposals", { art: "new_reward", wert: zahl("menge"), name: wert("bname"), grund: wert("grund") });
+      await api("proposals", { art: "new_reward", wert: zahl("menge"), name: wert("bname"),
+        bestaetigen: scrim.querySelector("[data-bestaetigen]")?.getAttribute("aria-pressed") !== "false",
+        grund: wert("grund") });
       sheetZu(); ansicht = "wir"; await laden();
       toast("Vorschlag steht zur Abstimmung.");
       return;
     }
     if (el.dataset.senden === "kosten") {
-      await api("proposals", { art: "reward_cost", zielId: el.dataset.id, wert: zahl("menge"), grund: wert("grund") });
+      await api("proposals", { art: "reward_cost", zielId: el.dataset.id, wert: zahl("menge"),
+        bestaetigen: scrim.querySelector("[data-bestaetigen]")?.getAttribute("aria-pressed") !== "false",
+        grund: wert("grund") });
       sheetZu(); ansicht = "wir"; await laden();
       toast("Vorschlag steht zur Abstimmung.");
       return;

@@ -34,8 +34,10 @@ export const ANFANGSBESTAND = {
   standard: 88
 };
 
+// „bestaetigen: false" nur für das, was niemand ausführt — ein Vetorecht wird in
+// Anspruch genommen, nicht geliefert. Alles andere braucht die Empfangsbestätigung.
 export const BELOHNUNGEN = [
-  { name: "Veto-Ausnahmeantrag",         kosten: 15 },
+  { name: "Veto-Ausnahmeantrag",         kosten: 15, bestaetigen: false },
   { name: "Freizeitaktivität bestimmen", kosten: 15 },
   { name: "Massage eine Region",         kosten: 3 },
   { name: "Eincremen komplett",          kosten: 4 },

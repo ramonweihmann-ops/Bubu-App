@@ -12,6 +12,10 @@ import {
   vergabeEntscheiden, erledigtMelden, erledigungEntscheiden,
   aufgabeAnlegen, aufgabeAendern, aufgabeLoeschen
 } from "./plan.js";
+import {
+  rueckfrageStellen, rueckfrageBeantworten, offeneBelohnungen,
+  belohnungEmpfang, belohnungNachholen, nachholEntscheiden
+} from "./rueckmeldung.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -78,6 +82,16 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "plan" && teile[2] === "vergabe") return json(await vergabeEntscheiden(env, ich, teile[1], !!koerper.annehmen));
     if (teile[0] === "plan" && teile[2] === "erledigt") return json(await erledigtMelden(env, ich, teile[1], koerper));
     if (teile[0] === "erledigungen" && teile[2] === "decide") return json(await erledigungEntscheiden(env, ich, teile[1], koerper.status));
+
+    if ((teile[0] === "claims" || teile[0] === "requests") && teile[2] === "rueckfrage") {
+      return json(await rueckfrageStellen(env, ich, teile[0], teile[1], koerper));
+    }
+    if ((teile[0] === "claims" || teile[0] === "requests") && teile[2] === "antwort") {
+      return json(await rueckfrageBeantworten(env, ich, teile[0], teile[1], koerper));
+    }
+    if (teile[0] === "requests" && teile[2] === "empfang") return json(await belohnungEmpfang(env, ich, teile[1], !!koerper.erhalten));
+    if (teile[0] === "requests" && teile[2] === "nachholen") return json(await belohnungNachholen(env, ich, teile[1]));
+    if (teile[0] === "requests" && teile[2] === "nachhol-pruefen") return json(await nachholEntscheiden(env, ich, teile[1], !!koerper.ja));
     if (teile[0] === "quests" && teile[2] === "raum") return json(await questRaum(env, ich, teile[1], koerper.raum));
     if (pfad === "raeume") return json(await raumAnlegen(env, ich, koerper));
     if (teile[0] === "raeume" && teile[1]) return json(await raumAendern(env, ich, teile[1], koerper));
@@ -171,8 +185,8 @@ async function haushaltEinrichten(env, ich, daten) {
         env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
           .bind(id(), paar, q.name, q.kategorie, q.punkte)),
       ...BELOHNUNGEN.map((b) =>
-        env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
-          .bind(id(), paar, b.name, b.kosten))
+        env.DB.prepare("insert into rewards (id, couple_id, name, cost, bestaetigen) values (?1, ?2, ?3, ?4, ?5)")
+          .bind(id(), paar, b.name, b.kosten, b.bestaetigen === false ? 0 : 1))
     );
   } else {
     anweisungen.push(
@@ -487,13 +501,15 @@ async function zustand(env, ich) {
       env.DB.prepare(`select q.id, q.name, q.category, q.points,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select b.id, b.name, b.cost,
+      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen,
                              (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
                         from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at, q.name as quest
+      env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at,
+                             c.rueckfrage, c.rueckfrage_von, q.name as quest
                         from claims c join quests q on q.id = c.quest_id
                        where c.couple_id = ?1 and c.status = 'offen' order by c.created_at desc`).bind(paar).all(),
-      env.DB.prepare(`select r.id, r.requested_by, r.cost, r.wish_date, r.message, r.created_at, b.name as belohnung
+      env.DB.prepare(`select r.id, r.requested_by, r.cost, r.wish_date, r.message, r.created_at,
+                             r.rueckfrage, r.rueckfrage_von, r.vorschlag_datum, b.name as belohnung
                         from requests r join rewards b on b.id = r.reward_id
                        where r.couple_id = ?1 and r.status = 'offen' order by r.created_at desc`).bind(paar).all(),
       env.DB.prepare(`select id, from_member, to_member, amount, message, created_at
@@ -552,6 +568,7 @@ async function zustand(env, ich) {
     }),
     aktionen: aktionen.results,
     plan: await planListe(env, paar, ich.id),
+    belohnungenOffen: await offeneBelohnungen(env, paar),
     meldungen: meldungen.results,
     antraege: antraege.results,
     uebertragungen: uebertragungen.results,
@@ -692,7 +709,14 @@ async function antragEntscheiden(env, ich, antragId, status) {
          from requests r
         where r.id = ?2 and r.status = 'bestaetigt'
           and not exists (select 1 from ledger where source_id = r.id)`
-    ).bind(id(), antragId)
+    ).bind(id(), antragId),
+    // Eine zugesagte Belohnung ist noch keine erhaltene — außer bei Ausnahme-
+    // und Vetoanträgen, die nichts zu liefern haben.
+    env.DB.prepare(
+      `update requests set erfuellt = case
+          when (select bestaetigen from rewards where id = requests.reward_id) = 1 then 'offen' else 'erhalten' end
+        where id = ?1 and status = 'bestaetigt'`
+    ).bind(antragId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
 
@@ -786,7 +810,7 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
 /* ------------------------------------------------------------------ Abstimmungen */
 
 async function vorschlagen(env, ich, daten) {
-  const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "" } = daten;
+  const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "", bestaetigen = true } = daten;
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
                  "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
@@ -830,10 +854,11 @@ async function vorschlagen(env, ich, daten) {
   const vorschlag = id();
   await env.DB.batch([
     env.DB.prepare(
-      `insert into proposals (id, couple_id, kind, target_id, old_value, new_value, name, category, reason, created_by)
-       values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+      `insert into proposals (id, couple_id, kind, target_id, old_value, new_value, name, category, reason, payload, created_by)
+       values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
     ).bind(vorschlag, ich.couple_id, art, zielId || null, alt, neu,
-           String(name).slice(0, 120), String(kategorie).slice(0, 40), String(grund).slice(0, 300), ich.id),
+           String(name).slice(0, 120), String(kategorie).slice(0, 40), String(grund).slice(0, 300),
+           JSON.stringify({ bestaetigen: !!bestaetigen }), ich.id),
     // Wer vorschlägt, stimmt zu. Es fehlt noch die andere Stimme.
     env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
       .bind(vorschlag, ich.id)
@@ -960,6 +985,11 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
   return { ok: true };
 }
 
+/** Der Anhang eines Vorschlags — leer, wenn keiner mitgeschickt wurde. */
+function anhang(vorschlag) {
+  try { return JSON.parse(vorschlag.payload || "{}"); } catch { return {}; }
+}
+
 /** Ein Nein beendet den Vorschlag sofort, der alte Wert gilt weiter.
  *  Übernommen wird er erst, wenn beide zugestimmt haben. */
 async function auszaehlen(env, vorschlag) {
@@ -989,15 +1019,17 @@ async function auszaehlen(env, vorschlag) {
   const bauplan = {
     quest_points: () => env.DB.prepare("update quests set points = ?1 where id = ?2 and couple_id = ?3")
       .bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
-    reward_cost: () => env.DB.prepare("update rewards set cost = ?1 where id = ?2 and couple_id = ?3")
-      .bind(vorschlag.new_value, vorschlag.target_id, vorschlag.couple_id),
+    reward_cost: () => env.DB.prepare("update rewards set cost = ?1, bestaetigen = ?2 where id = ?3 and couple_id = ?4")
+      .bind(vorschlag.new_value, anhang(vorschlag).bestaetigen === false ? 0 : 1,
+            vorschlag.target_id, vorschlag.couple_id),
     // Der Vorschlag gibt dem neuen Eintrag seine Kennung. Damit kann dieselbe
     // Abstimmung nie zwei Quests anlegen — ein zweiter Anlauf verletzt den
     // Primärschlüssel, und der ganze Schritt wird zurückgerollt.
     new_quest: () => env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
       .bind(vorschlag.id, vorschlag.couple_id, vorschlag.name, vorschlag.category || "Sonstiges", vorschlag.new_value),
-    new_reward: () => env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
-      .bind(vorschlag.id, vorschlag.couple_id, vorschlag.name, vorschlag.new_value),
+    new_reward: () => env.DB.prepare("insert into rewards (id, couple_id, name, cost, bestaetigen) values (?1, ?2, ?3, ?4, ?5)")
+      .bind(vorschlag.id, vorschlag.couple_id, vorschlag.name, vorschlag.new_value,
+            anhang(vorschlag).bestaetigen === false ? 0 : 1),
     // Nie hart löschen: der Verlauf soll lesbar bleiben.
     delete_quest: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),

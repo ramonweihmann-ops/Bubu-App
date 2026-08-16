@@ -19,6 +19,12 @@ database_name = "haus-quest"
 database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
 migrations_dir = "d1/migrations"
 
+# Der Wecker für den Haushaltsplan: jeden Morgen um 6 Uhr UTC, also 7 bzw. 8 Uhr
+# bei uns. Er zieht Vergabe, Mahnungen und Gruppenstrafe nach, damit das nicht
+# davon abhängt, dass gerade jemand die App öffnet.
+[triggers]
+crons = ["0 6 * * *"]
+
 [vars]
 BASIS_URL = "https://haus-quest.com"
 GOOGLE_CLIENT_ID = "600393178714-ds40oku8g1qskci4vsngrihre3ps0hal.apps.googleusercontent.com"
