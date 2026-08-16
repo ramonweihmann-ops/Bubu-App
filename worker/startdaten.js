@@ -26,7 +26,7 @@ export const QUESTS = [
   { name: "Arzttermin machen + hingehen",          kategorie: "Sonstiges", punkte: 6 }
 ];
 
-// Punktestände aus der Reinigungsquest-Tabelle, Zeile „Punkte übrig".
+// Cleanies-Stände aus der Reinigungsquest-Tabelle, Zeile „Cleanies übrig".
 // Wird einmalig gebucht, sobald das Paar vollständig ist. Wer hier nicht steht,
 // startet bei null. Nach der Übernahme kann dieser Block ersatzlos weg.
 export const ANFANGSBESTAND = {

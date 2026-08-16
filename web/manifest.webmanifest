@@ -1,7 +1,7 @@
 {
   "name": "Haus-Quest",
   "short_name": "Haus-Quest",
-  "description": "Punkte für erledigte Aufgaben — freigegeben nur gemeinsam.",
+  "description": "Cleanies für erledigte Aufgaben — freigegeben nur gemeinsam.",
   "lang": "de",
   "start_url": "/app",
   "scope": "/",

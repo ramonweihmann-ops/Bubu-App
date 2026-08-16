@@ -162,7 +162,7 @@ export async function belohnungEmpfang(env, ich, antragId, erhalten) {
     if (antrag.decided_by) {
       await melde(env, ich.couple_id, antrag.decided_by, antrag.strafe_am
         ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat es doch bekommen`,
-            text: `${antrag.belohnung} — die ${antrag.cost} Punkte sind wieder da.`, punkte: antrag.cost }
+            text: `${antrag.belohnung} — die ${antrag.cost} Cleanies sind wieder da.`, punkte: antrag.cost }
         : { art: "bestaetigt", titel: `${vorname(ich.name)} hat bestätigt`,
             text: `${antrag.belohnung} ist angekommen.` });
     }
@@ -187,7 +187,7 @@ export async function belohnungEmpfang(env, ich, antragId, erhalten) {
   await melde(env, ich.couple_id, antrag.decided_by, {
     art: "abgelehnt",
     titel: `${antrag.belohnung} kam nicht an`,
-    text: `${antrag.cost} Punkte ab. Du hast ${NACHHOLTAGE} Tage, es nachzuholen.`,
+    text: `${antrag.cost} Cleanies ab. Du hast ${NACHHOLTAGE} Tage, es nachzuholen.`,
     punkte: -antrag.cost
   });
   return { ok: true, status: "nicht_erhalten" };
@@ -213,7 +213,7 @@ export async function belohnungNachholen(env, ich, antragId) {
   await melde(env, ich.couple_id, antrag.requested_by, {
     art: "info",
     titel: `${vorname(ich.name)} hat nachgeholt`,
-    text: `${antrag.belohnung} — stimmt das? Dann sind die Punkte wieder da.`
+    text: `${antrag.belohnung} — stimmt das? Dann sind die Cleanies wieder da.`
   });
   return { ok: true };
 }
@@ -231,7 +231,7 @@ export async function nachholEntscheiden(env, ich, antragId, ja) {
     await melde(env, ich.couple_id, antrag.nachhol_von, {
       art: "abgelehnt",
       titel: `${vorname(ich.name)} sagt: kam nicht`,
-      text: `${antrag.belohnung} — die Punkte bleiben ab.`
+      text: `${antrag.belohnung} — die Cleanies bleiben ab.`
     });
     return { ok: true, status: "nicht_erhalten" };
   }

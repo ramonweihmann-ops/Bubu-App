@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Quest-Liste mit Cleanies</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1000px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:-.02em;margin:34px 0 8px}
+.lead{color:var(--ink-2);margin:0 0 20px;max-width:64ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px;align-items:start}
+.probe{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:16px;position:relative}
+.probe.gewaehlt{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.probe h3{font-family:var(--font-display);font-weight:800;font-size:16px;margin:0 0 2px}
+.probe .warum{font-size:12.5px;color:var(--ink-2);margin:0 0 14px;min-height:3em}
+.probe .marker{position:absolute;top:14px;right:16px;font-size:10px;font-family:var(--font-data);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+
+/* ---------- gemeinsame Bausteine ---------- */
+.liste{display:flex;flex-direction:column;gap:8px}
+.zeile{display:flex;gap:8px;align-items:stretch}
+.rowlink{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--line);
+  border-radius:14px;background:var(--bg);width:100%;font:inherit;color:inherit;text-align:left;flex:1;min-width:0}
+.rowlink .grow{flex:1;min-width:0}
+.rowlink .t{display:block;font-weight:600}
+.rowlink .m{display:block;color:var(--ink-3)}
+.stiftbtn{flex:none;width:46px;border-radius:14px;border:1px solid var(--line);background:var(--bg);
+  color:var(--ink-3);display:grid;place-items:center}
+.cleanie{width:1em;height:1em;vertical-align:-.14em;margin-left:.18em;display:inline-block}
+
+/* ---------- heute ---------- */
+.jetzt .t{font-size:14.5px}
+.jetzt .m{font-size:12px}
+.jetzt .pill{font-family:var(--font-data);font-size:13px;font-weight:700;background:var(--accent-tint);
+  color:var(--accent);border-radius:999px;padding:5px 10px;flex:none}
+
+/* ---------- A: ruhiges Blau ---------- */
+.a .t{font-size:14px}
+.a .m{font-size:11.5px}
+.a .pill{font-family:var(--font-data);font-size:13px;font-weight:700;background:#e8f0fd;
+  color:#1d5fc4;border-radius:999px;padding:5px 9px;flex:none;display:inline-flex;align-items:center}
+
+/* ---------- B: nur Zahl, kein Kasten ---------- */
+.b .t{font-size:14px}
+.b .m{font-size:11.5px}
+.b .pill{font-family:var(--font-display);font-weight:800;font-size:19px;color:#1d5fc4;flex:none;
+  display:inline-flex;align-items:center;letter-spacing:-.02em}
+
+/* ---------- C: Sternchip in Markenfarbe ---------- */
+.c .rowlink{padding:12px 13px;border-radius:16px}
+.c .t{font-size:14px}
+.c .m{font-size:11.5px}
+.c .pill{font-family:var(--font-data);font-size:13px;font-weight:700;background:var(--ink);
+  color:#fff;border-radius:999px;padding:5px 10px;flex:none;display:inline-flex;align-items:center}
+.c .pill .cleanie{filter:brightness(1.9) saturate(.6)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+.dunkelprobe{background:#0f1c31;border-radius:20px;padding:16px;margin-top:10px}
+.dunkelprobe .rowlink{background:#0f1c31;border-color:#27395a;color:#e8eef8}
+.dunkelprobe .m{color:#7d8ea9}
+.dunkelprobe .stiftbtn{background:#0f1c31;border-color:#27395a}
+.dunkelprobe .cleanie{filter:brightness(1.3) saturate(1.05)}
+.dunkelprobe .a .pill{background:#16345e;color:#8fb8ff}
+.dunkelprobe .b .pill{color:#8fb8ff}
+.dunkelprobe .c .pill{background:#e8eef8;color:#0f1c31}
+.dunkelprobe .c .pill .cleanie{filter:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · entschieden: C</span>
+  <h1>Quest-Liste mit Cleanies</h1>
+  <p class="lead">
+    Der Stern steht als Währungszeichen direkt hinter der Zahl — überall dort, wo bisher eine
+    nackte Zahl stand. Bleibt die Frage nach der Farbe: Rot liest sich wie eine Warnung, und
+    seit der Stern blau ist, beißt es sich zusätzlich. Drei Vorschläge, alle mit etwas
+    ruhigeren Schriftgrößen als heute.
+  </p>
+
+  <h2>Heute</h2>
+  <div class="probe" style="max-width:420px">
+    <h3>Wie es jetzt aussieht</h3>
+    <p class="warum">Rote Zahl auf rotem Grund, Titel 14,5 px. Das Rot ist in der App sonst für
+      Warnungen und Ablehnungen reserviert — hier steht es für den Lohn.</p>
+    <div class="liste jetzt" id="jetzt"></div>
+  </div>
+
+  <h2>Zur Auswahl</h2>
+  <div class="reihe">
+    <div class="probe a">
+      <span class="marker">A</span>
+      <h3>Ruhiges Blau</h3>
+      <p class="warum">Dieselbe Form wie heute, nur in einem Blau, das den Stern aufnimmt.
+        Rot bleibt für das reserviert, was wirklich dringend ist.</p>
+      <div class="liste a" id="a"></div>
+    </div>
+
+    <div class="probe b">
+      <span class="marker">B</span>
+      <h3>Ohne Kasten</h3>
+      <p class="warum">Nur die Zahl mit Stern, größer und in Blau. Am leisesten — die Liste wirkt
+        aufgeräumter, weil eine Umrandung weniger im Bild ist.</p>
+      <div class="liste b" id="b"></div>
+    </div>
+
+    <div class="probe c gewaehlt">
+      <span class="marker">C · gewählt</span>
+      <h3>Navy-Chip</h3>
+      <p class="warum">Der Chip in eurem Navy, der Stern hell darauf. Kräftiger als A, aber ohne
+        das Signalrot — und näher an der bisherigen Marke.</p>
+      <div class="liste c" id="c"></div>
+    </div>
+  </div>
+
+  <h2>Im Dunkeln</h2>
+  <p class="lead">Damit die Wahl auch bei Nacht trägt — dieselben drei, nur im dunklen Satz.</p>
+  <div class="dunkelprobe">
+    <div class="reihe">
+      <div><div class="liste a" id="ad"></div></div>
+      <div><div class="liste b" id="bd"></div></div>
+      <div><div class="liste c" id="cd"></div></div>
+    </div>
+  </div>
+
+  <h2>Was sich sonst noch ändert</h2>
+  <table>
+    <tr><th style="width:28%">Stelle</th><th>Vorher → nachher</th></tr>
+    <tr><td><b>Überall im Text</b></td><td>„Punkte" → „Cleanies". Auch „Punktwert" wird zu „Cleanies-Wert", „Punktestand" zu „Cleanies-Stand".</td></tr>
+    <tr><td><b>Nackte Zahlen</b></td><td>Bekommen den Stern direkt dahinter: <b>12<img class="cleanie" src="/cleanie.webp" alt="Cleanies"></b> statt nur <b>12</b>. Steht das Wort ohnehin da, bleibt der Stern weg.</td></tr>
+    <tr><td><b>Kontostände</b></td><td>Die große Zahl auf der Startseite trägt den Stern mit, in ihrer Größe.</td></tr>
+    <tr><td><b>Verlauf</b></td><td>+10<img class="cleanie" src="/cleanie.webp" alt="Cleanies"> und −3<img class="cleanie" src="/cleanie.webp" alt="Cleanies"> statt +10 und −3.</td></tr>
+    <tr><td><b>Schriftgrößen</b></td><td>Questname 14,5 → 14 px, Zeile darunter 12 → 11,5 px. Eine Kleinigkeit, aber die Liste atmet mehr.</td></tr>
+  </table>
+
+</div>
+
+<script>
+const QUESTS = [
+  { name: "Badezimmer putzen", raum: "Bad", punkte: 12, oft: 4 },
+  { name: "Spülmaschine ausräumen", raum: "Küche", punkte: 3, oft: 11 },
+  { name: "Wohnung saugen", raum: "Wohnzimmer", punkte: 6, oft: 2, rhythmus: "1× pro Woche" },
+  { name: "Betten beziehen", raum: "Schlafzimmer", punkte: 5, oft: 1 },
+  { name: "Fenster putzen", raum: "Wohnzimmer", punkte: 10, oft: 0 }
+];
+
+const stern = '<img class="cleanie" src="/cleanie.webp" alt="Cleanies">';
+
+function zeile(q) {
+  return `
+    <div class="zeile">
+      <div class="rowlink">
+        <span class="grow">
+          <span class="t">${q.name}${q.rhythmus ? "&nbsp;↻" : ""}</span>
+          <span class="m">${q.raum}${q.rhythmus ? ` · ${q.rhythmus}` : ""}${q.oft ? ` · ${q.oft}×` : ""}</span>
+        </span>
+        <span class="pill">${q.punkte}${stern}</span>
+      </div>
+      <button class="stiftbtn">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16v4z"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+    </div>`;
+}
+
+for (const wo of ["jetzt", "a", "b", "c", "ad", "bd", "cd"]) {
+  document.getElementById(wo).innerHTML = QUESTS.map(zeile).join("");
+}
+</script>
+</body>
+</html>

@@ -249,7 +249,7 @@ async function strafen(env, paar, q) {
   await meldeAlle(env, paar, null, {
     art: "abgelehnt",
     titel: `${q.name} — sieben Tage überfällig`,
-    text: `Gruppenstrafe: ${q.points} Punkte für jeden.`,
+    text: `Gruppenstrafe: ${q.points} Cleanies für jeden.`,
     punkte: -q.points
   });
 }

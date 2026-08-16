@@ -1,4 +1,4 @@
-// Die Schnittstelle. Alles, was Punkte bewegt, läuft hier durch.
+// Die Schnittstelle. Alles, was Cleanies bewegt, läuft hier durch.
 //
 // Die App schickt nur Absichten („ich habe X erledigt“). Ob daraus eine Buchung
 // wird, entscheiden diese Prüfungen und die Regeln in der Datenbank — nicht das Handy.
@@ -246,7 +246,7 @@ const grenze = (wert, min, max) => Math.max(min, Math.min(max, Math.floor(Number
 
 /* ------------------------------------------------------------------ Räume */
 
-/** Räume sind Ordnung, keine Punkte — deshalb darf sie jeder pflegen. Der Name
+/** Räume sind Ordnung, keine Cleanies — deshalb darf sie jeder pflegen. Der Name
  *  steht zusätzlich als Text in den Quests; ein umbenannter Raum zieht sie mit. */
 async function raumAnlegen(env, ich, { name }) {
   const sauber = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
@@ -261,7 +261,7 @@ async function raumAnlegen(env, ich, { name }) {
   return { ok: true, name: sauber };
 }
 
-/** Eine Quest in einen anderen Raum schieben. Am Punktwert ändert das nichts,
+/** Eine Quest in einen anderen Raum schieben. Am Cleanies-Wert ändert das nichts,
  *  deshalb braucht es dafür auch keine Abstimmung — nur Ordnung. */
 async function questRaum(env, ich, questId, raum) {
   const ziel = await env.DB.prepare("select name from raeume where couple_id = ?1 and name = ?2 and aktiv = 1")
@@ -358,7 +358,7 @@ async function paarBeitreten(env, ich, code) {
   return { ok: true };
 }
 
-/** Einmalige Übernahme der Punktestände aus der Reinigungsquest-Tabelle.
+/** Einmalige Übernahme der Cleanies-Stände aus der Reinigungsquest-Tabelle.
  *  Läuft nur für den Haushalt, aus dem die Tabelle stammt, und nur solange das
  *  Konto völlig leer ist. Jeder neue Haushalt fängt bei null an. */
 async function anfangsbestand(env, paarId) {
@@ -425,7 +425,7 @@ async function laufendeAktionen(env, paarId) {
   return treffer.results;
 }
 
-/** Punkte einer Quest inklusive laufendem Bonus. */
+/** Cleanies einer Quest inklusive laufendem Bonus. */
 function questWert(quest, aktionen) {
   const bonus = aktionen.find((a) => a.art === "quest_bonus" && (!a.kategorie || a.kategorie === quest.category));
   if (!bonus) return { wert: quest.points, aktion: null };
@@ -465,7 +465,7 @@ async function abstimmungenNachziehen(env, paarId) {
 
 async function zustand(env, ich) {
   // Ohne Haushalt beginnt die Einrichtung. Sie ist der einzige Weg hinein —
-  // erst danach gibt es Quests, Punkte und alles Weitere.
+  // erst danach gibt es Quests, Cleanies und alles Weitere.
   if (!ich.couple_id) {
     return {
       angemeldet: true,
@@ -511,7 +511,8 @@ async function zustand(env, ich) {
                        where r.couple_id = ?1 and r.status = 'offen' order by r.created_at desc`).bind(paar).all(),
       env.DB.prepare(`select id, from_member, to_member, amount, message, created_at
                         from transfers where couple_id = ?1 and status = 'offen' order by created_at desc`).bind(paar).all(),
-      env.DB.prepare(`select p.*, q.name as quest_name, b.name as belohnung_name
+      env.DB.prepare(`select p.*, q.name as quest_name, b.name as belohnung_name,
+                             q.rhythmus as quest_rhythmus, q.wiederkehrend as quest_wiederkehrend
                         from proposals p
                         left join quests q on q.id = p.target_id
                         left join rewards b on b.id = p.target_id
@@ -580,8 +581,15 @@ async function zustand(env, ich) {
       grund: p.reason,
       von: p.created_by,
       raum: p.category,
-      tage: p.kind === "neue_aktion" ? (JSON.parse(p.payload || "{}").tage || null) : null,
+      // Was im Anhang steht, gehört auch auf die Karte. Ohne den Rhythmus liest
+      // sich ein Wechsel sonst als „12 Cleanies → 12 Cleanies“ und sagt nichts.
+      tage: anhang(p).tage || null,
+      rhythmus: anhang(p).rhythmus || null,
+      wiederkehrend: anhang(p).wiederkehrend,
+      alt_rhythmus: p.quest_rhythmus || null,
+      alt_wiederkehrend: !!p.quest_wiederkehrend,
       status: p.status,
+      created_at: p.created_at,
       meine: stimmenJe[p.id]?.[ich.id],
       stimmen: mit.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id] }))
     })),
@@ -621,7 +629,7 @@ async function melden(env, ich, daten) {
   await meldeAllen(env, ich, {
     art: "info",
     titel: `${vorname(ich.name)} hat etwas erledigt`,
-    text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Punkte warten auf eine Bestätigung.`
+    text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Cleanies warten auf eine Bestätigung.`
   });
   return { ok: true };
 }
@@ -685,7 +693,7 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
   await meldeAllen(env, ich, {
     art: "info",
     titel: `${vorname(ich.name)} möchte etwas einlösen`,
-    text: `${belohnung.name} — ${wert} Punkte. Ihr entscheidet.`
+    text: `${belohnung.name} — ${wert} Cleanies. Ihr entscheidet.`
   });
   return { ok: true };
 }
@@ -705,7 +713,7 @@ async function antragEntscheiden(env, ich, antragId, status) {
       "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
     ).bind(antrag.requested_by).first();
     if (stand.punkte < antrag.cost) {
-      throw new Fehler(`Zu wenig Punkte für diese Belohnung — ${stand.punkte} von ${antrag.cost}`);
+      throw new Fehler(`Zu wenig Cleanies für diese Belohnung — ${stand.punkte} von ${antrag.cost}`);
     }
   }
 
@@ -745,7 +753,7 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
   const menge = Math.floor(Number(betrag));
   if (!(menge > 0)) throw new Fehler("Der Betrag muss größer als null sein");
 
-  // Mit mehreren im Haushalt muss stehen, wer die Punkte bekommt. Fehlt die
+  // Mit mehreren im Haushalt muss stehen, wer die Cleanies bekommt. Fehlt die
   // Angabe und es kommt ohnehin nur eine Person in Frage, ist es diese.
   const andere = await env.DB.prepare(
     "select user_id from members where couple_id = ?1 and user_id <> ?2"
@@ -755,12 +763,12 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
   const partner = an
     ? andere.results.find((m) => m.user_id === an)
     : (andere.results.length === 1 ? andere.results[0] : null);
-  if (!partner) throw new Fehler("Wähle aus, wer die Punkte bekommen soll");
+  if (!partner) throw new Fehler("Wähle aus, wer die Cleanies bekommen soll");
 
   const stand = await env.DB.prepare(
     "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
   ).bind(ich.id).first();
-  if (stand.punkte < menge) throw new Fehler(`Du hast nur ${stand.punkte} Punkte`);
+  if (stand.punkte < menge) throw new Fehler(`Du hast nur ${stand.punkte} Cleanies`);
 
   await env.DB.prepare(
     `insert into transfers (id, couple_id, from_member, to_member, amount, message)
@@ -769,8 +777,8 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
 
   await melde(env, ich.couple_id, partner.user_id, {
     art: "info",
-    titel: `${vorname(ich.name)} schickt dir Punkte`,
-    text: `${menge} Punkte — du musst sie annehmen.`
+    titel: `${vorname(ich.name)} schickt dir Cleanies`,
+    text: `${menge} Cleanies — du musst sie annehmen.`
   });
   return { ok: true };
 }
@@ -788,7 +796,7 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
     const stand = await env.DB.prepare(
       "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
     ).bind(uebertragung.from_member).first();
-    if (stand.punkte < uebertragung.amount) throw new Fehler("Die Punkte reichen inzwischen nicht mehr");
+    if (stand.punkte < uebertragung.amount) throw new Fehler("Die Cleanies reichen inzwischen nicht mehr");
   }
 
   const [entschieden] = await env.DB.batch([
@@ -798,13 +806,13 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
     ).bind(status, uebertragungId, ich.couple_id, ich.id),
     env.DB.prepare(
       `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-       select ?1, t.couple_id, t.from_member, -t.amount, 'Punkte übertragen', 'transfer', t.id
+       select ?1, t.couple_id, t.from_member, -t.amount, 'Cleanies übertragen', 'transfer', t.id
          from transfers t where t.id = ?2 and t.status = 'bestaetigt'
           and not exists (select 1 from ledger where source_id = t.id and delta < 0)`
     ).bind(id(), uebertragungId),
     env.DB.prepare(
       `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
-       select ?1, t.couple_id, t.to_member, t.amount, 'Punkte erhalten', 'transfer', t.id
+       select ?1, t.couple_id, t.to_member, t.amount, 'Cleanies erhalten', 'transfer', t.id
          from transfers t where t.id = ?2 and t.status = 'bestaetigt'
           and not exists (select 1 from ledger where source_id = t.id and delta > 0)`
     ).bind(id(), uebertragungId)
@@ -812,10 +820,10 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
   if (!entschieden.meta.changes) throw new Fehler("Diese Übertragung ist bereits entschieden");
 
   await melde(env, ich.couple_id, uebertragung.from_member, status === "bestaetigt"
-    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat die Punkte angenommen`,
-        text: `${uebertragung.amount} Punkte übertragen`, punkte: -uebertragung.amount }
-    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat die Punkte abgelehnt`,
-        text: `${uebertragung.amount} Punkte bleiben bei dir` });
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat die Cleanies angenommen`,
+        text: `${uebertragung.amount} Cleanies übertragen`, punkte: -uebertragung.amount }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat die Cleanies abgelehnt`,
+        text: `${uebertragung.amount} Cleanies bleiben bei dir` });
   return { ok: true };
 }
 
@@ -880,7 +888,7 @@ async function vorschlagen(env, ich, daten) {
     art: "info",
     titel: `${vorname(ich.name)} schlägt etwas vor`,
     text: loeschen ? `${name || "Ein Eintrag"} soll gelöscht werden — deine Stimme fehlt.`
-                   : `Neuer Wert: ${neu} Punkte — deine Stimme fehlt.`
+                   : `Neuer Wert: ${neu} Cleanies — deine Stimme fehlt.`
   });
   return { ok: true };
 }
@@ -907,7 +915,7 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
   return { ok: true, status, wert: vorschlag.new_value };
 }
 
-/** Eine Aktion vorschlagen: doppelte Punkte oder Rabatt, befristet, auf Wunsch
+/** Eine Aktion vorschlagen: doppelte Cleanies oder Rabatt, befristet, auf Wunsch
  *  auf einen Raum begrenzt. Gültig wird sie erst mit beiden Stimmen. */
 async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = "", dauer = "heute", grund = "" }) {
   if (!["quest_bonus", "belohnung_rabatt"].includes(aktionsart)) throw new Fehler("Unbekannte Art von Aktion");
@@ -937,7 +945,7 @@ async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = ""
       `insert into proposals (id, couple_id, kind, new_value, name, category, reason, payload, created_by)
        values (?1, ?2, 'neue_aktion', ?3, ?4, ?5, ?6, ?7, ?8)`
     ).bind(vorschlag, ich.couple_id, wert,
-           aktionsart === "quest_bonus" ? "Doppelte Punkte" : "Rabatt auf Belohnungen",
+           aktionsart === "quest_bonus" ? "Doppelte Cleanies" : "Rabatt auf Belohnungen",
            raum || null, String(grund).slice(0, 300),
            JSON.stringify({ aktionsart, prozent: wert, kategorie: raum, tage }), ich.id),
     env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
@@ -948,14 +956,14 @@ async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = ""
     art: "info",
     titel: `${vorname(ich.name)} schlägt eine Aktion vor`,
     text: aktionsart === "quest_bonus"
-      ? `+${wert} % Punkte${raum ? ` auf ${raum}` : ""} — deine Stimme fehlt.`
+      ? `+${wert} % Cleanies${raum ? ` auf ${raum}` : ""} — deine Stimme fehlt.`
       : `${wert} % Rabatt auf Belohnungen — deine Stimme fehlt.`
   });
   return { ok: true };
 }
 
 /** Eine wiederkehrende Aufgabe anlegen, ändern oder löschen — wie alles, was
- *  Punkte bewegt, nur gemeinsam. Rhythmus und Raum reisen im Anhang mit. */
+ *  Cleanies bewegt, nur gemeinsam. Rhythmus und Raum reisen im Anhang mit. */
 async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum = "Sonstiges",
                                               rhythmus = "1× pro Woche", wiederkehrend = true, grund = "" }) {
   if (wiederkehrend && !RHYTHMEN[rhythmus]) throw new Fehler("Unbekannter Rhythmus");
@@ -973,7 +981,7 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
   }
 
   const punkte = art === "neue_aufgabe" ? Math.floor(Number(wert)) : ziel.points;
-  if (!(punkte > 0)) throw new Fehler("Der Punktwert muss größer als null sein");
+  if (!(punkte > 0)) throw new Fehler("Der Cleanies-Wert muss größer als null sein");
   const titel = art === "neue_aufgabe" ? String(name).trim().slice(0, 60) : ziel.name;
   if (!titel) throw new Fehler("Ein Name fehlt");
 
@@ -994,7 +1002,7 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
     titel: `${vorname(ich.name)} schlägt etwas für den Plan vor`,
     text: art === "delete_aufgabe" ? `${titel} soll aus dem Plan — deine Stimme fehlt.`
         : !wiederkehrend ? `${titel} soll keine wiederkehrende Aufgabe mehr sein — deine Stimme fehlt.`
-        : `${titel} · ${rhythmus} · ${punkte} Punkte — deine Stimme fehlt.`
+        : `${titel} · ${rhythmus} · ${punkte} Cleanies — deine Stimme fehlt.`
   });
   return { ok: true };
 }
@@ -1028,7 +1036,7 @@ async function auszaehlen(env, vorschlag) {
   if (ja < koepfe.n) return "offen";
 
   // Nur die Anweisung der tatsächlichen Art bauen. Vorher wurden alle Arten auf
-  // einmal erzeugt — bei einer Punktwertänderung sind die Felder einer Aktion leer,
+  // einmal erzeugt — bei einer Änderung der Cleanies sind die Felder einer Aktion leer,
   // und ein leerer Wert in bind() lässt die ganze Auszählung scheitern.
   const bauplan = {
     quest_points: () => env.DB.prepare("update quests set points = ?1 where id = ?2 and couple_id = ?3")
@@ -1083,7 +1091,7 @@ const TAG = 86400000;
 const alsTag = (d) => d.toISOString().slice(0, 10);
 
 /**
- * Punkte je Tag, dazu Hochrechnungen auf Woche und Monat.
+ * Cleanies je Tag, dazu Hochrechnungen auf Woche und Monat.
  *
  * Gezählt wird nur, was durch bestätigte Quests hereinkam — Übertragungen,
  * Einlösungen und der Anfangsbestand aus der Tabelle sind Bewegungen, kein Verdienst.

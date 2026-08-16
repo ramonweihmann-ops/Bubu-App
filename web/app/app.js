@@ -1,7 +1,7 @@
 // Haus-Quest – Oberfläche.
 //
 // Diese Datei zeigt nur an und schickt Absichten an die Schnittstelle.
-// Ob aus „erledigt“ Punkte werden, entscheidet der Server — nie das Handy.
+// Ob aus „erledigt“ Cleanies werden, entscheidet der Server — nie das Handy.
 
 const app = document.getElementById("app");
 const scrim = document.getElementById("scrim");
@@ -19,6 +19,10 @@ let laderTimer = null;
 /* ------------------------------------------------------------------ Werkzeug */
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/** Der Stern hinter einer Zahl — er ist die Währung, so wie das €-Zeichen.
+ *  Wo das Wort „Cleanies" ohnehin dasteht, braucht es ihn nicht. */
+const cl = (n) => `${n}<img class="cleanie" src="/cleanie.webp" alt="Cleanies">`;
+
 const icon = (id, s = 20) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#${id}"/></svg>`;
 
 async function api(pfad, daten) {
@@ -59,7 +63,7 @@ const nameVon = (id) => id === S?.ich?.id ? "Du"
 const mitglied = (id) => (S?.mitglieder || []).find((m) => m.id === id) || { id };
 
 /** Zu zweit nebeneinander wie bisher, zu dritt und mehr als Liste — sonst
- *  schrumpfen die Punktestände auf dem Handy zu Briefmarken. */
+ *  schrumpfen die Cleanies-Stände auf dem Handy zu Briefmarken. */
 function kontenTafel() {
   const alle = S.mitglieder || [];
   if (alle.length <= 2) {
@@ -67,7 +71,7 @@ function kontenTafel() {
       ${alle.map((m) => `
         <div class="account ${m.id === S.ich.id ? "me" : ""}">
           ${bild(m)}<span class="who">${esc(vorname(m.name))}</span>
-          <span class="pts">${m.punkte}</span><span class="unit">Punkte</span>
+          <span class="pts">${cl(m.punkte)}</span><span class="unit">Cleanies</span>
         </div>`).join("")}
     </div>`;
   }
@@ -76,7 +80,7 @@ function kontenTafel() {
       <div class="konto">
         ${bild(m, "sm")}
         <span class="who">${esc(vorname(m.name))}${m.id === S.ich.id ? ' <span class="chip wait">du</span>' : ""}</span>
-        <span class="pts">${m.punkte}</span>
+        <span class="pts">${cl(m.punkte)}</span>
       </div>`).join("")}
   </div>`;
 }
@@ -282,7 +286,7 @@ function anmelden() {
     <div class="mitte">
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
       <h1>Haus-Quest</h1>
-      <p>Punkte für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
+      <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
       <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
       <p style="font-size:12px;color:var(--ink-3);margin-top:18px;max-width:30ch">
         Gespeichert werden Name, E-Mail und Profilbild aus deinem Google-Konto — sonst nichts.
@@ -336,7 +340,7 @@ function einrichtung() {
   bauer();
 }
 
-function ePunkte() {
+function eCleanies() {
   return `<div class="schrittpunkte">${
     Array.from({ length: 7 }, (_, i) => `<i ${i === E.schritt ? "data-an" : ""}></i>`).join("")}</div>`;
 }
@@ -367,7 +371,7 @@ function eName() {
       <div class="note">${icon("i-info", 16)}<span>Beides lässt sich später jederzeit in den
         Einstellungen ändern — dafür braucht es keine Abstimmung.</span></div>
     </div>`,
-    `<button class="btn primary block" data-eweiter>Weiter</button>${ePunkte()}`);
+    `<button class="btn primary block" data-eweiter>Weiter</button>${eCleanies()}`);
 }
 
 function eBegruessung() {
@@ -381,7 +385,7 @@ function eBegruessung() {
     `<button class="btn primary block" data-eweiter>Los geht's</button>
      <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
      <button class="btn text block" data-ecode>Ich wurde eingeladen — Code eingeben</button>
-     ${ePunkte()}`);
+     ${eCleanies()}`);
 }
 
 function eHaushalt() {
@@ -417,7 +421,7 @@ function eHaushalt() {
             E.art === "paar" ? " Zwei sind der Normalfall, mehr geht genauso." : ""}`}</span></div>
     </div>`,
     `<button class="btn primary block" data-eweiter>Weiter</button>
-     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+     <button class="btn text block" data-ezurueck>Zurück</button>${eCleanies()}`);
 }
 
 function eRaumwahl() {
@@ -440,7 +444,7 @@ function eRaumwahl() {
         „+100 % auf Küche“ hängt daran.</span></div>
     </div>`,
     `<button class="btn primary block" data-eweiter ${gewaehlt.size ? "" : "disabled"}>Weiter</button>
-     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+     <button class="btn text block" data-ezurueck>Zurück</button>${eCleanies()}`);
 }
 
 function eFinden() {
@@ -454,7 +458,7 @@ function eFinden() {
         langfristig leichter und sogar ein bisschen spaßiger, die Ordnung zu bewahren.</p>
     </div>`,
     `<button class="btn primary block" data-eweiter>Weiter</button>
-     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+     <button class="btn text block" data-ezurueck>Zurück</button>${eCleanies()}`);
 }
 
 function eErhalten() {
@@ -469,7 +473,7 @@ function eErhalten() {
         Haushalt Schritt für Schritt leichter organisieren.</p>
     </div>`,
     `<button class="btn primary block" data-eweiter>Weiter</button>
-     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+     <button class="btn text block" data-ezurueck>Zurück</button>${eCleanies()}`);
 }
 
 function eStarten() {
@@ -481,7 +485,7 @@ function eStarten() {
       <p>${esc(art.k)} · ${eZahl()} ${eZahl() === 1 ? "Person" : "Personen"} · ${eRaeume().size} Räume</p>
     </div>`,
     `<button class="btn primary block" data-eanlegen>Jetzt starten</button>
-     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+     <button class="btn text block" data-ezurueck>Zurück</button>${eCleanies()}`);
 }
 
 /* ------------------------------------------------------------------ Einladen */
@@ -555,8 +559,14 @@ function eCodeSchirm() {
 
 /* ------------------------------------------------------------------ Hilfen zum Zustand */
 
+/** Alles, was auf meine Entscheidung wartet. Was hier steht, steht beim
+ *  Absender auf der Startseite unter „Wartet auf …“ — beides ist dieselbe
+ *  Sache aus den zwei Blickrichtungen. Auch Abstimmungen gehören dazu:
+ *  solange meine Stimme fehlt, bin ich der Empfänger. */
 const zuPruefen = () => [
   ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id && !m.rueckfrage).map((m) => ({ ...m, art: "meldung" })),
+  ...offeneAbstimmungen().filter((a) => a.meine === undefined || a.meine === null)
+    .map((a) => ({ ...a, vorschlag: a.art, art: "abstimmung" })),
   ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "offen")
     .map((r) => ({ ...r, art: "empfang" })),
   ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "nachgeholt")
@@ -596,17 +606,17 @@ const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
 const meineOffenenSachen = () => [
   ...meineOffenen().map((m) => ({
     titel: m.quest + (m.quantity > 1 ? ` · ${m.quantity}×` : ""), was: "Quest gemeldet",
-    zusatz: m.rueckfrage ? "Rückfrage offen" : "", punkte: `+${m.quantity * m.points_each}`,
+    zusatz: m.rueckfrage ? "Rückfrage offen" : "", punkte: `+${cl(m.quantity * m.points_each)}`,
     created_at: m.created_at
   })),
   ...S.antraege.filter((a) => a.requested_by === S.ich.id).map((a) => ({
     titel: a.belohnung, was: "Belohnung beantragt",
-    zusatz: a.rueckfrage ? "Rückfrage offen" : (a.wish_date || ""), punkte: `−${a.cost}`,
+    zusatz: a.rueckfrage ? "Rückfrage offen" : (a.wish_date || ""), punkte: `−${cl(a.cost)}`,
     created_at: a.created_at
   })),
   ...S.uebertragungen.filter((u) => u.from_member === S.ich.id).map((u) => ({
-    titel: `Punkte an ${nameVon(u.to_member)}`, was: "Übertragung angeboten",
-    zusatz: "", punkte: `−${u.amount}`, created_at: u.created_at
+    titel: `Cleanies an ${nameVon(u.to_member)}`, was: "Übertragung angeboten",
+    zusatz: "", punkte: `−${cl(u.amount)}`, created_at: u.created_at
   }))
 ].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 const belohnungenOffen = () => S.belohnungenOffen || [];
@@ -645,7 +655,7 @@ function aktionsBanner(nur = null) {
         <span style="color:var(--accent);flex:none">${icon("i-heart", 20)}</span>
         <span style="flex:1;font-size:14.5px;font-weight:700">
           ${a.art === "quest_bonus"
-            ? `+${a.prozent} % Punkte${a.kategorie ? ` auf ${esc(a.kategorie)}` : " auf alles"}`
+            ? `+${a.prozent} % Cleanies${a.kategorie ? ` auf ${esc(a.kategorie)}` : " auf alles"}`
             : `${a.prozent} % Rabatt auf Belohnungen`}</span>
         <span class="chip wait">${restzeit(a.ende)}</span>
       </div>
@@ -678,7 +688,7 @@ function schirmStart() {
           <span style="color:var(--accent);flex:none">${icon("i-shield", 22)}</span>
           <div style="flex:1">
             <div style="font-size:14.5px;font-weight:700">${offen.length} ${offen.length === 1 ? "Sache wartet" : "Sachen warten"} auf dich</div>
-            <div style="font-size:12.5px;color:var(--ink-2)">Ohne dein OK gibt es keine Punkte.</div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Ohne dein OK gibt es keine Cleanies.</div>
           </div>
         </div>
         <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
@@ -706,7 +716,7 @@ function schirmStart() {
         <span class="grow"><span class="t">${r.erfuellt === "nicht_erhalten"
             ? `${esc(r.belohnung)} — nachholen?` : `Du schuldest: ${esc(r.belohnung)}`}</span>
           <span class="m">${r.erfuellt === "nicht_erhalten"
-            ? `${r.cost} Punkte ab · noch rückholbar`
+            ? `${r.cost} Cleanies ab · noch rückholbar`
             : `für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · ${esc(r.wish_date)}` : ""}`}</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>`).join("")}
@@ -717,7 +727,7 @@ function schirmStart() {
           ${ueberfaellig().length} ${ueberfaellig().length === 1 ? "Aufgabe ist" : "Aufgaben sind"} überfällig</div>
         <div style="font-size:12.5px;color:var(--ink-2)">
           ${ueberfaellig().slice(0, 3).map((a) => `${esc(a.name)} seit ${-a.offen} ${-a.offen === 1 ? "Tag" : "Tagen"}`).join(", ")}.
-          ${ueberfaellig().some((a) => a.offen <= -5) ? "Ab sieben Tagen kostet es die ganze Gruppe Punkte." : ""}</div>
+          ${ueberfaellig().some((a) => a.offen <= -5) ? "Ab sieben Tagen kostet es die ganze Gruppe Cleanies." : ""}</div>
         <button class="btn primary block" data-go="plan">Zum Haushaltsplan</button>
       </div>` : ""}
 
@@ -750,7 +760,7 @@ function schirmStart() {
       <div class="quick">
         <button data-go="quests">${icon("i-broom", 21)}Quest erledigt</button>
         <button data-go="belohnungen">${icon("i-gift", 21)}Belohnung</button>
-        <button data-sheet="transfer">${icon("i-swap", 21)}Punkte senden</button>
+        <button data-sheet="transfer">${icon("i-swap", 21)}Cleanies senden</button>
       </div>
 
       ${meineOffenenSachen().length ? `
@@ -763,7 +773,7 @@ function schirmStart() {
               <span style="font-size:11.5px;color:var(--ink-3)">${esc(o.was)}${
                 o.zusatz ? ` · ${esc(o.zusatz)}` : ""} · ${zeitpunkt(o.created_at)}</span>
             </span>
-            <span class="chip wait">${o.punkte}</span>
+            <span class="pts-pill">${o.punkte}</span>
           </div>`).join("")}
       </div>
       <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">
@@ -776,7 +786,7 @@ function schirmStart() {
       <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
         <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
         <span class="grow"><span class="t">Aktion starten</span>
-          <span class="m">Doppelte Punkte oder Rabatt — befristet, nur gemeinsam</span></span>
+          <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>
 
@@ -794,7 +804,7 @@ function schirmStart() {
       <button class="rowlink" data-go="statistik">
         <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
         <span class="grow"><span class="t">Auswertung</span>
-          <span class="m">Punkte je Tag, Wochen- und Monatsprognose</span></span>
+          <span class="m">Cleanies je Tag, Wochen- und Monatsprognose</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>
 
@@ -804,7 +814,7 @@ function schirmStart() {
         ${S.verlauf.slice(0, 6).map((b) => `
           <li><span class="dot ${b.delta < 0 ? "red" : ""}"></span>
             <span class="txt"><b>${esc(nameVon(b.member_id))}</b> ·
-              ${esc(b.reason)} <b>${b.delta > 0 ? "+" : ""}${b.delta}</b>
+              ${esc(b.reason)} <b>${b.delta > 0 ? "+" : ""}${cl(b.delta)}</b>
               <div class="when">${zeitpunkt(b.created_at)}</div></span></li>`).join("")}
       </ul>` : `
       <div class="card flat leer"><img src="/logo.webp" alt="">
@@ -817,7 +827,7 @@ function schirmStart() {
 
 const SORTIERUNGEN = [
   { id: "genutzt", label: "Meist genutzt" },
-  { id: "punkte", label: "Punkte" },
+  { id: "punkte", label: "Cleanies" },
   { id: "alpha", label: "A–Z" }
 ];
 
@@ -883,14 +893,14 @@ function questListe() {
       <button class="rowlink" ${q.wiederkehrend ? `data-plan="${q.id}"` : `data-sheet="melden" data-id="${q.id}"`}
         ${gemeldet.has(q.id) && !q.wiederkehrend ? "disabled" : ""}>
         <span class="grow">
-          <span class="t">${esc(q.name)}${q.wiederkehrend ? ' <span class="chip open">↻</span>' : ""}</span>
+          <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
             q.genutzt ? ` · ${q.genutzt}×` : ""}${
             gemeldet.has(q.id) ? ` · wartet auf ${esc(andereName())}` : ""}</span>
         </span>
         ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
-          : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${q.punkte_jetzt}</span>`
-          : `<span class="pts-pill">${q.points}</span>`}
+          : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
+          : `<span class="pts-pill">${cl(q.points)}</span>`}
       </button>
       <button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
         aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>
@@ -902,7 +912,7 @@ function schirmQuests() {
 
   return `
     <div class="appbar">
-      <div><div class="title">Quests</div><div class="sub">Punktwerte gelten für beide</div></div>
+      <div><div class="title">Quests</div><div class="sub">Cleanies gelten für beide</div></div>
       <button class="iconbtn" data-sheet="neu" aria-label="Quest vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
@@ -924,7 +934,7 @@ function schirmPruefen() {
 
   return `
     <div class="appbar"><div><div class="title">Prüfen</div>
-      <div class="sub">Du gibst die Punkte frei</div></div></div>
+      <div class="sub">Alles, was auf deine Entscheidung wartet</div></div></div>
     <div class="body">
       ${offen.length ? offen.map((e) => {
         if (e.art === "meldung") return `
@@ -935,10 +945,10 @@ function schirmPruefen() {
                 <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.claimed_by))} meldet · ${zeitpunkt(e.created_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.quest)}</span>
               </span>
-              <span class="pts-pill">+${e.quantity * e.points_each}</span>
+              <span class="pts-pill">+${cl(e.quantity * e.points_each)}</span>
             </div>
             ${e.quantity > 1 || e.note ? `<div style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap">
-              ${e.quantity > 1 ? `<span class="chip open">${e.quantity}× à ${e.points_each}</span>` : ""}
+              ${e.quantity > 1 ? `<span class="chip open">${e.quantity}× à ${cl(e.points_each)}</span>` : ""}
               ${e.note ? `<span>„${esc(e.note)}“</span>` : ""}</div>` : ""}
             <div class="btnrow">
               <button class="btn primary" data-entscheiden="claims" data-id="${e.id}" data-status="bestaetigt">Bestätigen</button>
@@ -946,6 +956,9 @@ function schirmPruefen() {
             </div>
             <button class="btn text block" data-sheet="rueckfrage" data-bereich="claims" data-id="${e.id}">Nachfragen</button>
           </div>`;
+        // Dieselbe Karte wie unter „Wir“ — wer entscheiden muss, soll nicht
+        // erst zwei Schirme weiter suchen, wofür seine Stimme fehlt.
+        if (e.art === "abstimmung") return abstimmungKarte({ ...e, art: e.vorschlag });
         if (e.art === "empfang") return `
           <div class="card">
             <div style="display:flex;gap:11px;align-items:center">
@@ -955,7 +968,7 @@ function schirmPruefen() {
                   ${esc(nameVon(e.decided_by))} hat zugesagt · ${zeitpunkt(e.decided_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
               </span>
-              <span class="pts-pill">−${e.cost}</span>
+              <span class="pts-pill">−${cl(e.cost)}</span>
             </div>
             <div style="font-size:12.5px;color:var(--ink-2)">
               ${e.wish_date ? `<b>${esc(e.wish_date)}</b> · ` : ""}Hast du sie bekommen?</div>
@@ -964,7 +977,7 @@ function schirmPruefen() {
               <button class="btn ghost" data-empfang="${e.id}" data-erhalten="nein">Kam nicht</button>
             </div>
             <div style="font-size:11.5px;color:var(--ink-3)">
-              „Kam nicht“ kostet ${esc(nameVon(e.decided_by))} ${e.cost} Punkte — rückholbar,
+              „Kam nicht“ kostet ${esc(nameVon(e.decided_by))} ${e.cost} Cleanies — rückholbar,
               wenn es binnen drei Tagen doch noch passiert.</div>
           </div>`;
         if (e.art === "nachhol") return `
@@ -976,10 +989,10 @@ function schirmPruefen() {
                   ${esc(nameVon(e.nachhol_von))} hat nachgeholt · ${zeitpunkt(e.nachhol_am)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
               </span>
-              <span class="pts-pill">+${e.cost}</span>
+              <span class="pts-pill">+${cl(e.cost)}</span>
             </div>
             <div style="font-size:12.5px;color:var(--ink-2)">Stimmt das? Dann bekommt
-              ${esc(nameVon(e.nachhol_von))} die ${e.cost} Punkte zurück.</div>
+              ${esc(nameVon(e.nachhol_von))} die ${e.cost} Cleanies zurück.</div>
             <div class="btnrow">
               <button class="btn primary" data-nachhol="${e.id}" data-ja="ja">Stimmt</button>
               <button class="btn ghost" data-nachhol="${e.id}" data-ja="nein">Kam trotzdem nicht</button>
@@ -993,7 +1006,7 @@ function schirmPruefen() {
                 <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.requested_by))} beantragt · ${zeitpunkt(e.created_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
               </span>
-              <span class="pts-pill">−${e.cost}</span>
+              <span class="pts-pill">−${cl(e.cost)}</span>
             </div>
             ${e.wish_date || e.message ? `<div style="font-size:12.5px;color:var(--ink-2)">
               ${e.wish_date ? `<b>${esc(e.wish_date)}</b>` : ""}${e.wish_date && e.message ? " · " : ""}${e.message ? `„${esc(e.message)}“` : ""}</div>` : ""}
@@ -1010,9 +1023,9 @@ function schirmPruefen() {
               ${bild(mitglied(e.from_member), "sm")}
               <span style="flex:1">
                 <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.from_member))} überträgt · ${zeitpunkt(e.created_at)}</span>
-                <span style="font-size:15px;font-weight:700;display:block">Punkte für dich</span>
+                <span style="font-size:15px;font-weight:700;display:block">Cleanies für dich</span>
               </span>
-              <span class="pts-pill">+${e.amount}</span>
+              <span class="pts-pill">+${cl(e.amount)}</span>
             </div>
             ${e.message ? `<div style="font-size:12.5px;color:var(--ink-2)">„${esc(e.message)}“</div>` : ""}
             <div class="btnrow">
@@ -1025,7 +1038,7 @@ function schirmPruefen() {
           <img src="/logo.webp" alt="">
           <div class="h">Alles geprüft</div>
           <div class="t">${allein() ? "Sobald jemand dazukommt, landen hier die Meldungen."
-            : `Keine offenen Meldungen. ${esc(andereName())} ${beugung("weiß", "wissen")} Bescheid.`}</div>
+            : `Keine Meldungen, Anträge oder Abstimmungen offen. ${esc(andereName())} ${beugung("weiß", "wissen")} Bescheid.`}</div>
         </div>`}
     </div>`;
 }
@@ -1045,9 +1058,9 @@ function belohnungsListe() {
           <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
           <span class="n">${esc(b.name)}</span>
           <span class="c">${zuTeuer
-            ? `${S.ich.punkte} von ${kosten} Punkten`
-            : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Punkte`
-            : `${b.cost} Punkte`}${b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
+            ? `${S.ich.punkte} von ${kosten} Cleanies`
+            : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Cleanies`
+            : `${b.cost} Cleanies`}${b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
         </button>
         <button class="stiftbtn" data-sheet="menue" data-art="belohnung" data-id="${b.id}"
           aria-label="${esc(b.name)} ändern oder löschen">${icon("i-stift", 16)}</button>
@@ -1059,7 +1072,7 @@ function schirmBelohnungen() {
   return `
     <div class="appbar">
       <div><div class="title">Belohnungen</div>
-        <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Punkte</div></div>
+        <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Cleanies</div></div>
       <button class="iconbtn" data-sheet="neue-belohnung" aria-label="Belohnung vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
@@ -1069,7 +1082,7 @@ function schirmBelohnungen() {
 
       <button class="reward wide" data-sheet="transfer" style="background:var(--tint);border-color:transparent">
         <span class="ico" style="background:var(--bg)">${icon("i-swap", 18)}</span>
-        <span class="n">Punkte ${mehrere() ? "übertragen" : `an ${esc(andereName())} übertragen`}<br>
+        <span class="n">Cleanies ${mehrere() ? "übertragen" : `an ${esc(andereName())} übertragen`}<br>
           <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
       </button>
 
@@ -1077,12 +1090,70 @@ function schirmBelohnungen() {
       <div class="rewards" id="liste">${belohnungsListe()}</div>
       <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
         Jede Einlösung geht als Antrag an ${esc(andereName())}.
-        Erst mit Zustimmung werden die Punkte abgebucht.
+        Erst mit Zustimmung werden die Cleanies abgebucht.
       </p>
     </div>`;
 }
 
 /* ------------------------------------------------------------------ Wir */
+
+/** Worum es in einer Abstimmung geht — in einem Satz, ohne Fachwort.
+ *  Steht als Zeile über der Gegenüberstellung, damit niemand raten muss. */
+function abstimmungWorum(a) {
+  const wieder = a.wiederkehrend !== false;
+  switch (a.art) {
+    case "neue_aufgabe":
+      return `Neue Quest — soll gleich als wiederkehrende Aufgabe laufen`;
+    case "aufgabe_aendern":
+      return wieder
+        ? (a.alt_wiederkehrend
+            ? "Bestehende wiederkehrende Aufgabe — der Rhythmus soll sich ändern"
+            : "Bestehende Quest — soll eine wiederkehrende Aufgabe werden")
+        : "Bestehende wiederkehrende Aufgabe — soll wieder eine normale Quest werden";
+    case "delete_aufgabe": return "Wiederkehrende Aufgabe — soll ganz weg";
+    case "new_quest": return "Neue Quest";
+    case "new_reward": return "Neue Belohnung";
+    case "quest_points": return "Bestehende Quest — der Cleanies-Wert soll sich ändern";
+    case "reward_cost": return "Bestehende Belohnung — die Kosten sollen sich ändern";
+    case "delete_quest": return "Bestehende Quest — soll gelöscht werden";
+    case "delete_reward": return "Bestehende Belohnung — soll gelöscht werden";
+    case "neue_aktion": return "Befristete Aktion für alle";
+    default: return "Vorschlag";
+  }
+}
+
+/** Was sich genau ändert. Bei einer wiederkehrenden Aufgabe ist das der
+ *  Rhythmus — der Cleanies-Wert bleibt gleich, ihn hier zu zeigen sagt nichts. */
+function abstimmungWandel(a) {
+  const raumZusatz = a.raum ? `<span style="color:var(--ink-2);font-weight:400">· ${esc(a.raum)}</span>` : "";
+  const wieder = a.wiederkehrend !== false;
+
+  if (a.art === "neue_aufgabe") {
+    return `<span class="new">${esc(a.rhythmus || "")}</span>
+            <span style="color:var(--ink-2);font-weight:400">· ${cl(a.neu)}</span> ${raumZusatz}`;
+  }
+  if (a.art === "aufgabe_aendern") {
+    if (!wieder) return `<span class="old">${esc(a.alt_rhythmus || "wiederkehrend")}</span>→<span class="new">nur noch normale Quest</span>`;
+    return a.alt_wiederkehrend && a.alt_rhythmus
+      ? `<span class="old">${esc(a.alt_rhythmus)}</span>→<span class="new">${esc(a.rhythmus || "")}</span>`
+      : `<span class="old">jederzeit meldbar</span>→<span class="new">${esc(a.rhythmus || "")}</span>`;
+  }
+  if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
+  if (a.art === "neue_aktion") {
+    return `<span class="new">${a.titel.startsWith("Rabatt") ? `${a.neu} % Rabatt` : `+${a.neu} % Cleanies`}</span>
+            <span style="color:var(--ink-2);font-weight:400">${a.raum ? `· ${esc(a.raum)}` : "· alles"}
+            ${a.tage ? `· ${a.tage === 1 ? "heute" : a.tage + " Tage"}` : ""}</span>`;
+  }
+  if (a.art === "delete_quest" || a.art === "delete_reward") {
+    return `<span class="old">${cl(a.alt)}</span>→<span class="new">löschen</span>`;
+  }
+  if (a.art === "new_quest" || a.art === "new_reward") {
+    return `<span class="new">${cl(a.neu)}</span> ${raumZusatz}`;
+  }
+  return a.alt !== null && a.alt !== undefined
+    ? `<span class="old">${cl(a.alt)}</span>→<span class="new">${cl(a.neu)}</span>`
+    : `<span>Cleanies-Wert</span><span class="new">${cl(a.neu)}</span>`;
+}
 
 function abstimmungKarte(a) {
   const entschieden = a.status !== "offen";
@@ -1092,29 +1163,18 @@ function abstimmungKarte(a) {
   return `
     <div class="card vote">
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:14.5px;font-weight:700;flex:1">${esc(a.titel || "Vorschlag")}</span>
+        <span style="flex:1;min-width:0">
+          <span style="font-size:14.5px;font-weight:700;display:block">${esc(a.titel || "Vorschlag")}</span>
+          <span style="font-size:11.5px;color:var(--ink-3);display:block">${esc(abstimmungWorum(a))}</span>
+        </span>
         <span class="chip ${entschieden ? (angenommen ? "done" : "open") : "wait"}">
           ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
       </div>
-      <div class="change">
-        ${a.art === "neue_aufgabe"
-          ? `<span class="new">${a.neu} Punkte</span>
-             <span style="color:var(--ink-2);font-weight:400">· ${esc(a.raum || "")}</span>`
-          : a.art === "aufgabe_aendern"
-          ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
-          : a.art === "delete_aufgabe"
-          ? `<span class="old">im Plan</span>→<span class="new">löschen</span>`
-          : a.art === "neue_aktion"
-          ? `<span class="new">${a.titel.startsWith("Rabatt") ? `${a.neu} % Rabatt` : `+${a.neu} % Punkte`}</span>
-             <span style="color:var(--ink-2);font-weight:400">${a.raum ? `· ${esc(a.raum)}` : "· alles"}
-             ${a.tage ? `· ${a.tage === 1 ? "heute" : a.tage + " Tage"}` : ""}</span>`
-          : a.art === "delete_quest" || a.art === "delete_reward"
-          ? `<span class="old">${a.alt} Punkte</span>→<span class="new">löschen</span>`
-          : (a.alt !== null && a.alt !== undefined
-              ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
-              : `<span>Punktwert</span><span class="new">${a.neu} Punkte</span>`)}
-      </div>
-      ${a.grund ? `<div class="why">${esc(nameVon(a.von))}: „${esc(a.grund)}“</div>` : ""}
+      <div class="change">${abstimmungWandel(a)}</div>
+      <div style="font-size:11.5px;color:var(--ink-3)">
+        Vorgeschlagen von ${esc(nameVon(a.von))} · ${zeitpunkt(a.created_at)}</div>
+      ${a.grund ? `<div class="why">${esc(nameVon(a.von))}: „${esc(a.grund)}“</div>`
+        : `<div class="why" style="color:var(--ink-3)">Keine Begründung angegeben.</div>`}
       <div class="stance">
         ${(a.stimmen || []).map((s) => `
           <span>${esc(s.id === S.ich.id ? "Du" : vorname(s.name))}: <i>${stimme(s.antwort)}</i></span>`).join("")}
@@ -1148,19 +1208,19 @@ function schirmWir() {
       <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
         <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
         <span class="grow"><span class="t">Aktion starten</span>
-          <span class="m">Doppelte Punkte oder Rabatt — befristet, nur gemeinsam</span></span>
+          <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>
 
       <p class="section-label">Offene Abstimmungen</p>
       ${offen.length ? offen.map(abstimmungKarte).join("") : `
         <div class="card flat" style="font-size:13px;color:var(--ink-2)">
-          Nichts offen. Punktwerte ändert ihr über den Stift in der Quest-Liste.
+          Nichts offen. Cleanies ändert ihr über den Stift in der Quest-Liste.
         </div>`}
 
       <p class="section-label">Hausregeln</p>
       <ul class="card rules">
-        <li><span class="n">01</span><span>Der Punktwert einer Quest steht <b>vor</b> dem Erledigen fest.</span></li>
+        <li><span class="n">01</span><span>Der Cleanies-Wert einer Quest steht <b>vor</b> dem Erledigen fest.</span></li>
         <li><span class="n">02</span><span>Erledigt melden kann jeder — <b>freigeben nur der andere</b>.</span></li>
         <li><span class="n">03</span><span>Werte ändern, Quests anlegen: <b>nur wenn beide zustimmen</b>.</span></li>
         <li><span class="n">04</span><span>Bis eine Abstimmung durch ist, gilt der <b>alte Wert</b>.</span></li>
@@ -1172,7 +1232,7 @@ function schirmWir() {
       <p class="section-label">Konto</p>
       <button class="rowlink" data-go="verlauf">
         <span class="avatar sm" style="background:var(--tint)">${icon("i-clock", 17)}</span>
-        <span class="grow"><span class="t">Verlauf &amp; Punktekonto</span>
+        <span class="grow"><span class="t">Verlauf &amp; Cleanies-Konto</span>
           <span class="m">Jede Buchung nachvollziehbar</span></span><span style="color:var(--ink-3)">›</span>
       </button>
       <button class="rowlink" data-export>
@@ -1236,7 +1296,7 @@ function diagramm(tage) {
     : "";
 
   return `<svg class="diagramm" viewBox="0 0 ${breite} ${hoehe}" role="img"
-            aria-label="Punkte je Tag der letzten zwei Wochen">
+            aria-label="Cleanies je Tag der letzten zwei Wochen">
     ${linien}${balken}${beschriftung}
   </svg>`;
 }
@@ -1248,22 +1308,22 @@ function prognoseKarte(titel, zahlen, offen, einheit) {
       <span class="section-label" style="margin:0">${titel}</span>
       <div class="prognose">
         <span class="jetzt">
-          <span class="hero-zahl">${zahlen.bisher}</span>
+          <span class="hero-zahl">${cl(zahlen.bisher)}</span>
           <div class="hero-zusatz">bisher</div>
         </span>
         <span class="pfeil" aria-hidden="true" style="font-size:20px;font-weight:700">→</span>
         <span class="ziel">
-          <span class="hero-zahl" style="color:var(--reihe-ich);font-size:34px">${zahlen.prognose}</span>
+          <span class="hero-zahl" style="color:var(--reihe-ich);font-size:34px">${cl(zahlen.prognose)}</span>
           <div class="hero-zusatz">Hochrechnung</div>
         </span>
       </div>
       <div style="font-size:12.5px;color:var(--ink-2)">
         ${offen > 0
           ? `Noch ${offen} ${einheit === "woche" ? (offen === 1 ? "Tag" : "Tage") : (offen === 1 ? "Tag" : "Tage")} —
-             bei deinem Schnitt kämen ${mehr} Punkte dazu.`
+             bei deinem Schnitt kämen ${mehr} Cleanies dazu.`
           : "Der Zeitraum ist durch."}
         ${einheit === "monat" && zahlen.vormonat
-          ? `<br>Vormonat: <b>${zahlen.vormonat}</b> Punkte.` : ""}
+          ? `<br>Vormonat: <b>${zahlen.vormonat}</b> Cleanies.` : ""}
       </div>
     </div>`;
 }
@@ -1286,7 +1346,7 @@ function schirmStatistik() {
   return `
     <div class="appbar">
       <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
-      <div><div class="title">Auswertung</div><div class="sub">Punkte aus bestätigten Quests</div></div>
+      <div><div class="title">Auswertung</div><div class="sub">Cleanies aus bestätigten Quests</div></div>
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
     </div>
     <div class="body">
@@ -1307,7 +1367,7 @@ function schirmStatistik() {
             <tbody>
               ${zwei.slice().reverse().filter((t) => t.ich || t.partner).map((t) => `
                 <tr><td>${t.tag.slice(8)}.${t.tag.slice(5, 7)}.</td><td>${t.ich}</td><td>${t.partner}</td></tr>`).join("")
-                || '<tr><td colspan="3" style="text-align:left;color:var(--ink-3)">Noch keine Punkte in diesem Zeitraum.</td></tr>'}
+                || '<tr><td colspan="3" style="text-align:left;color:var(--ink-3)">Noch keine Cleanies in diesem Zeitraum.</td></tr>'}
             </tbody>
           </table>
         </details>
@@ -1347,10 +1407,10 @@ function schirmStatistik() {
         <span class="section-label" style="margin:0">Nächstes Ziel</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="flex:1;font-size:14.5px;font-weight:700">${esc(statistik.naechsteBelohnung.name)}</span>
-          <span class="pts-pill">noch ${statistik.naechsteBelohnung.fehlt}</span>
+          <span class="pts-pill">noch ${cl(statistik.naechsteBelohnung.fehlt)}</span>
         </div>
         <div style="font-size:12.5px;color:var(--ink-2)">
-          Bei ${meins.schnitt} Punkten am Tag in
+          Bei ${meins.schnitt} Cleanies am Tag in
           ${meins.schnitt > 0 ? Math.ceil(statistik.naechsteBelohnung.fehlt / meins.schnitt) : "…"}
           ${meins.schnitt > 0 && Math.ceil(statistik.naechsteBelohnung.fehlt / meins.schnitt) === 1 ? "Tag" : "Tagen"} drin.
         </div>
@@ -1400,13 +1460,13 @@ function sheetZusage(r) {
     <h3>${gestraft ? "Doch noch nachholen" : "Deine Zusage"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(r.belohnung)}</span>
-      <span class="pts-pill">${gestraft ? "−" : ""}${r.cost}</span>
+      <span class="pts-pill">${gestraft ? "−" : ""}${cl(r.cost)}</span>
     </div>
     <div style="font-size:13px;color:var(--ink-2)">
       Für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · <b>${esc(r.wish_date)}</b>` : ""}.
       ${r.message ? `„${esc(r.message)}“` : ""}</div>
     ${gestraft ? `
-    <div class="note">${icon("i-info", 16)}<span>Die ${r.cost} Punkte sind ab. Wenn du es jetzt
+    <div class="note">${icon("i-info", 16)}<span>Die ${r.cost} Cleanies sind ab. Wenn du es jetzt
       machst und ${esc(nameVon(r.requested_by))} bestätigt, kommen sie zurück.</span></div>
     <button class="btn primary block" data-nachholen="${r.id}">Habe ich nachgeholt</button>`
     : `<div class="note">${icon("i-info", 16)}<span>Bestätigen kann nur
@@ -1526,7 +1586,7 @@ function schirmAufgabe() {
       <div class="card ${a.offen < 0 ? "alert" : ""}" style="gap:7px">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="flex:1;font-size:14.5px;font-weight:700">${esc(f.text)}</span>
-          <span class="pts-pill">+${a.punkte}</span>
+          <span class="pts-pill">+${cl(a.punkte)}</span>
         </div>
         ${planBalken(a)}
         <div style="font-size:12.5px;color:var(--ink-2)">
@@ -1588,7 +1648,7 @@ function sheetNeueAufgabe(vorlage = null) {
       <select id="araum">${raumListe().map((r) =>
         `<option ${vorlage && r === vorlage.category ? "selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
     <div class="field">
-      <label>Punktwert</label>
+      <label>Cleanies-Wert</label>
       <div class="stepper">
         <button data-menge="-1" aria-label="weniger">−</button>
         <span class="val" id="menge">${vorlage ? vorlage.points : 6}</span>
@@ -1616,9 +1676,9 @@ function sheetAufgabeMenue(a) {
     <h3>${esc(a.name)}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:13px;color:var(--ink-2)">${esc(a.raum)} · ${esc(a.rhythmus)}</span>
-      <span class="pts-pill">${a.punkte} Punkte</span>
+      <span class="pts-pill">${cl(a.punkte)}</span>
     </div>
-    <button class="btn ghost block" data-sheet="punktwert" data-id="${quest.id}">Punktwert ändern</button>
+    <button class="btn ghost block" data-sheet="punktwert" data-id="${quest.id}">Cleanies-Wert ändern</button>
     <button class="btn ghost block" data-sheet="rhythmus" data-id="${quest.id}">Rhythmus ändern</button>
     <button class="btn ghost block" data-senden="nicht-mehr" data-id="${quest.id}">Keine wiederkehrende Aufgabe mehr</button>
     <button class="btn ghost block" data-sheet="loeschen" data-art="quest" data-id="${quest.id}"
@@ -1635,7 +1695,7 @@ function sheetRhythmus(quest) {
     <h3>${schon ? "Rhythmus ändern" : "Wiederkehrende Aufgabe"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
-      <span class="pts-pill">${quest.points} Punkte</span>
+      <span class="pts-pill">${cl(quest.points)}</span>
     </div>
     <div class="field">
       <label>Wie oft</label>
@@ -1658,7 +1718,7 @@ function sheetErledigt(a) {
     <h3>${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
-      <span class="pts-pill">+${a.punkte}</span>
+      <span class="pts-pill">+${cl(a.punkte)}</span>
     </div>
     ${gesperrt ? `
     <div class="note">${icon("i-lock", 16)}<span>Sie ist noch bis <b>${esc(a.faellig_am)}</b> gesperrt.
@@ -1666,7 +1726,7 @@ function sheetErledigt(a) {
     <div class="field"><label>Warum jetzt schon</label>
       <textarea id="grund" placeholder="z. B. Besuch kommt kurzfristig"></textarea></div>` : `
     <div class="note">${icon("i-info", 16)}<span>${esc(andereName())} ${beugung("bestätigt", "bestätigen")} —
-      erst dann gibt es die Punkte. Danach ist die Aufgabe für ${a.tage} Tage gesperrt.</span></div>`}
+      erst dann gibt es die Cleanies. Danach ist die Aufgabe für ${a.tage} Tage gesperrt.</span></div>`}
     <button class="btn primary block" data-senden="erledigt" data-id="${a.id}"
       data-trotzdem="${gesperrt ? "ja" : "nein"}">Zur Bestätigung senden</button>`);
 }
@@ -1789,8 +1849,8 @@ function schirmVerlauf() {
     </div>
     <div class="body">
       <div class="card navy">
-        <span style="font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6">Dein Punktestand</span>
-        <span style="font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1">${S.ich.punkte}</span>
+        <span style="font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6">Dein Cleanies-Stand</span>
+        <span style="font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1">${cl(S.ich.punkte)}</span>
         <span style="font-size:12.5px;opacity:.75">${gesammelt} gesammelt · ${eingeloest} eingelöst (letzte 40 Buchungen)</span>
       </div>
       ${S.verlauf.length ? `
@@ -1803,7 +1863,7 @@ function schirmVerlauf() {
               <span style="font-size:11px;color:var(--ink-3);font-family:var(--font-data)">
                 ${esc(nameVon(b.member_id))} · ${zeitpunkt(b.created_at)}</span>
             </span>
-            <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${b.delta}</span>
+            <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${cl(b.delta)}</span>
           </li>`).join("")}
       </ul>` : `<div class="card flat leer"><div class="t">Noch keine Buchungen.</div></div>`}
     </div>`;
@@ -1828,7 +1888,7 @@ function sheetMelden(quest) {
     <h3>Erledigt melden</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
-      <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${punkte} Punkte</span>
+      <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${cl(punkte)}</span>
     </div>
     ${quest.bonus ? `<div class="note">${icon("i-heart", 16)}<span>+${quest.bonus} % Aktion läuft —
       der Wert friert beim Melden ein und bleibt, auch wenn erst später bestätigt wird.</span></div>` : ""}
@@ -1839,12 +1899,12 @@ function sheetMelden(quest) {
         <span class="val" id="menge">1</span>
         <button data-menge="1" aria-label="mehr">+</button>
         <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">
-          = <b style="color:var(--accent)" id="summe">${punkte}</b> Punkte</span>
+          = <b style="color:var(--accent)" id="summe">${punkte}</b> Cleanies</span>
       </div>
     </div>
     <div class="field"><label>Notiz für ${esc(andereName())}</label>
       <textarea id="notiz" placeholder="optional"></textarea></div>
-    <div class="note">${icon("i-info", 16)}<span>Die Punkte werden erst gutgeschrieben, wenn
+    <div class="note">${icon("i-info", 16)}<span>Die Cleanies werden erst gutgeschrieben, wenn
       ${esc(andereName())} ${beugung("bestätigt", "bestätigen")}. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
     <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${punkte}">
       Zur Bestätigung senden</button>`);
@@ -1858,7 +1918,7 @@ function sheetAntrag(belohnung) {
     <h3>Antrag stellen</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
-      <span class="pts-pill">${belohnung.rabatt ? `<s style="opacity:.55">−${belohnung.cost}</s> ` : ""}−${kosten}</span>
+      <span class="pts-pill">${belohnung.rabatt ? `<s style="opacity:.55">−${belohnung.cost}</s> ` : ""}−${cl(kosten)}</span>
     </div>
     ${belohnung.rabatt ? `<div class="note">${icon("i-heart", 16)}<span>Rabatt von ${belohnung.rabatt} % läuft —
       der Preis friert beim Absenden ein, auch wenn erst später entschieden wird.</span></div>` : ""}
@@ -1866,11 +1926,11 @@ function sheetAntrag(belohnung) {
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
     <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
       <span>Konto nach Einlösung</span>
-      <span><b>${S.ich.punkte}</b> → <b style="color:var(--accent)">${S.ich.punkte - kosten}</b></span>
+      <span><b>${cl(S.ich.punkte)}</b> → <b style="color:var(--accent)">${cl(S.ich.punkte - kosten)}</b></span>
     </div>
     <div class="note">${icon("i-info", 16)}<span>${fehlt
-      ? "Dir fehlen noch Punkte — der Antrag lässt sich erst genehmigen, wenn du sie hast."
-      : `${esc(andereName())} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Punkte abgebucht.`}</span></div>
+      ? "Dir fehlen noch Cleanies — der Antrag lässt sich erst genehmigen, wenn du sie hast."
+      : `${esc(andereName())} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Cleanies abgebucht.`}</span></div>
     <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}">Antrag senden</button>`);
 }
 
@@ -1878,7 +1938,7 @@ function sheetTransfer() {
   const ziel = andere();
   sheet(`
     <div class="grabber"></div>
-    <h3>Punkte übertragen</h3>
+    <h3>Cleanies übertragen</h3>
     ${ziel.length === 1 ? `
     <div style="display:flex;align-items:center;gap:14px;justify-content:center;padding:6px 0">
       <span style="text-align:center">${bild(S.ich)}<div style="font-size:12px;margin-top:5px">${esc(vorname(S.ich.name))}</div></span>
@@ -1898,11 +1958,11 @@ function sheetTransfer() {
         <span class="val" id="betrag">${Math.min(5, S.ich.punkte) || 1}</span>
         <button data-betrag="1" aria-label="mehr">+</button>
         <span style="margin-left:auto;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
-          von ${S.ich.punkte} verfügbar</span>
+          von ${cl(S.ich.punkte)} verfügbar</span>
       </div>
     </div>
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
-    <div class="note">${icon("i-info", 16)}<span>Die Punkte gelten erst, wenn sie angenommen werden.</span></div>
+    <div class="note">${icon("i-info", 16)}<span>Die Cleanies gelten erst, wenn sie angenommen werden.</span></div>
     <button class="btn primary block" data-senden="transfer">Übertragen</button>`);
 }
 
@@ -1914,7 +1974,7 @@ function sheetNeu() {
     <div class="field"><label>Raum</label>
       <select id="qkat">${raumListe().map((r) => `<option>${esc(r)}</option>`).join("")}</select></div>
     <div class="field">
-      <label>Punktwert</label>
+      <label>Cleanies-Wert</label>
       <div class="stepper">
         <button data-menge="-1" aria-label="weniger">−</button>
         <span class="val" id="menge">3</span>
@@ -1949,10 +2009,10 @@ function sheetMenue(art, eintrag) {
     <h3>${esc(eintrag.name)}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:13px;color:var(--ink-2)">${istQuest ? "Quest" : "Belohnung"}</span>
-      <span class="pts-pill">${istQuest ? eintrag.points : eintrag.cost} Punkte</span>
+      <span class="pts-pill">${cl(istQuest ? eintrag.points : eintrag.cost)}</span>
     </div>
     <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
-      ${istQuest ? "Punktwert ändern" : "Kosten ändern"}</button>
+      ${istQuest ? "Cleanies-Wert ändern" : "Kosten ändern"}</button>
     ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>
     <button class="btn ghost block" data-sheet="rhythmus" data-id="${eintrag.id}">
       ${eintrag.wiederkehrend ? "Rhythmus ändern" : "Wiederkehrende Aufgabe daraus machen"}</button>
@@ -1971,12 +2031,12 @@ function sheetLoeschen(art, eintrag) {
     <h3>${istQuest ? "Quest löschen" : "Belohnung löschen"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(eintrag.name)}</span>
-      <span class="pts-pill">${istQuest ? eintrag.points : eintrag.cost}</span>
+      <span class="pts-pill">${cl(istQuest ? eintrag.points : eintrag.cost)}</span>
     </div>
     <div class="field"><label>Begründung</label>
       <textarea id="grund" placeholder="Warum braucht ihr das nicht mehr?"></textarea></div>
     <div class="note">${icon("i-info", 16)}<span>Der Eintrag verschwindet nur aus der Liste.
-      Bereits gebuchte Punkte und der Verlauf bleiben unangetastet.</span></div>
+      Bereits gebuchte Cleanies und der Verlauf bleiben unangetastet.</span></div>
     <button class="btn primary block" data-senden="loeschen" data-art="${art}" data-id="${eintrag.id}">
       Zur Abstimmung geben</button>`);
 }
@@ -1987,12 +2047,12 @@ function sheetAktion() {
     <div class="grabber"></div>
     <h3>Aktion starten</h3>
     <div class="btnrow" id="aktionsart">
-      <button class="btn dark" data-art-wahl="quest_bonus">Doppelte Punkte</button>
+      <button class="btn dark" data-art-wahl="quest_bonus">Doppelte Cleanies</button>
       <button class="btn ghost" data-art-wahl="belohnung_rabatt">Rabatt</button>
     </div>
 
     <div class="field">
-      <label id="prozent-label">Wie viel mehr Punkte</label>
+      <label id="prozent-label">Wie viel mehr Cleanies</label>
       <div class="stepper">
         <button data-menge="-25" aria-label="weniger">−</button>
         <span class="val" id="menge">100</span>
@@ -2030,7 +2090,7 @@ function sheetNeueBelohnung() {
     <h3>Belohnung vorschlagen</h3>
     <div class="field"><label>Name</label><input id="bname" placeholder="z. B. Frühstück ans Bett"></div>
     <div class="field">
-      <label>Kosten in Punkten</label>
+      <label>Kosten in Cleanies</label>
       <div class="stepper">
         <button data-menge="-1" aria-label="weniger">−</button>
         <span class="val" id="menge">5</span>
@@ -2056,7 +2116,7 @@ function sheetKosten(belohnung) {
     <h3>Kosten ändern</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
-      <span class="pts-pill">jetzt ${belohnung.cost}</span>
+      <span class="pts-pill">jetzt ${cl(belohnung.cost)}</span>
     </div>
     <div class="field">
       <label>Neue Kosten</label>
@@ -2077,13 +2137,13 @@ function sheetKosten(belohnung) {
     <button class="btn primary block" data-senden="kosten" data-id="${belohnung.id}">Zur Abstimmung geben</button>`);
 }
 
-function sheetPunktwert(quest) {
+function sheetCleanieWert(quest) {
   sheet(`
     <div class="grabber"></div>
-    <h3>Punktwert ändern</h3>
+    <h3>Cleanies-Wert ändern</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
-      <span class="pts-pill">jetzt ${quest.points}</span>
+      <span class="pts-pill">jetzt ${cl(quest.points)}</span>
     </div>
     <div class="field">
       <label>Neuer Wert</label>
@@ -2095,7 +2155,7 @@ function sheetPunktwert(quest) {
     </div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt der alte Wert nicht mehr?"></textarea></div>
     <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn beide zustimmen — und nie rückwirkend.
-      Bereits gemeldete Quests behalten ${quest.points} Punkte.</span></div>
+      Bereits gemeldete Quests behalten ${quest.points} Cleanies.</span></div>
     <button class="btn primary block" data-senden="punktwert" data-id="${quest.id}">Zur Abstimmung geben</button>`);
 }
 
@@ -2120,7 +2180,7 @@ function sheetRaum(quest) {
           <span class="haken">${r === quest.category ? "✓" : ""}</span><span class="n">${esc(r)}</span>
         </button>`).join("")}
     </div>
-    <div class="note">${icon("i-info", 16)}<span>Der Raum ordnet nur ein — am Punktwert ändert
+    <div class="note">${icon("i-info", 16)}<span>Der Raum ordnet nur ein — am Cleanies-Wert ändert
       sich nichts. Deshalb geht das ohne Abstimmung.</span></div>`);
 }
 
@@ -2192,7 +2252,7 @@ function schirmHaushalt() {
           <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-shield", 17)}</span>
           <span style="flex:1">
             <span style="font-size:14px;font-weight:600;display:block">Nach sieben überfälligen Tagen</span>
-            <span style="font-size:12px;color:var(--ink-3)">Jeder verliert den Punktwert der Aufgabe</span>
+            <span style="font-size:12px;color:var(--ink-3)">Jeder verliert den Cleanies-Wert der Aufgabe</span>
           </span>
         </div>
         <div class="filters">
@@ -2340,7 +2400,7 @@ document.addEventListener("click", async (ev) => {
       const eintrag = liste.find((x) => x.id === el.dataset.id);
       if (!eintrag) return;
       sheetZu();
-      if (art === "punktwert") sheetPunktwert(eintrag);
+      if (art === "punktwert") sheetCleanieWert(eintrag);
       else if (art === "kosten") sheetKosten(eintrag);
       else sheetLoeschen(el.dataset.art, eintrag);
       return;
@@ -2389,7 +2449,7 @@ document.addEventListener("click", async (ev) => {
       if (b) sheetAntrag(b);
     } else if (art === "transfer") {
       if (allein()) return toast("Es ist noch niemand sonst im Haushalt", true);
-      if (S.ich.punkte < 1) return toast("Du hast noch keine Punkte zum Übertragen", true);
+      if (S.ich.punkte < 1) return toast("Du hast noch keine Cleanies zum Übertragen", true);
       sheetTransfer();
     } else if (art === "neu") sheetNeu();
     return;
@@ -2402,7 +2462,7 @@ document.addEventListener("click", async (ev) => {
     });
     const rabatt = el.dataset.artWahl === "belohnung_rabatt";
     document.getElementById("raum-feld").style.display = rabatt ? "none" : "";
-    document.getElementById("prozent-label").textContent = rabatt ? "Wie viel Rabatt" : "Wie viel mehr Punkte";
+    document.getElementById("prozent-label").textContent = rabatt ? "Wie viel Rabatt" : "Wie viel mehr Cleanies";
     document.getElementById("menge").textContent = rabatt ? 25 : 100;
     return;
   }
@@ -2526,14 +2586,14 @@ document.addEventListener("click", async (ev) => {
       const ergebnis = await api(`requests/${el.dataset.empfang}/empfang`, { erhalten: ja });
       await laden();
       if (ja) toast("Schön — bestätigt.");
-      else toast("Vermerkt. Die Punkte sind ab, drei Tage bleiben zum Nachholen.", true);
+      else toast("Vermerkt. Die Cleanies sind ab, drei Tage bleiben zum Nachholen.", true);
       return;
     }
 
     if (el.dataset.nachhol) {
       await api(`requests/${el.dataset.nachhol}/nachhol-pruefen`, { ja: el.dataset.ja === "ja" });
       await laden();
-      toast(el.dataset.ja === "ja" ? "Die Punkte sind zurück." : "Vermerkt — die Punkte bleiben ab.");
+      toast(el.dataset.ja === "ja" ? "Die Cleanies sind zurück." : "Vermerkt — die Cleanies bleiben ab.");
       return;
     }
 
@@ -2704,7 +2764,7 @@ document.addEventListener("click", async (ev) => {
       if (status === "bestaetigt") {
         if (bereich === "claims") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.quest });
         else if (bereich === "requests") toast(`${ergebnis.belohnung} genehmigt.`);
-        else toast("Punkte angenommen.");
+        else toast("Cleanies angenommen.");
       } else {
         toast("Abgelehnt.");
       }
@@ -2714,7 +2774,7 @@ document.addEventListener("click", async (ev) => {
     if (el.dataset.stimme) {
       const ergebnis = await api(`proposals/${el.dataset.stimme}/vote`, { antwort: el.dataset.antwort === "ja" });
       await laden();
-      if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Punkte.`);
+      if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Cleanies.`);
       else if (ergebnis.status === "abgelehnt") toast("Abgelehnt — der alte Wert gilt weiter.");
       else toast(`Deine Stimme zählt. ${beugung("Es fehlt noch eine.", "Es fehlen noch Stimmen.")}`);
       return;
@@ -2873,7 +2933,7 @@ document.addEventListener("click", (ev) => {
   const eintrag = statistik.tage.find((t) => t.tag === tag);
   const datum = new Date(tag + "T12:00:00Z");
   hinweis.innerHTML = `<b>${WOCHENTAGE[datum.getUTCDay()]}, ${tag.slice(8)}.${tag.slice(5, 7)}.</b> — `
-    + `${esc(vorname(S.ich.name))} ${eintrag.ich}, ${esc(mehrere() ? "die anderen" : andereName())} ${eintrag.partner} Punkte`;
+    + `${esc(vorname(S.ich.name))} ${eintrag.ich}, ${esc(mehrere() ? "die anderen" : andereName())} ${eintrag.partner} Cleanies`;
 });
 
 /* ------------------------------------------------------------------ Benachrichtigungen */
