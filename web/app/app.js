@@ -1574,21 +1574,25 @@ function schirmAufgabe() {
     </div>`;
 }
 
-function sheetNeueAufgabe() {
+function sheetNeueAufgabe(vorlage = null) {
   sheet(`
     <div class="grabber"></div>
     <h3>Wiederkehrende Aufgabe</h3>
-    <div class="field"><label>Name</label><input id="aname" placeholder="z. B. Wohnung saugen"></div>
+    <div class="field"><label>Name</label>
+      <input id="aname" value="${esc(vorlage?.name || "")}" placeholder="z. B. Wohnung saugen"></div>
     <div class="field"><label>Raum</label>
-      <select id="araum">${raumListe().map((r) => `<option>${esc(r)}</option>`).join("")}</select></div>
+      <select id="araum">${raumListe().map((r) =>
+        `<option ${vorlage && r === vorlage.category ? "selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
     <div class="field">
       <label>Punktwert</label>
       <div class="stepper">
         <button data-menge="-1" aria-label="weniger">−</button>
-        <span class="val" id="menge">6</span>
+        <span class="val" id="menge">${vorlage ? vorlage.points : 6}</span>
         <button data-menge="1" aria-label="mehr">+</button>
       </div>
     </div>
+    ${vorlage ? `<div class="note">${icon("i-info", 16)}<span>Die Quest <b>${esc(vorlage.name)}</b>
+      bleibt bestehen. Wenn ihr sie nicht doppelt wollt, löscht sie danach über den Stift.</span></div>` : ""}
     <div class="field">
       <label>Wie oft</label>
       <div class="rhythmuswahl" id="rhythmus">
@@ -1930,8 +1934,23 @@ function sheetNeu() {
         <button data-menge="1" aria-label="mehr">+</button>
       </div>
     </div>
+    <button class="schalter" data-wiederkehrend aria-pressed="false">
+      <span class="box"></span>
+      <span class="t">Wiederkehrende Aufgabe</span>
+    </button>
+    <div id="rhythmusfeld" hidden>
+      <div class="field">
+        <label>Wie oft</label>
+        <div class="rhythmuswahl" id="rhythmus">
+          ${RHYTHMEN.map((r, i) => `<button data-rhythmus="${esc(r)}" aria-pressed="${i === 0}">${esc(r)}</button>`).join("")}
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px">${icon("i-info", 16)}<span>Damit landet sie im
+        <b>Haushaltsplan</b> statt in der Quest-Liste: mit Fälligkeit, Sperre nach dem Erledigen
+        und Bewerbung, wenn mehrere sie wollen.</span></div>
+    </div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum lohnt sich das?"></textarea></div>
-    <div class="note">${icon("i-vote", 16)}<span>Neue Quests gehen in die Abstimmung. Übernommen wird der
+    <div class="note">${icon("i-vote", 16)}<span>Beides geht in die Abstimmung. Übernommen wird der
       Vorschlag erst, wenn ${esc(andereName())} ${beugung("zustimmt", "zustimmen")}.</span></div>
     <button class="btn primary block" data-senden="neu">Zur Abstimmung geben</button>`);
 }
@@ -1947,7 +1966,8 @@ function sheetMenue(art, eintrag) {
     </div>
     <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
       ${istQuest ? "Punktwert ändern" : "Kosten ändern"}</button>
-    ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>` : ""}
+    ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>
+    <button class="btn ghost block" data-sheet="in-den-plan" data-id="${eintrag.id}">In den Haushaltsplan</button>` : ""}
     <button class="btn ghost block" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}"
       style="color:var(--accent);border-color:var(--accent)">
       ${istQuest ? "Quest löschen" : "Belohnung löschen"}</button>
@@ -2215,7 +2235,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2252,6 +2272,14 @@ document.addEventListener("click", async (ev) => {
   }
 
   if (el.dataset.plansicht) { planGruppiert = el.dataset.plansicht === "raum"; zeichne(); return; }
+
+  if (el.hasAttribute("data-wiederkehrend")) {
+    const an = el.getAttribute("aria-pressed") !== "true";
+    el.setAttribute("aria-pressed", an);
+    el.querySelector(".box").textContent = an ? "✓" : "";
+    document.getElementById("rhythmusfeld").hidden = !an;
+    return;
+  }
 
   if (el.hasAttribute("data-bestaetigen")) {
     const an = el.getAttribute("aria-pressed") !== "true";
@@ -2347,6 +2375,13 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
+    if (art === "in-den-plan") {
+      const quest = S.quests.find((q) => q.id === el.dataset.id);
+      if (!quest) return;
+      sheetZu();
+      sheetNeueAufgabe(quest);
+      return;
+    }
     if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
     if (art === "aufgabe-aendern" || art === "aufgabe-loeschen") {
       if (!aufgabe) return;
@@ -2615,9 +2650,14 @@ document.addEventListener("click", async (ev) => {
     }
     if (el.dataset.senden === "neu") {
       if (!wert("qname")) throw new Error("Ein Name fehlt");
-      await api("proposals", { art: "new_quest", wert: zahl("menge"), name: wert("qname"), kategorie: wert("qkat"), grund: wert("grund") });
+      const wiederkehrend = scrim.querySelector("[data-wiederkehrend]")?.getAttribute("aria-pressed") === "true";
+      await api("proposals", wiederkehrend
+        ? { art: "neue_aufgabe", wert: zahl("menge"), name: wert("qname"), raum: wert("qkat"),
+            rhythmus: scrim.querySelector('[data-rhythmus][aria-pressed="true"]')?.dataset.rhythmus || "1× pro Woche",
+            grund: wert("grund") }
+        : { art: "new_quest", wert: zahl("menge"), name: wert("qname"), kategorie: wert("qkat"), grund: wert("grund") });
       sheetZu(); ansicht = "wir"; await laden();
-      toast("Vorschlag steht zur Abstimmung.");
+      toast(wiederkehrend ? "Aufgabe für den Plan steht zur Abstimmung." : "Vorschlag steht zur Abstimmung.");
       return;
     }
     if (el.dataset.senden === "aktion") {
