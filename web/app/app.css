@@ -429,3 +429,60 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ---------- Einrichtung beim ersten Öffnen ---------- */
+.schritt { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.schrittfuss {
+  flex: none; padding: 12px 16px calc(var(--unten) + 16px);
+  display: flex; flex-direction: column; gap: 6px;
+  border-top: 1px solid var(--line); background: var(--bg);
+}
+.schrittpunkte { display: flex; gap: 6px; justify-content: center; padding-top: 4px; }
+.schrittpunkte i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); display: block; }
+.schrittpunkte i[data-an] { background: var(--accent); transform: scale(1.35); }
+
+.bildwahl { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bw {
+  aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--line); background: var(--tint);
+  cursor: pointer; display: grid; place-items: center; overflow: hidden; padding: 0;
+  font-size: 20px; color: var(--ink); font-family: var(--font-ui);
+}
+.bw img { width: 100%; height: 100%; object-fit: cover; }
+.bw[data-an] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+.kacheln { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.kachel {
+  border: 1px solid var(--line); border-radius: 15px; background: var(--bg); padding: 12px;
+  cursor: pointer; text-align: left; font: inherit; color: inherit;
+  display: flex; flex-direction: column; gap: 3px; position: relative;
+}
+.kachel .k { font-size: 14.5px; font-weight: 700; }
+.kachel .m { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+.kachel[data-an] { border-color: var(--accent); background: var(--accent-tint); }
+.kachel[data-an]::after { content: "✓"; position: absolute; top: 8px; right: 11px; color: var(--accent); font-weight: 800; font-size: 14px; }
+.kachel:disabled { opacity: .55; }
+
+.raumwahl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.raum {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 10px 11px;
+  cursor: pointer; font: inherit; color: inherit; text-align: left;
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600;
+  min-width: 0; line-height: 1.3;
+}
+.raum .n { min-width: 0; hyphens: auto; }
+.raum .haken {
+  width: 17px; height: 17px; border-radius: 5px; border: 1.6px solid var(--line); flex: none;
+  display: grid; place-items: center; font-size: 11px; color: #fff;
+}
+.raum[data-an] { border-color: var(--accent); background: var(--accent-tint); }
+.raum[data-an] .haken { background: var(--accent); border-color: var(--accent); }
+
+/* ---------- Konten, wenn es mehr als zwei sind ---------- */
+.konten { padding: 6px 14px; gap: 0; }
+.konto { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.konto:last-child { border-bottom: none; }
+.konto .who { flex: 1; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 7px; min-width: 0; }
+.konto .pts {
+  font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}

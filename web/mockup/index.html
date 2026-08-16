@@ -262,7 +262,7 @@ const Z = {
 const TYPEN = [
   { id: "wg",       k: "WG",       m: "Mehrere Erwachsene, geteilte Aufgaben" },
   { id: "familie",  k: "Familie",  m: "Eltern und Kinder unter einem Dach" },
-  { id: "paar",     k: "Pärchen",  m: "Zwei Personen, ein Haushalt" },
+  { id: "paar",     k: "Pärchen",  m: "Meist zwei — mehr geht auch" },
   { id: "sonstige", k: "Sonstige", m: "Passt nichts davon? Dann das hier" }
 ];
 
@@ -367,13 +367,6 @@ const SCHIRME = [
       <div class="note"><span><b>Erwachsene verwalten.</b> Einladen, entfernen, Haushaltstyp
         ändern — das können nur sie. Beim Melden, Bestätigen, Beantragen und Abstimmen
         haben Kinder dieselben Rechte.</span></div>`
-    : Z.typ === "paar" ? `
-      <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
-        <span style="flex:1;font-size:14px;font-weight:600">Zwei Personen</span>
-        <span class="chip navy">fest</span>
-      </div>
-      <div class="note"><span>Beim Pärchen ist die Zahl gesetzt. Wenn jemand dazukommt,
-        wechselt ihr einfach den Typ.</span></div>`
     : `
       <div class="card">
         <div class="stepper">
@@ -384,7 +377,8 @@ const SCHIRME = [
         </div>
       </div>
       <div class="note"><span><b>${Z.typ === "wg" ? "Wer einrichtet, verwaltet." : "Du verwaltest."}</b>
-        Das heißt nur: einladen und entfernen. Sonst haben alle dieselben Rechte.</span></div>`}
+        Das heißt nur: einladen und entfernen. Sonst haben alle dieselben Rechte.${
+        Z.typ === "paar" ? " Zwei sind der Normalfall, mehr geht genauso." : ""}</span></div>`}
   </div>
   <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
 
@@ -619,6 +613,7 @@ document.addEventListener("click", (ev) => {
     Z.typ = el.dataset.typ;
     if (Z.typ === "familie" && Z.erwachsene + Z.kinder < 2) { Z.erwachsene = 2; Z.kinder = 1; }
     if (Z.typ === "wg" && Z.personen < 3) Z.personen = 3;
+    if (Z.typ === "paar" && Z.personen < 2) Z.personen = 2;
     return zeichne();
   }
 

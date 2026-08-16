@@ -4,7 +4,7 @@
 // wird, entscheiden diese Prüfungen und die Regeln in der Datenbank — nicht das Handy.
 
 import { angemeldet } from "./auth.js";
-import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND } from "./startdaten.js";
+import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND, RAUMVORSCHLAEGE } from "./startdaten.js";
 import { sendePush, vapid } from "./push.js";
 
 const json = (daten, status = 200) =>
@@ -51,8 +51,9 @@ export async function handleApi(request, env, url) {
     if (pfad === "push/subscribe") return json(await geraetMerken(env, ich, koerper));
     if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
     if (pfad === "profil") return json(await profilAendern(env, ich, koerper));
+    if (pfad === "haushalt/einrichten") return json(await haushaltEinrichten(env, ich, koerper));
 
-    if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
+    if (!ich.couple_id) throw new Fehler("Noch kein Haushalt eingerichtet", 409);
 
     if (pfad === "claims") return json(await melden(env, ich, koerper));
     if (teile[0] === "claims" && teile[2] === "decide") return json(await meldungEntscheiden(env, ich, teile[1], koerper.status));
@@ -62,6 +63,11 @@ export async function handleApi(request, env, url) {
 
     if (pfad === "transfers") return json(await uebertragen(env, ich, koerper));
     if (teile[0] === "transfers" && teile[2] === "decide") return json(await uebertragungEntscheiden(env, ich, teile[1], koerper.status));
+
+    if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
+    if (teile[0] === "quests" && teile[2] === "raum") return json(await questRaum(env, ich, teile[1], koerper.raum));
+    if (pfad === "raeume") return json(await raumAnlegen(env, ich, koerper));
+    if (teile[0] === "raeume" && teile[1]) return json(await raumAendern(env, ich, teile[1], koerper));
 
     if (pfad === "proposals") return json(await vorschlagen(env, ich, koerper));
     if (teile[0] === "proposals" && teile[2] === "vote") return json(await abstimmen(env, ich, teile[1], koerper.antwort));
@@ -82,13 +88,186 @@ export async function handleApi(request, env, url) {
 /** Der Anzeigename gehört einem allein — das ist keine Sache für eine Abstimmung.
  *  Gemerkt wird nur, dass er von Hand gesetzt wurde, damit die nächste Anmeldung
  *  ihn nicht wieder mit dem Google-Namen überschreibt. */
-async function profilAendern(env, ich, { name }) {
+async function profilAendern(env, ich, { name, bild }) {
+  if (name !== undefined) {
+    const sauber = String(name).replace(/\s+/g, " ").trim().slice(0, 40);
+    if (sauber.length < 2) throw new Fehler("Der Name braucht mindestens zwei Zeichen");
+    await env.DB.prepare("update users set name = ?1, name_gesetzt = 1 where id = ?2")
+      .bind(sauber, ich.id).run();
+  }
+  if (bild !== undefined) {
+    await env.DB.prepare("update users set bild = ?1 where id = ?2").bind(bildPruefen(bild), ich.id).run();
+  }
+  const jetzt = await env.DB.prepare("select name, bild from users where id = ?1").bind(ich.id).first();
+  return { ok: true, name: jetzt.name, bild: jetzt.bild };
+}
+
+/** Erlaubt sind eine der mitgelieferten Figuren, ein einzelnes Zeichen — oder ein
+ *  eigenes Foto als Data-URL. Das Handy verkleinert es vorher; hier steht nur die
+ *  Obergrenze, damit die Datenbank nicht als Bilderspeicher missbraucht wird. */
+function bildPruefen(bild) {
+  if (bild === null || bild === "") return null;
+  const wert = String(bild);
+  if (wert.startsWith("data:image/")) {
+    if (wert.length > 120000) throw new Fehler("Das Bild ist zu groß — bitte ein kleineres wählen");
+    return wert;
+  }
+  if (wert.length <= 8) return wert;               // Figur oder Zeichen
+  throw new Fehler("Dieses Bild versteht die App nicht");
+}
+
+/* ------------------------------------------------------------------ Haushalt */
+
+const HAUSHALTSARTEN = ["wg", "familie", "paar", "sonstige"];
+
+/** Die Einrichtung beim allerersten Öffnen: Name, Bild, Art des Haushalts,
+ *  geplante Größe und die Räume — alles in einem Zug. Danach steht der Haushalt
+ *  und die anderen können über den Code dazukommen. */
+async function haushaltEinrichten(env, ich, daten) {
+  const { name, bild, art = "paar", erwachsene = 2, kinder = 0, personen = 2, raeume = [] } = daten;
+
+  if (!HAUSHALTSARTEN.includes(art)) throw new Fehler("Unbekannte Art von Haushalt");
+  if (ich.couple_id) {
+    const schon = await env.DB.prepare("select eingerichtet from couples where id = ?1").bind(ich.couple_id).first();
+    if (schon?.eingerichtet) throw new Fehler("Dieser Haushalt ist bereits eingerichtet");
+  }
+
+  const kinderZahl = art === "familie" ? grenze(kinder, 0, 12) : 0;
+  const erwachsenenZahl = art === "familie" ? grenze(erwachsene, 1, 12) : 0;
+  const groesse = art === "familie" ? erwachsenenZahl + kinderZahl : grenze(personen, 1, 12);
+
+  const liste = [...new Set((Array.isArray(raeume) ? raeume : [])
+    .map((r) => String(r).replace(/\s+/g, " ").trim().slice(0, 40))
+    .filter(Boolean))].slice(0, 30);
+
+  if (name !== undefined) await profilAendern(env, ich, { name });
+  if (bild !== undefined) await profilAendern(env, ich, { bild });
+
+  const paar = ich.couple_id || id();
+  const code = await code6();
+  const anweisungen = [];
+
+  if (!ich.couple_id) {
+    anweisungen.push(
+      env.DB.prepare(
+        `insert into couples (id, pair_code, pair_code_expires, art, groesse, erwachsene, kinder, eingerichtet)
+         values (?1, ?2, datetime('now', '+1 day'), ?3, ?4, ?5, ?6, 1)`
+      ).bind(paar, code, art, groesse, erwachsenenZahl, kinderZahl),
+      env.DB.prepare("insert into members (user_id, couple_id, rolle) values (?1, ?2, 'verwalter')").bind(ich.id, paar),
+      ...QUESTS.map((q) =>
+        env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
+          .bind(id(), paar, q.name, q.kategorie, q.punkte)),
+      ...BELOHNUNGEN.map((b) =>
+        env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
+          .bind(id(), paar, b.name, b.kosten))
+    );
+  } else {
+    anweisungen.push(
+      env.DB.prepare(
+        `update couples set art = ?1, groesse = ?2, erwachsene = ?3, kinder = ?4, eingerichtet = 1,
+                            pair_code = ?5, pair_code_expires = datetime('now', '+1 day')
+          where id = ?6`
+      ).bind(art, groesse, erwachsenenZahl, kinderZahl, code, paar),
+      env.DB.prepare("update members set rolle = 'verwalter' where user_id = ?1").bind(ich.id)
+    );
+  }
+
+  liste.forEach((raum, i) => anweisungen.push(
+    env.DB.prepare(`insert into raeume (id, couple_id, name, sortierung) values (?1, ?2, ?3, ?4)
+                    on conflict(couple_id, name) do nothing`).bind(id(), paar, raum, i)
+  ));
+
+  await env.DB.batch(anweisungen);
+  return { ok: true, code };
+}
+
+/** Art und Größe später ändern — das darf nur, wer verwaltet. */
+async function haushaltAendern(env, ich, { art, erwachsene, kinder, personen }) {
+  await nurVerwalter(env, ich);
+
+  const jetzt = await env.DB.prepare("select * from couples where id = ?1").bind(ich.couple_id).first();
+  const neueArt = art === undefined ? jetzt.art : art;
+  if (!HAUSHALTSARTEN.includes(neueArt)) throw new Fehler("Unbekannte Art von Haushalt");
+
+  const kinderZahl = neueArt === "familie" ? grenze(kinder ?? jetzt.kinder, 0, 12) : 0;
+  const erwachsenenZahl = neueArt === "familie" ? grenze(erwachsene ?? jetzt.erwachsene, 1, 12) : 0;
+  const groesse = neueArt === "familie"
+    ? erwachsenenZahl + kinderZahl
+    : grenze(personen ?? jetzt.groesse, 1, 12);
+
+  const belegt = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+    .bind(ich.couple_id).first();
+  if (groesse < belegt.n) throw new Fehler(`Ihr seid schon zu ${belegt.n} — kleiner geht nur, wenn jemand geht`);
+
+  await env.DB.prepare(
+    "update couples set art = ?1, groesse = ?2, erwachsene = ?3, kinder = ?4 where id = ?5"
+  ).bind(neueArt, groesse, erwachsenenZahl, kinderZahl, ich.couple_id).run();
+  return { ok: true };
+}
+
+async function nurVerwalter(env, ich) {
+  const meins = await env.DB.prepare("select rolle from members where user_id = ?1").bind(ich.id).first();
+  if (meins?.rolle !== "verwalter") throw new Fehler("Das kann nur, wer den Haushalt verwaltet", 403);
+}
+
+const grenze = (wert, min, max) => Math.max(min, Math.min(max, Math.floor(Number(wert) || 0)));
+
+/* ------------------------------------------------------------------ Räume */
+
+/** Räume sind Ordnung, keine Punkte — deshalb darf sie jeder pflegen. Der Name
+ *  steht zusätzlich als Text in den Quests; ein umbenannter Raum zieht sie mit. */
+async function raumAnlegen(env, ich, { name }) {
   const sauber = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
   if (sauber.length < 2) throw new Fehler("Der Name braucht mindestens zwei Zeichen");
 
-  await env.DB.prepare("update users set name = ?1, name_gesetzt = 1 where id = ?2")
-    .bind(sauber, ich.id).run();
+  const letzte = await env.DB.prepare("select coalesce(max(sortierung), 0) as n from raeume where couple_id = ?1")
+    .bind(ich.couple_id).first();
+  await env.DB.prepare(
+    `insert into raeume (id, couple_id, name, sortierung) values (?1, ?2, ?3, ?4)
+     on conflict(couple_id, name) do update set aktiv = 1`
+  ).bind(id(), ich.couple_id, sauber, letzte.n + 1).run();
   return { ok: true, name: sauber };
+}
+
+/** Eine Quest in einen anderen Raum schieben. Am Punktwert ändert das nichts,
+ *  deshalb braucht es dafür auch keine Abstimmung — nur Ordnung. */
+async function questRaum(env, ich, questId, raum) {
+  const ziel = await env.DB.prepare("select name from raeume where couple_id = ?1 and name = ?2 and aktiv = 1")
+    .bind(ich.couple_id, String(raum ?? "")).first();
+  if (!ziel) throw new Fehler("Diesen Raum gibt es nicht");
+
+  const geaendert = await env.DB.prepare(
+    "update quests set category = ?1 where id = ?2 and couple_id = ?3 and active = 1"
+  ).bind(ziel.name, questId, ich.couple_id).run();
+  if (!geaendert.meta.changes) throw new Fehler("Diese Quest gibt es nicht");
+  return { ok: true, raum: ziel.name };
+}
+
+async function raumAendern(env, ich, raumId, { name, aktiv }) {
+  const raum = await env.DB.prepare("select * from raeume where id = ?1 and couple_id = ?2")
+    .bind(raumId, ich.couple_id).first();
+  if (!raum) throw new Fehler("Diesen Raum gibt es nicht", 404);
+
+  if (name !== undefined) {
+    const sauber = String(name).replace(/\s+/g, " ").trim().slice(0, 40);
+    if (sauber.length < 2) throw new Fehler("Der Name braucht mindestens zwei Zeichen");
+    // Der Raum steht in den Quests als Text — beides wandert gemeinsam.
+    await env.DB.batch([
+      env.DB.prepare("update raeume set name = ?1 where id = ?2").bind(sauber, raumId),
+      env.DB.prepare("update quests set category = ?1 where couple_id = ?2 and category = ?3")
+        .bind(sauber, ich.couple_id, raum.name),
+      env.DB.prepare("update aktionen set kategorie = ?1 where couple_id = ?2 and kategorie = ?3")
+        .bind(sauber, ich.couple_id, raum.name)
+    ]);
+  }
+  if (aktiv !== undefined) {
+    const offen = await env.DB.prepare(
+      "select count(*) as n from quests where couple_id = ?1 and category = ?2 and active = 1"
+    ).bind(ich.couple_id, raum.name).first();
+    if (!aktiv && offen.n > 0) throw new Fehler(`In „${raum.name}“ liegen noch ${offen.n} Quests`);
+    await env.DB.prepare("update raeume set aktiv = ?1 where id = ?2").bind(aktiv ? 1 : 0, raumId).run();
+  }
+  return { ok: true };
 }
 
 /* ------------------------------------------------------------------ Paar */
@@ -98,22 +277,14 @@ async function code6() {
   return String(zahl).padStart(6, "0");
 }
 
+/** Der alte Weg „Code erzeugen“ ohne Einrichtung. Er legt denselben Haushalt an,
+ *  nur mit den Voreinstellungen — damit niemand in einem halben Zustand landet. */
 async function paarAnlegen(env, ich) {
   if (ich.couple_id) throw new Fehler("Du bist bereits mit jemandem verbunden");
-
-  const paar = id();
-  const code = await code6();
-  await env.DB.batch([
-    env.DB.prepare("insert into couples (id, pair_code, pair_code_expires) values (?1, ?2, datetime('now', '+1 day'))").bind(paar, code),
-    env.DB.prepare("insert into members (user_id, couple_id) values (?1, ?2)").bind(ich.id, paar),
-    ...QUESTS.map((q) =>
-      env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
-        .bind(id(), paar, q.name, q.kategorie, q.punkte)),
-    ...BELOHNUNGEN.map((b) =>
-      env.DB.prepare("insert into rewards (id, couple_id, name, cost) values (?1, ?2, ?3, ?4)")
-        .bind(id(), paar, b.name, b.kosten))
-  ]);
-  return { code };
+  return haushaltEinrichten(env, ich, {
+    art: "paar", personen: 2,
+    raeume: [...new Set(QUESTS.map((q) => q.kategorie))]
+  });
 }
 
 async function paarBeitreten(env, ich, code) {
@@ -121,14 +292,14 @@ async function paarBeitreten(env, ich, code) {
   const sauber = String(code).trim();
 
   const paar = await env.DB.prepare(
-    `select id from couples where pair_code = ?1 and pair_code_expires > datetime('now')`
+    `select id, groesse from couples where pair_code = ?1 and pair_code_expires > datetime('now')`
   ).bind(sauber).first();
   if (!paar) throw new Fehler("Dieser Code ist unbekannt oder abgelaufen");
 
   const anzahl = await env.DB.prepare("select count(*) as n from members where couple_id = ?1").bind(paar.id).first();
-  if (anzahl.n >= 2) throw new Fehler("Dieses Paar ist bereits vollständig");
+  if (anzahl.n >= paar.groesse) throw new Fehler("Dieser Haushalt ist bereits vollständig");
 
-  if (ich.couple_id === paar.id) throw new Fehler("Das ist dein eigener Code — gib ihn deinem Partner");
+  if (ich.couple_id === paar.id) throw new Fehler("Das ist dein eigener Code — gib ihn den anderen");
 
   // Wer selbst ein leeres Paar angelegt hat, darf es beim Beitreten aufgeben.
   if (ich.couple_id) {
@@ -143,18 +314,25 @@ async function paarBeitreten(env, ich, code) {
     ]);
   }
 
+  // Der Code bleibt gültig, solange noch Plätze frei sind — in einer WG kommen
+  // die anderen nicht alle in derselben Minute.
+  const voll = anzahl.n + 1 >= paar.groesse;
   await env.DB.batch([
-    env.DB.prepare("insert into members (user_id, couple_id) values (?1, ?2)").bind(ich.id, paar.id),
-    env.DB.prepare("update couples set pair_code = null, pair_code_expires = null where id = ?1").bind(paar.id)
+    env.DB.prepare("insert into members (user_id, couple_id, rolle) values (?1, ?2, 'mitglied')").bind(ich.id, paar.id),
+    ...(voll ? [env.DB.prepare("update couples set pair_code = null, pair_code_expires = null where id = ?1").bind(paar.id)] : [])
   ]);
 
   await anfangsbestand(env, paar.id);
   return { ok: true };
 }
 
-/** Einmalige Übernahme der Punktestände aus der bisherigen Tabelle.
- *  Läuft nur, solange das Konto noch völlig leer ist. */
+/** Einmalige Übernahme der Punktestände aus der Reinigungsquest-Tabelle.
+ *  Läuft nur für den Haushalt, aus dem die Tabelle stammt, und nur solange das
+ *  Konto völlig leer ist. Jeder neue Haushalt fängt bei null an. */
 async function anfangsbestand(env, paarId) {
+  const haus = await env.DB.prepare("select startguthaben from couples where id = ?1").bind(paarId).first();
+  if (!haus?.startguthaben) return;
+
   const bisher = await env.DB.prepare("select count(*) as n from ledger where couple_id = ?1").bind(paarId).first();
   if (bisher.n > 0) return;
 
@@ -214,11 +392,20 @@ async function melde(env, paarId, empfaengerId, ereignis) {
   });
 }
 
-async function partnerVon(env, ich) {
+/** Alle außer mir — in einer WG sind das mehrere. */
+async function andereVon(env, ich) {
   const treffer = await env.DB.prepare(
     "select user_id from members where couple_id = ?1 and user_id <> ?2"
-  ).bind(ich.couple_id, ich.id).first();
-  return treffer?.user_id || null;
+  ).bind(ich.couple_id, ich.id).all();
+  return treffer.results.map((r) => r.user_id);
+}
+
+/** Dasselbe Ereignis an alle anderen. Wer etwas meldet, muss nicht wissen,
+ *  wer gerade Zeit hat — jeder darf bestätigen, also erfährt es jeder. */
+async function meldeAllen(env, ich, ereignis) {
+  for (const wer of await andereVon(env, ich)) {
+    await melde(env, ich.couple_id, wer, ereignis);
+  }
 }
 
 /* ------------------------------------------------------------------ Aktionen */
@@ -257,7 +444,8 @@ async function abstimmungenNachziehen(env, paarId) {
   const haengend = await env.DB.prepare(
     `select p.* from proposals p
       where p.couple_id = ?1 and p.status = 'offen'
-        and (select count(*) from proposal_votes v where v.proposal_id = p.id and v.answer = 1) >= 2`
+        and (select count(*) from proposal_votes v where v.proposal_id = p.id and v.answer = 1)
+            >= (select count(*) from members where couple_id = p.couple_id)`
   ).bind(paarId).all();
 
   for (const vorschlag of haengend.results) {
@@ -270,25 +458,35 @@ async function abstimmungenNachziehen(env, paarId) {
 }
 
 async function zustand(env, ich) {
+  // Ohne Haushalt beginnt die Einrichtung. Sie ist der einzige Weg hinein —
+  // erst danach gibt es Quests, Punkte und alles Weitere.
   if (!ich.couple_id) {
-    const eigener = await env.DB.prepare(
-      `select c.pair_code from couples c join members m on m.couple_id = c.id where m.user_id = ?1`
-    ).bind(ich.id).first();
     return {
       angemeldet: true,
-      verbunden: false,
-      ich: { id: ich.id, name: ich.name, avatar: ich.avatar_url },
-      code: eigener?.pair_code || null
+      eingerichtet: false,
+      ich: { id: ich.id, name: ich.name, avatar: ich.avatar_url, bild: ich.bild },
+      raumvorschlaege: RAUMVORSCHLAEGE
     };
   }
 
   const paar = ich.couple_id;
+  const haus = await env.DB.prepare("select * from couples where id = ?1").bind(paar).first();
+  if (!haus.eingerichtet) {
+    return {
+      angemeldet: true,
+      eingerichtet: false,
+      ich: { id: ich.id, name: ich.name, avatar: ich.avatar_url, bild: ich.bild },
+      raumvorschlaege: RAUMVORSCHLAEGE
+    };
+  }
+
   await abstimmungenNachziehen(env, paar);
 
-  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen] =
+  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume] =
     await Promise.all([
-      env.DB.prepare(`select u.id, u.name, u.avatar_url, m.joined_at from members m join users u on u.id = m.user_id
-                       where m.couple_id = ?1`).bind(paar).all(),
+      env.DB.prepare(`select u.id, u.name, u.avatar_url, u.bild, m.joined_at, m.rolle, m.erwachsen
+                        from members m join users u on u.id = m.user_id
+                       where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
       env.DB.prepare(`select q.id, q.name, q.category, q.points,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
@@ -316,27 +514,37 @@ async function zustand(env, ich) {
       env.DB.prepare(`select id, art, titel, text, punkte, created_at from ereignisse
                        where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all(),
       env.DB.prepare(`select id, art, prozent, kategorie, beginn, ende from aktionen
-                       where couple_id = ?1 and ende > datetime('now') order by beginn`).bind(paar).all()
+                       where couple_id = ?1 and ende > datetime('now') order by beginn`).bind(paar).all(),
+      env.DB.prepare(`select id, name, aktiv from raeume where couple_id = ?1
+                       order by sortierung, name`).bind(paar).all()
     ]);
 
   const jetzt = new Date().toISOString().slice(0, 19).replace("T", " ");
   const laufend = aktionen.results.filter((a) => a.beginn <= jetzt && a.ende > jetzt);
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
   const mit = personen.results.map((p) => ({
-    id: p.id, name: p.name, avatar: p.avatar_url, seit: p.joined_at, punkte: punkteVon[p.id] || 0
+    id: p.id, name: p.name, avatar: p.avatar_url, bild: p.bild, seit: p.joined_at,
+    rolle: p.rolle, erwachsen: !!p.erwachsen, punkte: punkteVon[p.id] || 0
   }));
   const mein = mit.find((p) => p.id === ich.id) || { id: ich.id, name: ich.name, punkte: 0 };
-  const partner = mit.find((p) => p.id !== ich.id) || null;
+  const andere = mit.filter((p) => p.id !== ich.id);
 
   const stimmenJe = {};
   for (const s of stimmen.results) (stimmenJe[s.proposal_id] ||= {})[s.member_id] = !!s.answer;
 
   return {
     angemeldet: true,
-    verbunden: !!partner,
-    code: partner ? null : (await env.DB.prepare("select pair_code from couples where id = ?1").bind(paar).first())?.pair_code,
+    eingerichtet: true,
+    verbunden: andere.length > 0,
+    code: mit.length < haus.groesse ? haus.pair_code : null,
+    haushalt: {
+      art: haus.art, groesse: haus.groesse, erwachsene: haus.erwachsene, kinder: haus.kinder,
+      belegt: mit.length, ichVerwalte: mein.rolle === "verwalter"
+    },
     ich: mein,
-    partner,
+    mitglieder: mit,
+    andere,
+    raeume: raeume.results,
     quests: quests.results.map((q) => {
       const { wert, aktion } = questWert(q, laufend);
       return { ...q, punkte_jetzt: wert, bonus: aktion ? aktion.prozent : 0 };
@@ -363,7 +571,7 @@ async function zustand(env, ich) {
       tage: p.kind === "neue_aktion" ? (JSON.parse(p.payload || "{}").tage || null) : null,
       status: p.status,
       meine: stimmenJe[p.id]?.[ich.id],
-      ihre: partner ? stimmenJe[p.id]?.[partner.id] : undefined
+      stimmen: mit.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id] }))
     })),
     verlauf: verlauf.results,
     ereignisse: ereignisse.results
@@ -387,14 +595,11 @@ async function melden(env, ich, { questId, anzahl = 1, notiz = "" }) {
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
   ).bind(id(), ich.couple_id, quest.id, ich.id, menge, wert, String(notiz).slice(0, 300)).run();
-  const partner = await partnerVon(env, ich);
-  if (partner) {
-    await melde(env, ich.couple_id, partner, {
-      art: "info",
-      titel: `${vorname(ich.name)} hat etwas erledigt`,
-      text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Punkte warten auf deine Bestätigung.`
-    });
-  }
+  await meldeAllen(env, ich, {
+    art: "info",
+    titel: `${vorname(ich.name)} hat etwas erledigt`,
+    text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Punkte warten auf eine Bestätigung.`
+  });
   return { ok: true };
 }
 
@@ -406,7 +611,7 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
       where c.id = ?1 and c.couple_id = ?2`
   ).bind(meldungId, ich.couple_id).first();
   if (!meldung) throw new Fehler("Meldung nicht gefunden", 404);
-  if (meldung.claimed_by === ich.id) throw new Fehler("Eine Meldung muss vom jeweils anderen bestätigt werden");
+  if (meldung.claimed_by === ich.id) throw new Fehler("Eine Meldung muss von jemand anderem bestätigt werden");
 
   // Entscheidung und Buchung in einem Zug: die zweite Anweisung sieht den neuen
   // Stand und bucht nur, wenn wirklich bestätigt wurde — und nur einmal.
@@ -450,14 +655,11 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
   ).bind(id(), ich.couple_id, belohnung.id, ich.id, wert,
          String(termin).slice(0, 60), String(nachricht).slice(0, 300)).run();
-  const partner = await partnerVon(env, ich);
-  if (partner) {
-    await melde(env, ich.couple_id, partner, {
-      art: "info",
-      titel: `${vorname(ich.name)} möchte etwas einlösen`,
-      text: `${belohnung.name} — ${wert} Punkte. Du entscheidest.`
-    });
-  }
+  await meldeAllen(env, ich, {
+    art: "info",
+    titel: `${vorname(ich.name)} möchte etwas einlösen`,
+    text: `${belohnung.name} — ${wert} Punkte. Ihr entscheidet.`
+  });
   return { ok: true };
 }
 
@@ -469,7 +671,7 @@ async function antragEntscheiden(env, ich, antragId, status) {
       where r.id = ?1 and r.couple_id = ?2`
   ).bind(antragId, ich.couple_id).first();
   if (!antrag) throw new Fehler("Antrag nicht gefunden", 404);
-  if (antrag.requested_by === ich.id) throw new Fehler("Ein Antrag muss vom jeweils anderen entschieden werden");
+  if (antrag.requested_by === ich.id) throw new Fehler("Ein Antrag muss von jemand anderem entschieden werden");
 
   if (status === "bestaetigt") {
     const stand = await env.DB.prepare(
@@ -505,14 +707,21 @@ async function antragEntscheiden(env, ich, antragId, status) {
 
 /* ------------------------------------------------------------------ Übertragen */
 
-async function uebertragen(env, ich, { betrag, nachricht = "" }) {
+async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
   const menge = Math.floor(Number(betrag));
   if (!(menge > 0)) throw new Fehler("Der Betrag muss größer als null sein");
 
-  const partner = await env.DB.prepare(
+  // Mit mehreren im Haushalt muss stehen, wer die Punkte bekommt. Fehlt die
+  // Angabe und es kommt ohnehin nur eine Person in Frage, ist es diese.
+  const andere = await env.DB.prepare(
     "select user_id from members where couple_id = ?1 and user_id <> ?2"
-  ).bind(ich.couple_id, ich.id).first();
-  if (!partner) throw new Fehler("Noch kein Partner verbunden");
+  ).bind(ich.couple_id, ich.id).all();
+  if (!andere.results.length) throw new Fehler("Es ist noch niemand sonst im Haushalt");
+
+  const partner = an
+    ? andere.results.find((m) => m.user_id === an)
+    : (andere.results.length === 1 ? andere.results[0] : null);
+  if (!partner) throw new Fehler("Wähle aus, wer die Punkte bekommen soll");
 
   const stand = await env.DB.prepare(
     "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
@@ -628,15 +837,12 @@ async function vorschlagen(env, ich, daten) {
       .bind(vorschlag, ich.id)
   ]);
 
-  const partner = await partnerVon(env, ich);
-  if (partner) {
-    await melde(env, ich.couple_id, partner, {
-      art: "info",
-      titel: `${vorname(ich.name)} schlägt etwas vor`,
-      text: loeschen ? `${name || "Ein Eintrag"} soll gelöscht werden — deine Stimme fehlt.`
-                     : `Neuer Wert: ${neu} Punkte — deine Stimme fehlt.`
-    });
-  }
+  await meldeAllen(env, ich, {
+    art: "info",
+    titel: `${vorname(ich.name)} schlägt etwas vor`,
+    text: loeschen ? `${name || "Ein Eintrag"} soll gelöscht werden — deine Stimme fehlt.`
+                   : `Neuer Wert: ${neu} Punkte — deine Stimme fehlt.`
+  });
   return { ok: true };
 }
 
@@ -699,16 +905,13 @@ async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = ""
       .bind(vorschlag, ich.id)
   ]);
 
-  const partner = await partnerVon(env, ich);
-  if (partner) {
-    await melde(env, ich.couple_id, partner, {
-      art: "info",
-      titel: `${vorname(ich.name)} schlägt eine Aktion vor`,
-      text: aktionsart === "quest_bonus"
-        ? `+${wert} % Punkte${raum ? ` auf ${raum}` : ""} — deine Stimme fehlt.`
-        : `${wert} % Rabatt auf Belohnungen — deine Stimme fehlt.`
-    });
-  }
+  await meldeAllen(env, ich, {
+    art: "info",
+    titel: `${vorname(ich.name)} schlägt eine Aktion vor`,
+    text: aktionsart === "quest_bonus"
+      ? `+${wert} % Punkte${raum ? ` auf ${raum}` : ""} — deine Stimme fehlt.`
+      : `${wert} % Rabatt auf Belohnungen — deine Stimme fehlt.`
+  });
   return { ok: true };
 }
 
@@ -728,7 +931,12 @@ async function auszaehlen(env, vorschlag) {
     ).bind(vorschlag.id).run();
     return "abgelehnt";
   }
-  if (ja < 2) return "offen";
+
+  // Nur gemeinsam heißt: wirklich alle. Ein einziges Nein beendet den Vorschlag
+  // sofort, eine fehlende Stimme lässt ihn offen — der alte Wert gilt weiter.
+  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+    .bind(vorschlag.couple_id).first();
+  if (ja < koepfe.n) return "offen";
 
   // Nur die Anweisung der tatsächlichen Art bauen. Vorher wurden alle Arten auf
   // einmal erzeugt — bei einer Punktwertänderung sind die Felder einer Aktion leer,
@@ -787,7 +995,7 @@ const alsTag = (d) => d.toISOString().slice(0, 10);
  * Sonst stünde am ersten Tag ein Balken von 88 und alles andere verschwände daneben.
  */
 async function statistik(env, ich, versatzRoh) {
-  if (!ich.couple_id) throw new Fehler("Noch kein Paar verbunden", 409);
+  if (!ich.couple_id) throw new Fehler("Noch kein Haushalt eingerichtet", 409);
 
   // Der Tag beginnt dort, wo die Person wohnt — nicht in Greenwich.
   const versatz = Math.max(-840, Math.min(840, Number(versatzRoh) || 0));
@@ -801,7 +1009,9 @@ async function statistik(env, ich, versatzRoh) {
       group by tag, member_id`
   ).bind(ich.couple_id, schieben).all();
 
-  const partner = await partnerVon(env, ich);
+  // Zwei Reihen bleiben es auch zu viert: du und alle anderen zusammen. Wer im
+  // Einzelnen wie viel beigetragen hat, steht auf dem Dashboard.
+  const andere = await andereVon(env, ich);
   const proTag = new Map();
   for (const z of zeilen.results) {
     if (!proTag.has(z.tag)) proTag.set(z.tag, {});
@@ -815,7 +1025,11 @@ async function statistik(env, ich, versatzRoh) {
   for (let i = 27; i >= 0; i--) {
     const tag = alsTag(new Date(heuteLokal.getTime() - i * TAG));
     const werte = proTag.get(tag) || {};
-    tage.push({ tag, ich: werte[ich.id] || 0, partner: partner ? (werte[partner] || 0) : 0 });
+    tage.push({
+      tag,
+      ich: werte[ich.id] || 0,
+      partner: andere.reduce((n, wer) => n + (werte[wer] || 0), 0)
+    });
   }
 
   const summe = (liste, feld) => liste.reduce((n, t) => n + t[feld], 0);
@@ -839,7 +1053,7 @@ async function statistik(env, ich, versatzRoh) {
   for (const [tag, werte] of proTag) {
     if (tag >= vorMonatAb && tag <= alsTag(vorMonatEnde)) {
       vorMonat.ich += werte[ich.id] || 0;
-      if (partner) vorMonat.partner += werte[partner] || 0;
+      vorMonat.partner += andere.reduce((n, wer) => n + (werte[wer] || 0), 0);
     }
   }
 
@@ -885,7 +1099,8 @@ async function statistik(env, ich, versatzRoh) {
     tageOffen,
     monatOffen,
     ich: kennzahlen("ich"),
-    partner: partner ? kennzahlen("partner") : null,
+    partner: andere.length ? kennzahlen("partner") : null,
+    andereZahl: andere.length,
     naechsteBelohnung: naechste ? { ...naechste, fehlt: naechste.kosten - stand.punkte } : null
   };
 }

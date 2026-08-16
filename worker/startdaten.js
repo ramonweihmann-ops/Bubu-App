@@ -47,3 +47,10 @@ export const BELOHNUNGEN = [
   { name: "B",                           kosten: 8 },
   { name: "L",                           kosten: 8 }
 ];
+
+// Vorschläge für die Einrichtung. Nur Vorschläge: angehakt wird, was passt,
+// und Eigenes lässt sich dazuschreiben.
+export const RAUMVORSCHLAEGE = [
+  "Küche", "Bad", "Wohnzimmer", "Schlafzimmer", "Flur", "Kinderzimmer",
+  "Arbeitszimmer", "Balkon", "Garten", "Keller", "Hauswirtschaft", "Garage"
+];

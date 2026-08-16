@@ -1,8 +1,12 @@
 # Haus-Quest
 
-Punktekonto für zwei. Aufgaben („Quests“) haben einen **vorher festgelegten** Punktwert.
-Wer eine erledigt, meldet sie — gutgeschrieben wird sie erst, wenn **der andere bestätigt**.
-Punktwerte ändern sich nie im Alleingang, sondern nur über eine **Abstimmung**, der beide zustimmen.
+Punktekonto für einen Haushalt. Aufgaben („Quests“) haben einen **vorher festgelegten**
+Punktwert. Wer eine erledigt, meldet sie — gutgeschrieben wird sie erst, wenn **jemand
+anderes bestätigt**. Punktwerte ändern sich nie im Alleingang, sondern nur über eine
+**Abstimmung**, der **alle** zustimmen.
+
+Ob Pärchen, WG, Familie oder etwas anderes: der Haushalt hat einen Typ und so viele
+Plätze, wie ihr braucht.
 
 Grundlage ist die Reinigungsquest-Tabelle (22 Quests, 11 Belohnungen, zwei Konten).
 
@@ -10,7 +14,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 
 - **Mockup:** [`docs/mockup.html`](./docs/mockup.html) — im Browser öffnen, der Prototyp oben ist antippbar.
 - **Mockup „Erster Start":** [`web/mockup/`](./web/mockup) — live unter `haus-quest.com/mockup/`.
-  Einrichtung vom Namen bis zum fertigen Haushalt. Noch nichts davon ist gebaut.
+  Der Entwurf, aus dem die Einrichtung entstanden ist.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
@@ -23,12 +27,12 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 | Regel | Bedeutung |
 | --- | --- |
 | Preis steht vorher | Beim Melden wird der aktuelle Punktwert eingefroren. Spätere Änderungen wirken nie rückwirkend. |
-| Vier Augen | Melden darf jeder, freigeben nur der andere. Ohne Bestätigung keine Punkte. |
-| Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**: nur mit Zustimmung von beiden. Ein Nein lässt alles beim Alten. |
+| Vier Augen | Melden darf jeder, freigeben nur jemand **anderes**. Wer meldet, kann nie selbst bestätigen — sonst reicht eine beliebige andere Person aus dem Haushalt. |
+| Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**, Aktion starten: nur mit Zustimmung **aller**. Ein Nein lässt alles beim Alten, eine fehlende Stimme hält den Vorschlag offen. |
 
 Die Übernahme selbst — neuer Punktwert, neuer Eintrag, Löschung, Aktion — passiert in derselben
 Transaktion wie das Schließen der Abstimmung: entweder beides oder nichts. Sollte eine Abstimmung
-doch einmal mit zwei Ja-Stimmen offen stehen bleiben, zieht die App sie beim nächsten Laden nach.
+doch einmal trotz vollständiger Zustimmung offen stehen bleiben, zieht die App sie beim nächsten Laden nach.
 
 Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer eine eigene Meldung
 bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
@@ -58,15 +62,58 @@ sind hier bereits belegt. Das fertige Postgres-Schema liegt für den Fall der F�
 [`supabase/schema.sql`](./supabase/schema.sql) bereit — Details im
 [Anhang der Einrichtung](./docs/SETUP.md#anhang-supabase-variante).
 
+## Erster Start
+
+Beim allerersten Öffnen läuft die Einrichtung — genau einmal:
+
+1. **Name und Bild.** Vorname oder Spitzname frei wählbar, Google schlägt nur vor. Dazu
+   eine der Figuren, ein Zeichen oder ein eigenes Foto.
+2. **Begrüßung.** Von hier führt auch der Weg für alle, die eingeladen wurden: *Ich wurde
+   eingeladen — Code eingeben*.
+3. **Haushalt.** WG, Familie, Pärchen oder Sonstige, dazu die Zahl der Teilnehmer — bei
+   einer Familie getrennt nach Erwachsenen und Kindern. Pärchen sind meist zwei, dürfen
+   aber mehr sein.
+4. **Räume.** Vorschläge zum Antippen, Eigenes dazu.
+5. Zwei Erklärseiten, dann **Jetzt starten** und die Einladecodes.
+
+Der Code gilt 24 Stunden und bleibt gültig, solange noch Plätze frei sind — in einer WG
+kommen nicht alle in derselben Minute.
+
+## Rollen
+
+| Wer | Darf |
+| --- | --- |
+| Alle | Melden, bestätigen, beantragen, übertragen, abstimmen, Räume pflegen, Quests einem Raum zuordnen. Kinder eingeschlossen. |
+| Verwalter | Zusätzlich: einladen, Haushaltstyp und Plätze ändern. Wer einrichtet, verwaltet; in einer Familie können das mehrere Erwachsene sein. |
+
+Am täglichen Gebrauch ändert die Rolle nichts. Sie regelt nur das, was sonst niemand
+allein tun sollte.
+
+## Bilder
+
+Jede Person hat ein eigenes Bild: eine der mitgelieferten Figuren, ein Zeichen — oder ein
+Foto vom Handy. Das Foto wird **vor** dem Hochladen quadratisch zugeschnitten und auf 256
+Pixel verkleinert; alles, was sonst in einer Fotodatei steckt (Ort, Uhrzeit, Kameramodell),
+bleibt dabei auf der Strecke. Änderbar in den Einstellungen, jederzeit, ohne Abstimmung.
+
+## Räume
+
+Die Räume sind die Kategorien der Quests: danach wird sortiert, gefiltert und gesucht, und
+daran hängt auch eine Aktion wie „+100 % auf Küche“. Pflegen darf sie jeder — das ist
+Ordnung, nicht Punktesache. Ein umbenannter Raum zieht seine Quests mit; ausblenden geht
+erst, wenn keine Quest mehr darin liegt.
+
+Eine Quest in einen anderen Raum zu schieben geht über den **Stift** in der Liste und
+braucht keine Abstimmung — am Punktwert ändert sich dabei nichts.
+
 ## Anmeldung
 
 Google Sign-In — kein eigenes Passwort, keine Registrierung. Übernommen werden Name, E-Mail
 und Profilbild. Wer den Namen in den Einstellungen ändert, behält ihn: die nächste Anmeldung
 lässt ihn dann in Ruhe.
 
-Danach das **Pairing**: Der erste erzeugt einen sechsstelligen Code, der zweite gibt ihn ein.
-Der Code ist einmal einlösbar und verfällt nach 24 Stunden. Ein Konto kann in genau einem Paar
-sein, ein Paar besteht aus genau zwei Personen — beides erzwingt die Datenbank.
+Ein Konto gehört zu genau einem Haushalt — das erzwingt die Datenbank. Wie viele Personen
+ein Haushalt hat, steht in seinen Einstellungen und lässt sich jederzeit ändern.
 
 ## Trennung von anderen Projekten
 
@@ -127,7 +174,7 @@ hervorgehen, damit die Leiste nie erloschen wirkt.
 
 ## Auswertung
 
-Punkte je Tag der letzten zwei Wochen als Balken, beide Personen nebeneinander, dazu
+Punkte je Tag der letzten zwei Wochen als Balken — du und alle anderen zusammen, dazu
 Hochrechnungen auf Woche und Monat aus dem Schnitt der letzten sieben Tage. Gezählt wird nur,
 was durch **bestätigte Quests** hereinkam — Übertragungen und Einlösungen sind Bewegungen,
 kein Verdienst.

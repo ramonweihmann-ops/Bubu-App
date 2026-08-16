@@ -43,10 +43,59 @@ function zeitpunkt(iso) {
   return dann.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
 }
 
+/* ---------- Personen ---------- */
+// Der Haushalt hat zwei oder zwanzig Mitglieder. Damit die Texte in beiden
+// Fällen stimmen, gibt es hier einen Namen für „die anderen" und die passende
+// Beugung dazu — statt überall „dein Partner" hart hineinzuschreiben.
+
+const vorname = (n) => String(n || "").split(" ")[0];
+const andere = () => S?.andere || [];
+const mehrere = () => andere().length > 1;
+const andereName = () => mehrere() ? "die anderen" : (andere()[0] ? vorname(andere()[0].name) : "niemand");
+const beugung = (einzahl, mehrzahl) => mehrere() ? mehrzahl : einzahl;
+const allein = () => andere().length === 0;
+const nameVon = (id) => id === S?.ich?.id ? "Du"
+  : vorname((S?.mitglieder || []).find((m) => m.id === id)?.name) || "jemand";
+const mitglied = (id) => (S?.mitglieder || []).find((m) => m.id === id) || { id };
+
+/** Zu zweit nebeneinander wie bisher, zu dritt und mehr als Liste — sonst
+ *  schrumpfen die Punktestände auf dem Handy zu Briefmarken. */
+function kontenTafel() {
+  const alle = S.mitglieder || [];
+  if (alle.length <= 2) {
+    return `<div class="accounts">
+      ${alle.map((m) => `
+        <div class="account ${m.id === S.ich.id ? "me" : ""}">
+          ${bild(m)}<span class="who">${esc(vorname(m.name))}</span>
+          <span class="pts">${m.punkte}</span><span class="unit">Punkte</span>
+        </div>`).join("")}
+    </div>`;
+  }
+  return `<div class="card konten">
+    ${[...alle].sort((a, b) => b.punkte - a.punkte).map((m) => `
+      <div class="konto">
+        ${bild(m, "sm")}
+        <span class="who">${esc(vorname(m.name))}${m.id === S.ich.id ? ' <span class="chip wait">du</span>' : ""}</span>
+        <span class="pts">${m.punkte}</span>
+      </div>`).join("")}
+  </div>`;
+}
+
+const FIGUREN = { "fuchs": "/fox.webp", "wolf": "/wolf.webp" };
+
 function bild(person, groesse = "") {
-  const quelle = person?.avatar;
-  const ersatz = person && S?.partner && person.id === S.partner.id ? "/wolf.webp" : "/fox.webp";
-  return `<span class="avatar ${groesse}"><img src="${esc(quelle || ersatz)}" alt=""
+  const huelle = `avatar ${groesse}`;
+  const eigen = person?.bild;
+  if (eigen) {
+    if (FIGUREN[eigen]) return `<span class="${huelle}"><img src="${FIGUREN[eigen]}" alt=""></span>`;
+    if (eigen.startsWith("data:")) return `<span class="${huelle}"><img src="${esc(eigen)}" alt=""></span>`;
+    return `<span class="${huelle}">${esc(eigen)}</span>`;
+  }
+  // Immer dieselbe Figur für dieselbe Person, egal in welcher Reihenfolge die
+  // Liste gerade steht.
+  const streu = [...String(person?.id || "")].reduce((n, z) => n + z.charCodeAt(0), 0);
+  const ersatz = person?.id === S?.ich?.id || streu % 2 === 0 ? "/fox.webp" : "/wolf.webp";
+  return `<span class="${huelle}"><img src="${esc(person?.avatar || ersatz)}" alt=""
     onerror="this.src='${ersatz}'"></span>`;
 }
 
@@ -192,7 +241,8 @@ function naechstesEreignis() {
 function zeichne() {
   if (!S) return;
   if (!S.angemeldet) return anmelden();
-  if (!S.verbunden) return verbinden();
+  if (!S.eingerichtet) return einrichtung();
+  if (ansicht === "einladen") return einladen();
 
   const nav = [
     { id: "start", label: "Start", icon: "i-home" },
@@ -205,12 +255,14 @@ function zeichne() {
   const inhalt = {
     start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
     belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
-    statistik: schirmStatistik, einstellungen: schirmEinstellungen
+    statistik: schirmStatistik, einstellungen: schirmEinstellungen,
+    raeume: schirmRaeume, haushalt: schirmHaushalt
   }[ansicht] || schirmStart;
 
   // Unterseiten haben keinen eigenen Knopf in der Leiste. Damit trotzdem immer
   // ein Reiter leuchtet, zeigen sie auf den, aus dem sie hervorgehen.
-  const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start" }[ansicht] || ansicht;
+  const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start",
+                  raeume: "start", haushalt: "start" }[ansicht] || ansicht;
 
   app.innerHTML = inhalt() + `
     <nav class="navbar">
@@ -237,44 +289,267 @@ function anmelden() {
     </div>`;
 }
 
-function verbinden() {
-  const code = S.code;
-  app.innerHTML = `
-    <div class="appbar"><div><div class="title">Paar verbinden</div>
-      <div class="sub">Angemeldet als ${esc(S.ich.name)}</div></div>
-      <button class="iconbtn" data-abmelden aria-label="Abmelden">${icon("i-out", 18)}</button></div>
+/* ------------------------------------------------------------------ Einrichtung */
+//
+// Der Weg beim allerersten Öffnen. Er läuft genau einmal: Name und Bild,
+// Begrüßung, Art des Haushalts mit Teilnehmerzahl, Räume, zwei Erklärseiten,
+// starten. Wer eingeladen wurde, biegt gleich auf der Begrüßung zum Code ab.
+
+const ARTEN = [
+  { id: "wg", k: "WG", m: "Mehrere Erwachsene, geteilte Aufgaben" },
+  { id: "familie", k: "Familie", m: "Eltern und Kinder unter einem Dach" },
+  { id: "paar", k: "Pärchen", m: "Meist zwei — mehr geht auch" },
+  { id: "sonstige", k: "Sonstige", m: "Passt nichts davon? Dann das hier" }
+];
+
+const BILDWAHL = ["fuchs", "wolf", "★", "☾", "☀", "♣", "◆", "☘", "☕", "⚑"];
+
+const E = {
+  schritt: 0,
+  name: "",
+  bild: "fuchs",
+  art: "paar",
+  erwachsene: 2,
+  kinder: 1,
+  personen: 2,
+  raeume: null,
+  code: ""
+};
+
+const eZahl = () => E.art === "familie" ? E.erwachsene + E.kinder : E.personen;
+
+function eRaeume() {
+  if (!E.raeume) E.raeume = new Set((S.raumvorschlaege || []).slice(0, 5));
+  return E.raeume;
+}
+
+function huelle(inhalt, fuss) {
+  app.innerHTML = `<div class="schritt">${inhalt}</div><div class="schrittfuss">${fuss}</div>`;
+}
+
+function einrichtung() {
+  if (E.schritt < 0) return eCodeSchirm();
+  if (!E.name) E.name = vorname(S.ich.name);
+  if (!E.bild && S.ich.bild) E.bild = S.ich.bild;
+  const bauer = [eName, eBegruessung, eHaushalt, eRaumwahl, eFinden, eErhalten, eStarten][E.schritt] || eName;
+  bauer();
+}
+
+function ePunkte() {
+  return `<div class="schrittpunkte">${
+    Array.from({ length: 7 }, (_, i) => `<i ${i === E.schritt ? "data-an" : ""}></i>`).join("")}</div>`;
+}
+
+function eName() {
+  huelle(`
+    <div class="appbar"><div>
+      <div class="title">Wie sollen wir dich nennen?</div>
+      <div class="sub">Vorname, Spitzname — was dir lieber ist</div></div></div>
     <div class="body ohne-leiste">
-      <div class="card flat leer">
-        <img src="/logo.webp" alt="">
-        <div class="t">Ohne zweite Person geht hier nichts: Bestätigen und Abstimmen brauchen zwei.</div>
+      <div class="card" style="align-items:center;gap:10px">
+        ${bild({ bild: E.bild }, "gr")}
+        <div style="font-size:12.5px;color:var(--ink-3)">So sehen dich die anderen</div>
+      </div>
+      <div class="field">
+        <label>Dein Name</label>
+        <input id="e-name" maxlength="40" autocomplete="off" value="${esc(E.name)}" placeholder="z. B. Ramon">
+      </div>
+      <p class="section-label">Dein Bild</p>
+      <div class="bildwahl">
+        ${BILDWAHL.map((b) => `
+          <button class="bw" data-ebild="${esc(b)}" ${E.bild === b ? "data-an" : ""} aria-label="Bild ${esc(b)}">
+            ${FIGUREN[b] ? `<img src="${FIGUREN[b]}" alt="">` : esc(b)}
+          </button>`).join("")}
+      </div>
+      <button class="btn ghost block" data-foto style="font-size:14px">Eigenes Foto wählen</button>
+      <input type="file" id="fotofeld" accept="image/*" hidden>
+      <div class="note">${icon("i-info", 16)}<span>Beides lässt sich später jederzeit in den
+        Einstellungen ändern — dafür braucht es keine Abstimmung.</span></div>
+    </div>`,
+    `<button class="btn primary block" data-eweiter>Weiter</button>${ePunkte()}`);
+}
+
+function eBegruessung() {
+  huelle(`
+    <div class="mitte">
+      <img class="logo" src="/logo.webp" alt="">
+      <h1>Schön, dass du da bist,<br>${esc(E.name || "Du")}</h1>
+      <p>Ab hier zählt jede erledigte Aufgabe. Wir richten in drei kurzen Schritten
+        euren Haushalt ein — danach könnt ihr sofort loslegen.</p>
+    </div>`,
+    `<button class="btn primary block" data-eweiter>Los geht's</button>
+     <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
+     <button class="btn text block" data-ecode>Ich wurde eingeladen — Code eingeben</button>
+     ${ePunkte()}`);
+}
+
+function eHaushalt() {
+  const zaehler = (feld, bezeichnung, min) => `
+    <div class="stepper">
+      <button data-ezaehl="${feld}:-1" aria-label="weniger">−</button>
+      <span class="val">${E[feld]}</span>
+      <button data-ezaehl="${feld}:1" aria-label="mehr">+</button>
+      <span style="margin-left:auto;font-size:12.5px;color:var(--ink-2)">${bezeichnung}</span>
+    </div>`;
+
+  huelle(`
+    <div class="appbar"><div>
+      <div class="title">Euer Haushalt</div>
+      <div class="sub">Danach richtet sich, wie die App mit euch rechnet</div></div></div>
+    <div class="body ohne-leiste">
+      <div class="kacheln">
+        ${ARTEN.map((a) => `
+          <button class="kachel" data-eart="${a.id}" ${E.art === a.id ? "data-an" : ""}>
+            <span class="k">${a.k}</span><span class="m">${a.m}</span>
+          </button>`).join("")}
       </div>
 
-      ${code ? `
+      <p class="section-label">Wie viele seid ihr?</p>
+      <div class="card">
+        ${E.art === "familie"
+          ? zaehler("erwachsene", "Erwachsene", 1) + zaehler("kinder", "Kinder", 0)
+          : zaehler("personen", "Teilnehmer", 1)}
+      </div>
+      <div class="note">${icon("i-info", 16)}<span>${E.art === "familie"
+        ? "<b>Erwachsene verwalten.</b> Einladen, entfernen, Haushaltstyp ändern — das können nur sie. Beim Melden, Bestätigen, Beantragen und Abstimmen haben Kinder dieselben Rechte."
+        : `<b>${E.art === "wg" ? "Wer einrichtet, verwaltet." : "Du verwaltest."}</b> Das heißt nur: einladen und entfernen. Sonst haben alle dieselben Rechte.${
+            E.art === "paar" ? " Zwei sind der Normalfall, mehr geht genauso." : ""}`}</span></div>
+    </div>`,
+    `<button class="btn primary block" data-eweiter>Weiter</button>
+     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+}
+
+function eRaumwahl() {
+  const gewaehlt = eRaeume();
+  const liste = [...new Set([...(S.raumvorschlaege || []), ...gewaehlt])];
+  huelle(`
+    <div class="appbar"><div>
+      <div class="title">Eure Räume</div>
+      <div class="sub">${gewaehlt.size} ausgewählt · jederzeit änderbar</div></div></div>
+    <div class="body ohne-leiste">
+      <div class="raumwahl">
+        ${liste.map((r) => `
+          <button class="raum" data-eraum="${esc(r)}" ${gewaehlt.has(r) ? "data-an" : ""}>
+            <span class="haken">${gewaehlt.has(r) ? "✓" : ""}</span><span class="n">${esc(r)}</span>
+          </button>`).join("")}
+      </div>
+      <button class="btn ghost block" data-eneuerraum style="font-size:14px">+ Eigenen Raum anlegen</button>
+      <div class="note">${icon("i-info", 16)}<span>Die Räume sind später die <b>Kategorien eurer
+        Quests</b>: danach wird sortiert, gefiltert und gesucht. Auch eine Aktion wie
+        „+100 % auf Küche“ hängt daran.</span></div>
+    </div>`,
+    `<button class="btn primary block" data-eweiter ${gewaehlt.size ? "" : "disabled"}>Weiter</button>
+     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+}
+
+function eFinden() {
+  huelle(`
+    <div class="mitte">
+      <img class="logo" src="/fox.webp" alt="" style="width:min(160px,45vw)">
+      <h1 style="font-size:27px">Ordnung finden und<br>Belohnungen schaffen</h1>
+      <p style="max-width:34ch">Entdecke mit Quests Schritt für Schritt eine neue Grundordnung für
+        dein Zuhause. Strukturiere deine Räume ganz einfach anhand verschiedener Questpunkte neu
+        und erlebe dabei, wie aus kleinen Aufgaben sichtbare Fortschritte werden. So wird es
+        langfristig leichter und sogar ein bisschen spaßiger, die Ordnung zu bewahren.</p>
+    </div>`,
+    `<button class="btn primary block" data-eweiter>Weiter</button>
+     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+}
+
+function eErhalten() {
+  huelle(`
+    <div class="mitte">
+      <img class="logo" src="/wolf.webp" alt="" style="width:min(160px,45vw)">
+      <h1 style="font-size:27px">Ordnung konstant erhalten</h1>
+      <p style="max-width:34ch">Plane wiederkehrende Haushaltsaufgaben ganz entspannt und sorge
+        dafür, dass Ordnung und Sauberkeit langfristig erhalten bleiben. Haus-Quest unterstützt
+        dich dabei mit einem individuellen Jahresplan, der sich ganz automatisch auf Basis deiner
+        Angaben erstellt. So habt ihr alle Aufgaben und Quests jederzeit im Blick und könnt euren
+        Haushalt Schritt für Schritt leichter organisieren.</p>
+    </div>`,
+    `<button class="btn primary block" data-eweiter>Weiter</button>
+     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+}
+
+function eStarten() {
+  const art = ARTEN.find((a) => a.id === E.art);
+  huelle(`
+    <div class="mitte">
+      <img class="logo" src="/logo.webp" alt="">
+      <h1>Alles steht</h1>
+      <p>${esc(art.k)} · ${eZahl()} ${eZahl() === 1 ? "Person" : "Personen"} · ${eRaeume().size} Räume</p>
+    </div>`,
+    `<button class="btn primary block" data-eanlegen>Jetzt starten</button>
+     <button class="btn text block" data-ezurueck>Zurück</button>${ePunkte()}`);
+}
+
+/* ------------------------------------------------------------------ Einladen */
+
+function einladen() {
+  const frei = Math.max(0, S.haushalt.groesse - S.mitglieder.length);
+  app.innerHTML = `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Die anderen holen</div>
+        <div class="sub">${frei ? `Es ${frei === 1 ? "fehlt" : "fehlen"} noch ${frei} von ${S.haushalt.groesse}`
+                                : "Alle sind da"}</div></div>
+    </div>
+    <div class="body ohne-leiste">
+      ${S.code ? `
       <div class="card" style="align-items:center;gap:8px">
-        <span class="section-label" style="margin:0">Dein Code</span>
-        <span class="codeanzeige">${esc(code)}</span>
+        <span class="section-label" style="margin:0">Euer Einladecode</span>
+        <span class="codeanzeige">${esc(S.code)}</span>
         <div class="btnrow" style="width:100%">
-          <button class="btn ghost" data-teilen>Code teilen</button>
+          <button class="btn ghost" data-teilen>Teilen</button>
           <button class="btn ghost" data-neuladen>Aktualisieren</button>
         </div>
         <div style="font-size:12px;color:var(--ink-3);text-align:center">
-          Gib ihn deinem Partner. Sobald er ihn eingibt, geht es los.
-        </div>
+          Gilt 24 Stunden und für ${frei} ${frei === 1 ? "Person" : "Personen"}.</div>
       </div>` : `
-      <button class="btn primary block" data-paar-anlegen>Code erzeugen</button>`}
+      <div class="card flat" style="font-size:13.5px;color:var(--ink-2)">
+        Der Haushalt ist voll. Mehr Plätze gibt es in den Einstellungen unter „Haushalt“.
+      </div>`}
 
-      <p class="section-label">Oder Code eingeben</p>
+      <p class="section-label">Schon dabei</p>
+      ${S.mitglieder.map((m) => `
+        <div class="rowlink" style="cursor:default">
+          ${bild(m)}
+          <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
+            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt" : "Mitglied"}</span></span>
+          ${m.id === S.ich.id ? '<span class="chip wait">du</span>' : ""}
+        </div>`).join("")}
+      ${Array.from({ length: frei }, (_, i) => `
+        <div class="rowlink" style="border-style:dashed;opacity:.65;cursor:default">
+          <span class="avatar">?</span>
+          <span class="grow"><span class="t">Platz ${S.mitglieder.length + i + 1}</span>
+            <span class="m">Wartet auf den Code</span></span>
+        </div>`).join("")}
+
+      <div class="note">${icon("i-lock", 16)}<span>Ein Konto gehört zu genau einem Haushalt.
+        Alle Daten gehören euch — niemand sonst sieht sie.</span></div>
+    </div>`;
+}
+
+/** Wer eingeladen wurde, gibt hier den Code ein statt einzurichten. */
+function eCodeSchirm() {
+  huelle(`
+    <div class="appbar"><div>
+      <div class="title">Code eingeben</div>
+      <div class="sub">Angemeldet als ${esc(S.ich.name)}</div></div></div>
+    <div class="body ohne-leiste">
+      <div class="card flat leer">
+        <img src="/logo.webp" alt="">
+        <div class="t">Der Code steht in der App der Person, die den Haushalt eingerichtet hat.</div>
+      </div>
       <div class="card">
         <div class="field">
-          <label>Code deines Partners</label>
+          <label>Einladecode</label>
           <input class="codefeld" id="code-eingabe" inputmode="numeric" maxlength="6" placeholder="000000">
         </div>
-        <button class="btn dark block" data-paar-beitreten>Verbinden</button>
+        <button class="btn dark block" data-paar-beitreten>Beitreten</button>
       </div>
-
-      <div class="note">${icon("i-lock", 16)}<span>Ein Konto kann in genau einem Paar sein.
-        Alle Daten gehören dem Paar — niemand sonst sieht sie.</span></div>
-    </div>`;
+    </div>`,
+    `<button class="btn text block" data-ezurueck>Doch selbst einrichten</button>`);
 }
 
 /* ------------------------------------------------------------------ Hilfen zum Zustand */
@@ -337,16 +612,7 @@ function schirmStart() {
       <button class="iconbtn" data-go="einstellungen" aria-label="Einstellungen">${icon("i-zahnrad", 18)}</button>
     </div>
     <div class="body">
-      <div class="accounts">
-        <div class="account me">
-          ${bild(S.ich)}<span class="who">${esc(S.ich.name.split(" ")[0])}</span>
-          <span class="pts">${S.ich.punkte}</span><span class="unit">Punkte</span>
-        </div>
-        <div class="account">
-          ${bild(S.partner)}<span class="who">${esc(S.partner.name.split(" ")[0])}</span>
-          <span class="pts">${S.partner.punkte}</span><span class="unit">Punkte</span>
-        </div>
-      </div>
+      ${kontenTafel()}
 
       ${aktionsBanner()}
 
@@ -362,11 +628,20 @@ function schirmStart() {
         <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
       </div>` : ""}
 
+      ${S.haushalt.belegt < S.haushalt.groesse ? `
+      <button class="rowlink" data-go="einladen" style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-plus", 18)}</span>
+        <span class="grow"><span class="t">Es fehlen noch ${S.haushalt.groesse - S.haushalt.belegt}</span>
+          <span class="m">${allein() ? "Allein geht hier wenig: Bestätigen braucht zwei."
+            : "Code teilen, damit alle dabei sind"}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>` : ""}
+
       ${pushOffen() ? `
       <button class="rowlink" data-push style="border-color:var(--accent)">
         <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-bell", 18)}</span>
         <span class="grow"><span class="t">Benachrichtigungen einschalten</span>
-          <span class="m">Damit du merkst, wenn ${esc(S.partner.name.split(" ")[0])} etwas meldet</span></span>
+          <span class="m">Damit du merkst, wenn ${esc(andereName())} etwas ${beugung("meldet", "melden")}</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>` : ""}
 
@@ -377,7 +652,7 @@ function schirmStart() {
       </div>
 
       ${wartet.length ? `
-      <p class="section-label">Wartet auf ${esc(S.partner.name.split(" ")[0])}</p>
+      <p class="section-label">Wartet auf ${esc(andereName())}</p>
       <div class="card" style="gap:8px">
         ${wartet.map((m) => `
           <div style="display:flex;align-items:center;gap:10px">
@@ -412,7 +687,7 @@ function schirmStart() {
       <ul class="card feed">
         ${S.verlauf.slice(0, 6).map((b) => `
           <li><span class="dot ${b.delta < 0 ? "red" : ""}"></span>
-            <span class="txt"><b>${esc(b.member_id === S.ich.id ? "Du" : S.partner.name.split(" ")[0])}</b> ·
+            <span class="txt"><b>${esc(nameVon(b.member_id))}</b> ·
               ${esc(b.reason)} <b>${b.delta > 0 ? "+" : ""}${b.delta}</b>
               <div class="when">${zeitpunkt(b.created_at)}</div></span></li>`).join("")}
       </ul>` : `
@@ -493,7 +768,7 @@ function questListe() {
         <span class="grow">
           <span class="t">${esc(q.name)}</span>
           <span class="m">${esc(q.category)}${q.genutzt ? ` · ${q.genutzt}×` : ""}${
-            gemeldet.has(q.id) ? ` · wartet auf ${esc(S.partner.name.split(" ")[0])}` : ""}</span>
+            gemeldet.has(q.id) ? ` · wartet auf ${esc(andereName())}` : ""}</span>
         </span>
         ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
           : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${q.punkte_jetzt}</span>`
@@ -527,7 +802,7 @@ function schirmQuests() {
 
 function schirmPruefen() {
   const offen = zuPruefen();
-  const kurz = S.partner.name.split(" ")[0];
+  const wer = (id) => nameVon(id);
 
   return `
     <div class="appbar"><div><div class="title">Prüfen</div>
@@ -537,9 +812,9 @@ function schirmPruefen() {
         if (e.art === "meldung") return `
           <div class="card">
             <div style="display:flex;gap:11px;align-items:center">
-              ${bild(S.partner, "sm")}
+              ${bild(mitglied(e.claimed_by), "sm")}
               <span style="flex:1">
-                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} meldet · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.claimed_by))} meldet · ${zeitpunkt(e.created_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.quest)}</span>
               </span>
               <span class="pts-pill">+${e.quantity * e.points_each}</span>
@@ -555,9 +830,9 @@ function schirmPruefen() {
         if (e.art === "antrag") return `
           <div class="card">
             <div style="display:flex;gap:11px;align-items:center">
-              ${bild(S.partner, "sm")}
+              ${bild(mitglied(e.requested_by), "sm")}
               <span style="flex:1">
-                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} beantragt · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.requested_by))} beantragt · ${zeitpunkt(e.created_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">${esc(e.belohnung)}</span>
               </span>
               <span class="pts-pill">−${e.cost}</span>
@@ -572,9 +847,9 @@ function schirmPruefen() {
         return `
           <div class="card">
             <div style="display:flex;gap:11px;align-items:center">
-              ${bild(S.partner, "sm")}
+              ${bild(mitglied(e.from_member), "sm")}
               <span style="flex:1">
-                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(kurz)} überträgt · ${zeitpunkt(e.created_at)}</span>
+                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.from_member))} überträgt · ${zeitpunkt(e.created_at)}</span>
                 <span style="font-size:15px;font-weight:700;display:block">Punkte für dich</span>
               </span>
               <span class="pts-pill">+${e.amount}</span>
@@ -589,7 +864,8 @@ function schirmPruefen() {
         <div class="card flat leer">
           <img src="/logo.webp" alt="">
           <div class="h">Alles geprüft</div>
-          <div class="t">Keine offenen Meldungen. ${esc(kurz)} weiß Bescheid.</div>
+          <div class="t">${allein() ? "Sobald jemand dazukommt, landen hier die Meldungen."
+            : `Keine offenen Meldungen. ${esc(andereName())} ${beugung("weiß", "wissen")} Bescheid.`}</div>
         </div>`}
     </div>`;
 }
@@ -633,14 +909,14 @@ function schirmBelohnungen() {
 
       <button class="reward wide" data-sheet="transfer" style="background:var(--tint);border-color:transparent">
         <span class="ico" style="background:var(--bg)">${icon("i-swap", 18)}</span>
-        <span class="n">Punkte an ${esc(S.partner.name.split(" ")[0])} übertragen<br>
+        <span class="n">Punkte ${mehrere() ? "übertragen" : `an ${esc(andereName())} übertragen`}<br>
           <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
       </button>
 
       <p class="section-label">Einlösbar</p>
       <div class="rewards" id="liste">${belohnungsListe()}</div>
       <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
-        Jede Einlösung geht als Antrag an ${esc(S.partner.name.split(" ")[0])}.
+        Jede Einlösung geht als Antrag an ${esc(andereName())}.
         Erst mit Zustimmung werden die Punkte abgebucht.
       </p>
     </div>`;
@@ -651,7 +927,6 @@ function schirmBelohnungen() {
 function abstimmungKarte(a) {
   const entschieden = a.status !== "offen";
   const angenommen = a.status === "bestaetigt";
-  const kurz = (id) => id === S.ich.id ? "Du" : S.partner.name.split(" ")[0];
   const stimme = (w) => w === undefined || w === null ? "offen" : (w ? "zugestimmt" : "abgelehnt");
 
   return `
@@ -672,11 +947,13 @@ function abstimmungKarte(a) {
               ? `<span class="old">${a.alt} Punkte</span>→<span class="new">${a.neu} Punkte</span>`
               : `<span>Punktwert</span><span class="new">${a.neu} Punkte</span>`)}
       </div>
-      ${a.grund ? `<div class="why">${esc(kurz(a.von))}: „${esc(a.grund)}“</div>` : ""}
+      ${a.grund ? `<div class="why">${esc(nameVon(a.von))}: „${esc(a.grund)}“</div>` : ""}
       <div class="stance">
-        <span>Du: <i>${stimme(a.meine)}</i></span>
-        <span>${esc(S.partner.name.split(" ")[0])}: <i>${stimme(a.ihre)}</i></span>
+        ${(a.stimmen || []).map((s) => `
+          <span>${esc(s.id === S.ich.id ? "Du" : vorname(s.name))}: <i>${stimme(s.antwort)}</i></span>`).join("")}
       </div>
+      ${!entschieden ? `<div style="font-size:11.5px;color:var(--ink-3)">Übernommen wird der
+        Vorschlag erst, wenn alle ${S.mitglieder.length} zugestimmt haben.</div>` : ""}
       ${!entschieden && (a.meine === undefined || a.meine === null) ? `
       <div class="btnrow">
         <button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zustimmen</button>
@@ -693,7 +970,7 @@ function schirmWir() {
   return `
     <div class="appbar">
       <div><div class="title">Wir</div>
-        <div class="sub">${esc(S.ich.name.split(" ")[0])} &amp; ${esc(S.partner.name.split(" ")[0])}</div></div>
+        <div class="sub">${esc(S.mitglieder.map((m) => vorname(m.name)).join(" · "))}</div></div>
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
       <button class="iconbtn" data-go="einstellungen" aria-label="Einstellungen">${icon("i-zahnrad", 18)}</button>
     </div>
@@ -837,7 +1114,7 @@ function schirmStatistik() {
   const zwei = statistik.tage.slice(-14);
   const meins = statistik.ich;
   const meinName = S.ich.name.split(" ")[0];
-  const partnerName = S.partner.name.split(" ")[0];
+  const partnerName = mehrere() ? "Die anderen" : andereName();
 
   return `
     <div class="appbar">
@@ -918,7 +1195,6 @@ function schirmStatistik() {
 
 function schirmEinstellungen() {
   const wahl = themaWahl();
-  const kurz = S.partner.name.split(" ")[0];
 
   const pushZeile = !pushMoeglich()
     ? { text: "Dieses Gerät kann keine Benachrichtigungen", knopf: false }
@@ -926,7 +1202,7 @@ function schirmEinstellungen() {
     ? { text: "Eingeschaltet — du erfährst sofort, wenn etwas entschieden wird", knopf: false }
     : Notification.permission === "denied"
     ? { text: "Im Browser blockiert. Dort unter „Berechtigungen“ wieder erlauben.", knopf: false }
-    : { text: `Damit du merkst, wenn ${kurz} etwas meldet`, knopf: true };
+    : { text: `Damit du merkst, wenn ${andereName()} etwas ${beugung("meldet", "melden")}`, knopf: true };
 
   return `
     <div class="appbar">
@@ -940,7 +1216,7 @@ function schirmEinstellungen() {
           ${bild(S.ich)}
           <span style="flex:1;min-width:0">
             <span style="font-size:14.5px;font-weight:700;display:block">${esc(S.ich.name)}</span>
-            <span style="font-size:12px;color:var(--ink-3)">So steht dein Name auch bei ${esc(kurz)}</span>
+            <span style="font-size:12px;color:var(--ink-3)">So ${beugung("sieht dich", "sehen dich")} ${esc(andereName())}</span>
           </span>
         </div>
         <div class="field">
@@ -949,6 +1225,19 @@ function schirmEinstellungen() {
             value="${esc(S.ich.name)}" placeholder="Wie sollen wir dich nennen?">
         </div>
         <button class="btn dark block" data-senden="name">Name speichern</button>
+      </div>
+
+      <p class="section-label">Dein Bild</p>
+      <div class="card">
+        <div class="bildwahl">
+          ${BILDWAHL.map((b) => `
+            <button class="bw" data-bildwahl="${esc(b)}" ${S.ich.bild === b ? "data-an" : ""}
+              aria-label="Bild ${esc(b)}">
+              ${FIGUREN[b] ? `<img src="${FIGUREN[b]}" alt="">` : esc(b)}
+            </button>`).join("")}
+        </div>
+        <button class="btn ghost block" data-foto style="font-size:14px">Eigenes Foto wählen</button>
+        <input type="file" id="fotofeld" accept="image/*" hidden>
       </div>
       <div class="note">${icon("i-info", 16)}<span>Den Namen änderst du allein — dafür braucht es keine
         Abstimmung. E-Mail und Profilbild kommen weiter aus deinem Google-Konto.</span></div>
@@ -967,6 +1256,21 @@ function schirmEinstellungen() {
         </div>
         <div style="font-size:12px;color:var(--ink-3)">Gilt nur auf diesem Gerät.</div>
       </div>
+
+      <p class="section-label">Haushalt</p>
+      <button class="rowlink" data-go="haushalt">
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-heart", 17)}</span>
+        <span class="grow"><span class="t">${esc((ARTEN.find((a) => a.id === S.haushalt.art) || ARTEN[2]).k)}</span>
+          <span class="m">${S.haushalt.belegt} von ${S.haushalt.groesse} Plätzen${
+            S.haushalt.ichVerwalte ? " · du verwaltest" : ""}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
+      <button class="rowlink" data-go="raeume">
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-home", 17)}</span>
+        <span class="grow"><span class="t">Räume</span>
+          <span class="m">${(S.raeume || []).filter((r) => r.aktiv).length} Räume · Kategorien der Quests</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
 
       <p class="section-label">Benachrichtigungen</p>
       ${pushZeile.knopf ? `
@@ -1013,11 +1317,11 @@ function schirmVerlauf() {
       <ul class="card ledger">
         ${S.verlauf.map((b) => `
           <li>
-            ${bild(b.member_id === S.ich.id ? S.ich : S.partner, "sm")}
+            ${bild(mitglied(b.member_id), "sm")}
             <span style="flex:1">
               <span style="font-size:13.5px;font-weight:600;display:block">${esc(b.reason)}</span>
               <span style="font-size:11px;color:var(--ink-3);font-family:var(--font-data)">
-                ${esc(b.member_id === S.ich.id ? "Du" : S.partner.name.split(" ")[0])} · ${zeitpunkt(b.created_at)}</span>
+                ${esc(nameVon(b.member_id))} · ${zeitpunkt(b.created_at)}</span>
             </span>
             <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${b.delta}</span>
           </li>`).join("")}
@@ -1058,10 +1362,10 @@ function sheetMelden(quest) {
           = <b style="color:var(--accent)" id="summe">${punkte}</b> Punkte</span>
       </div>
     </div>
-    <div class="field"><label>Notiz für ${esc(S.partner.name.split(" ")[0])}</label>
+    <div class="field"><label>Notiz für ${esc(andereName())}</label>
       <textarea id="notiz" placeholder="optional"></textarea></div>
     <div class="note">${icon("i-info", 16)}<span>Die Punkte werden erst gutgeschrieben, wenn
-      ${esc(S.partner.name.split(" ")[0])} bestätigt. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
+      ${esc(andereName())} ${beugung("bestätigt", "bestätigen")}. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
     <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${punkte}">
       Zur Bestätigung senden</button>`);
 }
@@ -1086,19 +1390,27 @@ function sheetAntrag(belohnung) {
     </div>
     <div class="note">${icon("i-info", 16)}<span>${fehlt
       ? "Dir fehlen noch Punkte — der Antrag lässt sich erst genehmigen, wenn du sie hast."
-      : `${esc(S.partner.name.split(" ")[0])} muss zustimmen. Erst dann werden die Punkte abgebucht.`}</span></div>
+      : `${esc(andereName())} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Punkte abgebucht.`}</span></div>
     <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}">Antrag senden</button>`);
 }
 
 function sheetTransfer() {
+  const ziel = andere();
   sheet(`
     <div class="grabber"></div>
     <h3>Punkte übertragen</h3>
+    ${ziel.length === 1 ? `
     <div style="display:flex;align-items:center;gap:14px;justify-content:center;padding:6px 0">
-      <span style="text-align:center">${bild(S.ich)}<div style="font-size:12px;margin-top:5px">${esc(S.ich.name.split(" ")[0])}</div></span>
+      <span style="text-align:center">${bild(S.ich)}<div style="font-size:12px;margin-top:5px">${esc(vorname(S.ich.name))}</div></span>
       <span style="color:var(--accent)">${icon("i-send", 22)}</span>
-      <span style="text-align:center">${bild(S.partner)}<div style="font-size:12px;margin-top:5px">${esc(S.partner.name.split(" ")[0])}</div></span>
-    </div>
+      <span style="text-align:center">${bild(ziel[0])}<div style="font-size:12px;margin-top:5px">${esc(vorname(ziel[0].name))}</div></span>
+    </div>` : `
+    <div class="field">
+      <label>An wen</label>
+      <div class="filters" id="empfaenger">
+        ${ziel.map((m, i) => `<button data-empfaenger="${m.id}" aria-pressed="${i === 0}">${esc(vorname(m.name))}</button>`).join("")}
+      </div>
+    </div>`}
     <div class="field">
       <label>Betrag</label>
       <div class="stepper">
@@ -1110,7 +1422,7 @@ function sheetTransfer() {
       </div>
     </div>
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
-    <div class="note">${icon("i-info", 16)}<span>${esc(S.partner.name.split(" ")[0])} muss die Übertragung annehmen.</span></div>
+    <div class="note">${icon("i-info", 16)}<span>Die Punkte gelten erst, wenn sie angenommen werden.</span></div>
     <button class="btn primary block" data-senden="transfer">Übertragen</button>`);
 }
 
@@ -1119,8 +1431,8 @@ function sheetNeu() {
     <div class="grabber"></div>
     <h3>Quest vorschlagen</h3>
     <div class="field"><label>Name</label><input id="qname" placeholder="z. B. Wäsche waschen"></div>
-    <div class="field"><label>Kategorie</label>
-      <select id="qkat">${["Wohnen", "Küche", "Bad", "Fenster", "Sonstiges"].map((k) => `<option>${k}</option>`).join("")}</select></div>
+    <div class="field"><label>Raum</label>
+      <select id="qkat">${raumListe().map((r) => `<option>${esc(r)}</option>`).join("")}</select></div>
     <div class="field">
       <label>Punktwert</label>
       <div class="stepper">
@@ -1131,7 +1443,7 @@ function sheetNeu() {
     </div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum lohnt sich das?"></textarea></div>
     <div class="note">${icon("i-vote", 16)}<span>Neue Quests gehen in die Abstimmung. Übernommen wird der
-      Vorschlag erst, wenn ${esc(S.partner.name.split(" ")[0])} zustimmt.</span></div>
+      Vorschlag erst, wenn ${esc(andereName())} ${beugung("zustimmt", "zustimmen")}.</span></div>
     <button class="btn primary block" data-senden="neu">Zur Abstimmung geben</button>`);
 }
 
@@ -1146,11 +1458,12 @@ function sheetMenue(art, eintrag) {
     </div>
     <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
       ${istQuest ? "Punktwert ändern" : "Kosten ändern"}</button>
+    ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>` : ""}
     <button class="btn ghost block" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}"
       style="color:var(--accent);border-color:var(--accent)">
       ${istQuest ? "Quest löschen" : "Belohnung löschen"}</button>
     <div class="note">${icon("i-vote", 16)}<span>Beides geht nur gemeinsam:
-      ${esc(S.partner.name.split(" ")[0])} muss zustimmen.</span></div>`);
+      ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen.</span></div>`);
 }
 
 function sheetLoeschen(art, eintrag) {
@@ -1171,7 +1484,7 @@ function sheetLoeschen(art, eintrag) {
 }
 
 function sheetAktion() {
-  const kategorien = [...new Set(S.quests.map((q) => q.category))];
+  const kategorien = raumListe();
   sheet(`
     <div class="grabber"></div>
     <h3>Aktion starten</h3>
@@ -1209,7 +1522,7 @@ function sheetAktion() {
 
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum jetzt?"></textarea></div>
     <div class="note">${icon("i-vote", 16)}<span>Aktionen starten nur gemeinsam.
-      ${esc(S.partner.name.split(" ")[0])} muss zustimmen — danach läuft sie sofort.</span></div>
+      ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen — danach läuft sie sofort.</span></div>
     <button class="btn primary block" data-senden="aktion">Zur Abstimmung geben</button>`);
 }
 
@@ -1228,7 +1541,7 @@ function sheetNeueBelohnung() {
     </div>
     <div class="field"><label>Begründung</label><textarea id="grund" placeholder="optional"></textarea></div>
     <div class="note">${icon("i-vote", 16)}<span>Neue Belohnungen gehen in die Abstimmung.
-      Übernommen wird der Vorschlag erst, wenn ${esc(S.partner.name.split(" ")[0])} zustimmt.</span></div>
+      Übernommen wird der Vorschlag erst, wenn ${esc(andereName())} ${beugung("zustimmt", "zustimmen")}.</span></div>
     <button class="btn primary block" data-senden="neue-belohnung">Zur Abstimmung geben</button>`);
 }
 
@@ -1275,10 +1588,117 @@ function sheetPunktwert(quest) {
     <button class="btn primary block" data-senden="punktwert" data-id="${quest.id}">Zur Abstimmung geben</button>`);
 }
 
+/** Räume des Haushalts; falls noch keiner gepflegt ist, die Kategorien der Quests. */
+function raumListe() {
+  const gepflegt = (S.raeume || []).filter((r) => r.aktiv).map((r) => r.name);
+  if (gepflegt.length) return gepflegt;
+  return [...new Set(S.quests.map((q) => q.category))];
+}
+
+function sheetRaum(quest) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Raum ändern</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="chip open">${esc(quest.category)}</span>
+    </div>
+    <div class="raumwahl">
+      ${raumListe().map((r) => `
+        <button class="raum" data-questraum="${esc(r)}" data-id="${quest.id}" ${r === quest.category ? "data-an" : ""}>
+          <span class="haken">${r === quest.category ? "✓" : ""}</span><span class="n">${esc(r)}</span>
+        </button>`).join("")}
+    </div>
+    <div class="note">${icon("i-info", 16)}<span>Der Raum ordnet nur ein — am Punktwert ändert
+      sich nichts. Deshalb geht das ohne Abstimmung.</span></div>`);
+}
+
+function schirmRaeume() {
+  const liste = S.raeume || [];
+  const belegung = (name) => S.quests.filter((q) => q.category === name).length;
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="einstellungen" aria-label="Zurück">‹</button>
+      <div><div class="title">Räume</div><div class="sub">Die Kategorien eurer Quests</div></div>
+      <button class="iconbtn" data-neuer-raum aria-label="Raum anlegen">${icon("i-plus", 18)}</button>
+    </div>
+    <div class="body">
+      ${liste.length ? liste.map((r) => `
+        <div class="zeile" ${r.aktiv ? "" : 'style="opacity:.55"'}>
+          <div class="rowlink" style="cursor:default">
+            <span class="grow"><span class="t">${esc(r.name)}</span>
+              <span class="m">${belegung(r.name)} ${belegung(r.name) === 1 ? "Quest" : "Quests"}${
+                r.aktiv ? "" : " · ausgeblendet"}</span></span>
+          </div>
+          <button class="stiftbtn" data-raum-umbenennen="${r.id}" data-name="${esc(r.name)}"
+            aria-label="${esc(r.name)} umbenennen">${icon("i-stift", 17)}</button>
+          <button class="stiftbtn" data-raum-schalten="${r.id}" data-aktiv="${r.aktiv ? 0 : 1}"
+            aria-label="${esc(r.name)} ${r.aktiv ? "ausblenden" : "einblenden"}">${r.aktiv ? "✕" : "＋"}</button>
+        </div>`).join("") : `
+        <div class="card flat" style="font-size:13.5px;color:var(--ink-2)">
+          Noch keine Räume angelegt. Über das Plus oben kommt der erste dazu.
+        </div>`}
+      <div class="note">${icon("i-info", 16)}<span>Ein umbenannter Raum zieht seine Quests mit.
+        Ausblenden geht erst, wenn keine Quest mehr darin liegt — so verschwindet nichts
+        aus Versehen.</span></div>
+    </div>`;
+}
+
+function schirmHaushalt() {
+  const h = S.haushalt;
+  const art = ARTEN.find((a) => a.id === h.art) || ARTEN[2];
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="einstellungen" aria-label="Zurück">‹</button>
+      <div><div class="title">Haushalt</div>
+        <div class="sub">${esc(art.k)} · ${h.belegt} von ${h.groesse}</div></div>
+    </div>
+    <div class="body">
+      <p class="section-label">Art</p>
+      <div class="kacheln">
+        ${ARTEN.map((a) => `
+          <button class="kachel" data-hart="${a.id}" ${h.art === a.id ? "data-an" : ""}
+            ${h.ichVerwalte ? "" : "disabled"}>
+            <span class="k">${a.k}</span><span class="m">${a.m}</span>
+          </button>`).join("")}
+      </div>
+
+      <p class="section-label">Plätze</p>
+      <div class="card">
+        <div class="stepper">
+          <button data-hzaehl="-1" ${h.ichVerwalte ? "" : "disabled"} aria-label="weniger">−</button>
+          <span class="val">${h.groesse}</span>
+          <button data-hzaehl="1" ${h.ichVerwalte ? "" : "disabled"} aria-label="mehr">+</button>
+          <span style="margin-left:auto;font-size:12.5px;color:var(--ink-2)">${h.belegt} belegt</span>
+        </div>
+      </div>
+
+      <p class="section-label">Wer dabei ist</p>
+      ${S.mitglieder.map((m) => `
+        <div class="rowlink" style="cursor:default">
+          ${bild(m)}
+          <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
+            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt" : "Mitglied"}</span></span>
+          ${m.id === S.ich.id ? '<span class="chip wait">du</span>' : ""}
+        </div>`).join("")}
+      ${h.belegt < h.groesse ? `
+      <button class="rowlink" data-go="einladen">
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-plus", 17)}</span>
+        <span class="grow"><span class="t">Einladen</span>
+          <span class="m">Code für die freien Plätze</span></span><span style="color:var(--ink-3)">›</span>
+      </button>` : ""}
+
+      ${h.ichVerwalte ? "" : `<div class="note">${icon("i-lock", 16)}<span>Art und Plätze ändert,
+        wer den Haushalt verwaltet. Alles andere darfst du genauso wie alle.</span></div>`}
+    </div>`;
+}
+
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -1314,6 +1734,42 @@ document.addEventListener("click", async (ev) => {
     return;
   }
 
+  if (el.dataset.empfaenger) {
+    scrim.querySelectorAll("[data-empfaenger]").forEach((b) => b.setAttribute("aria-pressed", b === el));
+    return;
+  }
+
+  /* ---------- Einrichtung ---------- */
+  if (el.hasAttribute("data-eweiter")) { eNamenMerken(); E.schritt++; return zeichne(); }
+  if (el.hasAttribute("data-ezurueck")) { eNamenMerken(); E.schritt = Math.max(0, E.schritt - 1); return zeichne(); }
+  if (el.hasAttribute("data-ecode")) { eNamenMerken(); E.schritt = -1; return zeichne(); }
+  if (el.dataset.ebild) { eNamenMerken(); E.bild = el.dataset.ebild; return zeichne(); }
+  if (el.dataset.eart) {
+    E.art = el.dataset.eart;
+    if (E.art === "wg" && E.personen < 3) E.personen = 3;
+    if (E.art === "paar" && E.personen < 2) E.personen = 2;
+    return zeichne();
+  }
+  if (el.dataset.ezaehl) {
+    const [feld, schritt] = el.dataset.ezaehl.split(":");
+    const min = feld === "kinder" ? 0 : 1;
+    E[feld] = Math.max(min, Math.min(12, E[feld] + Number(schritt)));
+    return zeichne();
+  }
+  if (el.dataset.eraum) {
+    eRaeume().has(el.dataset.eraum) ? eRaeume().delete(el.dataset.eraum) : eRaeume().add(el.dataset.eraum);
+    return zeichne();
+  }
+  if (el.hasAttribute("data-eneuerraum")) {
+    const name = (prompt("Wie heißt der Raum?") || "").replace(/\s+/g, " ").trim().slice(0, 40);
+    if (name.length >= 2) eRaeume().add(name);
+    return zeichne();
+  }
+  if (el.hasAttribute("data-foto")) {
+    document.getElementById("fotofeld")?.click();
+    return;
+  }
+
   if (el.dataset.sheet) {
     const art = el.dataset.sheet;
     if (art === "menue") {
@@ -1332,6 +1788,13 @@ document.addEventListener("click", async (ev) => {
       else sheetLoeschen(el.dataset.art, eintrag);
       return;
     }
+    if (art === "raum") {
+      const quest = S.quests.find((q) => q.id === el.dataset.id);
+      if (!quest) return;
+      sheetZu();
+      sheetRaum(quest);
+      return;
+    }
     if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
     if (art === "aktion") { sheetAktion(); return; }
     if (scrim.hasAttribute("data-open")) return;
@@ -1342,6 +1805,7 @@ document.addEventListener("click", async (ev) => {
       const b = S.belohnungen.find((x) => x.id === el.dataset.id);
       if (b) sheetAntrag(b);
     } else if (art === "transfer") {
+      if (allein()) return toast("Es ist noch niemand sonst im Haushalt", true);
       if (S.ich.punkte < 1) return toast("Du hast noch keine Punkte zum Übertragen", true);
       sheetTransfer();
     } else if (art === "neu") sheetNeu();
@@ -1392,6 +1856,70 @@ document.addEventListener("click", async (ev) => {
   try {
     el.disabled = true;
 
+    if (el.dataset.bildwahl) {
+      await api("profil", { bild: el.dataset.bildwahl });
+      await laden();
+      return;
+    }
+
+    if (el.dataset.questraum) {
+      await api(`quests/${el.dataset.id}/raum`, { raum: el.dataset.questraum });
+      sheetZu(); await laden();
+      toast(`Raum: ${el.dataset.questraum}`);
+      return;
+    }
+
+    if (el.hasAttribute("data-neuer-raum")) {
+      const name = (prompt("Wie heißt der Raum?") || "").trim();
+      if (!name) return;
+      await api("raeume", { name });
+      await laden();
+      toast("Raum angelegt.");
+      return;
+    }
+
+    if (el.dataset.raumUmbenennen) {
+      const name = (prompt("Neuer Name des Raums", el.dataset.name) || "").trim();
+      if (!name || name === el.dataset.name) return;
+      await api(`raeume/${el.dataset.raumUmbenennen}`, { name });
+      await laden();
+      toast("Umbenannt — die Quests sind mitgewandert.");
+      return;
+    }
+
+    if (el.dataset.raumSchalten) {
+      await api(`raeume/${el.dataset.raumSchalten}`, { aktiv: el.dataset.aktiv === "1" });
+      await laden();
+      return;
+    }
+
+    if (el.dataset.hart) {
+      await api("haushalt", { art: el.dataset.hart });
+      await laden();
+      return;
+    }
+
+    if (el.dataset.hzaehl) {
+      const h = S.haushalt;
+      await api("haushalt", { personen: h.groesse + Number(el.dataset.hzaehl),
+                              erwachsene: h.erwachsene + Number(el.dataset.hzaehl), kinder: h.kinder });
+      await laden();
+      return;
+    }
+
+    if (el.hasAttribute("data-eanlegen")) {
+      eNamenMerken();
+      await api("haushalt/einrichten", {
+        name: E.name, bild: E.bild, art: E.art,
+        erwachsene: E.erwachsene, kinder: E.kinder, personen: E.personen,
+        raeume: [...eRaeume()]
+      });
+      ansicht = eZahl() > 1 ? "einladen" : "start";
+      await laden();
+      toast("Euer Haushalt steht.");
+      return;
+    }
+
     if (el.dataset.senden === "name") {
       const ergebnis = await api("profil", { name: document.getElementById("name-feld")?.value || "" });
       await laden();
@@ -1401,7 +1929,7 @@ document.addEventListener("click", async (ev) => {
     if (el.dataset.senden === "melden") {
       await api("claims", { questId: el.dataset.id, anzahl: zahl("menge"), notiz: wert("notiz") });
       sheetZu(); await laden();
-      toast(`Gemeldet — ${S.partner.name.split(" ")[0]} muss bestätigen.`);
+      toast(`Gemeldet — ${andereName()} ${beugung("muss", "müssen")} bestätigen.`);
       return;
     }
     if (el.dataset.senden === "antrag") {
@@ -1411,7 +1939,9 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (el.dataset.senden === "transfer") {
-      await api("transfers", { betrag: zahl("betrag"), nachricht: wert("nachricht") });
+      const empfaenger = scrim.querySelector('[data-empfaenger][aria-pressed="true"]')?.dataset.empfaenger
+        || (andere().length === 1 ? andere()[0].id : null);
+      await api("transfers", { betrag: zahl("betrag"), an: empfaenger, nachricht: wert("nachricht") });
       sheetZu(); await laden();
       toast("Übertragung angeboten.");
       return;
@@ -1485,7 +2015,7 @@ document.addEventListener("click", async (ev) => {
       await laden();
       if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Punkte.`);
       else if (ergebnis.status === "abgelehnt") toast("Abgelehnt — der alte Wert gilt weiter.");
-      else toast(`Deine Stimme zählt. Es fehlt noch ${S.partner.name.split(" ")[0]}.`);
+      else toast(`Deine Stimme zählt. ${beugung("Es fehlt noch eine.", "Es fehlen noch Stimmen.")}`);
       return;
     }
 
@@ -1493,9 +2023,11 @@ document.addEventListener("click", async (ev) => {
 
     if (el.hasAttribute("data-paar-beitreten")) {
       const code = document.getElementById("code-eingabe")?.value.replace(/\D/g, "");
+      // Name und Bild aus dem ersten Schritt gelten auch für den, der beitritt.
+      if (!S.eingerichtet) await api("profil", { name: E.name, bild: E.bild });
       await api("pair/join", { code });
       await laden();
-      toast("Verbunden. Los geht's!");
+      toast("Willkommen im Haushalt!");
       return;
     }
 
@@ -1548,6 +2080,52 @@ document.addEventListener("click", async (ev) => {
   }
 });
 
+/* ------------------------------------------------------------------ Eigenes Foto */
+//
+// Das Bild wird auf dem Handy quadratisch zugeschnitten und auf 256 Pixel
+// verkleinert, bevor es überhaupt losgeschickt wird. So bleibt es klein, und
+// alles, was sonst in einer Fotodatei steckt — Ort, Uhrzeit, Kameramodell —
+// bleibt beim Zeichnen auf der Strecke.
+
+function eNamenMerken() {
+  const feld = document.getElementById("e-name");
+  if (feld) E.name = feld.value.replace(/\s+/g, " ").trim() || vorname(S.ich.name);
+}
+
+async function fotoVerkleinern(datei, kante = 256) {
+  const bitmap = await createImageBitmap(datei);
+  const seite = Math.min(bitmap.width, bitmap.height);
+  const leinwand = document.createElement("canvas");
+  leinwand.width = leinwand.height = kante;
+  leinwand.getContext("2d").drawImage(
+    bitmap,
+    (bitmap.width - seite) / 2, (bitmap.height - seite) / 2, seite, seite,
+    0, 0, kante, kante
+  );
+  bitmap.close?.();
+  return leinwand.toDataURL("image/jpeg", 0.82);
+}
+
+document.addEventListener("change", async (ev) => {
+  const feld = ev.target.closest("#fotofeld");
+  if (!feld || !feld.files?.length) return;
+  try {
+    const datenUrl = await fotoVerkleinern(feld.files[0]);
+    if (S.eingerichtet) {
+      await api("profil", { bild: datenUrl });
+      await laden();
+      toast("Bild geändert.");
+    } else {
+      E.bild = datenUrl;
+      zeichne();
+    }
+  } catch {
+    toast("Dieses Bild ließ sich nicht lesen", true);
+  } finally {
+    feld.value = "";
+  }
+});
+
 /* ------------------------------------------------------------------ Suchen & Sortieren bedienen */
 
 function listeZeichnen() {
@@ -1594,7 +2172,7 @@ document.addEventListener("click", (ev) => {
   const eintrag = statistik.tage.find((t) => t.tag === tag);
   const datum = new Date(tag + "T12:00:00Z");
   hinweis.innerHTML = `<b>${WOCHENTAGE[datum.getUTCDay()]}, ${tag.slice(8)}.${tag.slice(5, 7)}.</b> — `
-    + `${esc(S.ich.name.split(" ")[0])} ${eintrag.ich}, ${esc(S.partner.name.split(" ")[0])} ${eintrag.partner} Punkte`;
+    + `${esc(vorname(S.ich.name))} ${eintrag.ich}, ${esc(mehrere() ? "die anderen" : andereName())} ${eintrag.partner} Punkte`;
 });
 
 /* ------------------------------------------------------------------ Benachrichtigungen */

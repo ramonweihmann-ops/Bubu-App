@@ -44,7 +44,7 @@ export async function angemeldet(request, env) {
   const roh = keks(request, SITZUNG);
   if (!roh) return null;
   const treffer = await env.DB.prepare(
-    `select u.id, u.email, u.name, u.avatar_url, m.couple_id
+    `select u.id, u.email, u.name, u.avatar_url, u.bild, m.couple_id
        from sessions s
        join users u on u.id = s.user_id
        left join members m on m.user_id = u.id
