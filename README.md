@@ -178,14 +178,19 @@ hervorgehen, damit die Leiste nie erloschen wirkt.
 
 ## Haushaltsplan
 
-Wiederkehrende Aufgaben — getrennt von den Quests, die unangetastet bleiben. Zu finden auf
-der Startseite über der Auswertung; ist etwas überfällig, springt eine rote Karte davor.
+Eine wiederkehrende Aufgabe ist **keine eigene Sorte, sondern eine Quest mit Rhythmus**.
+Jede bestehende Quest lässt sich dazu machen — über den Stift, ohne sie neu anzulegen —
+und genauso wieder zurück. Gemeldet und bestätigt wird sie wie jede andere Quest auch.
+
+Der Plan zeigt alle Quests mit Rhythmus, zu finden auf der Startseite über der Auswertung;
+ist etwas überfällig, springt eine rote Karte davor.
 
 | Sache | Wie es läuft |
 | --- | --- |
 | **Rhythmus** | *1× pro Woche* bis *1× im Quartal*. Daraus folgt alles Weitere. |
+| **Umstellen** | Stift an der Quest → *Wiederkehrende Aufgabe daraus machen*. Geht über dieselbe Abstimmung wie alles andere, und *Keine wiederkehrende Aufgabe mehr* macht es rückgängig — die Quest bleibt dabei bestehen. |
 | **Sperre** | Nach dem Erledigen springt das Fälligkeitsdatum um genau den Rhythmus nach vorn. Bis dahin kann sie niemand noch einmal melden. Für besondere Umstände gibt es **Trotzdem erledigen** — mit Begründung, und jemand anderes muss trotzdem bestätigen. |
-| **Punkte** | Wie bei einer Quest: melden, jemand anderes bestätigt, dann gibt es sie. |
+| **Punkte** | Ganz normal: melden, jemand anderes bestätigt, dann gibt es sie. |
 | **Bewerbung** | Bewerben kann sich jeder. Einen Tag vor Fälligkeit friert die App die Reihenfolge ein und zeigt allen Bewerbern dieselbe Liste. |
 | **Reihenfolge** | Wer am wenigsten **am Stück** dran war, steht oben. Bei Gleichstand die kleinere Jahreszahl. Wer zuletzt dran war, rutscht nach unten — genau das sorgt für den Wechsel. |
 | **Annehmen** | Nur wer oben steht. Ablehnen reicht an Platz 2 weiter; lehnen alle ab, ist die Aufgabe wieder für jeden offen. |
@@ -196,12 +201,18 @@ der Startseite über der Auswertung; ist etwas überfällig, springt eine rote K
 fängt der Zähler aller anderen wieder bei null an. Beide Zahlen stehen offen in der Aufgabe,
 damit die Reihenfolge nachvollziehbar bleibt.
 
-Anlegen, ändern und aus dem Plan nehmen geht wie alles andere nur über eine **Abstimmung**.
+Anlegen, umstellen und zurückstellen geht wie alles andere nur über eine **Abstimmung**.
 
 Vergabe, Mahnung und Strafe hängen am Kalender, nicht an einer Bedienung. Ein **Cron**
 weckt den Worker deshalb jeden Morgen um 6 Uhr UTC und zieht sie für alle Haushalte nach;
 beim Laden der App passiert dasselbe noch einmal. Doppelt schadet nicht, weil jeder Schritt
 am Fälligkeitsdatum festhält, dass er gelaufen ist.
+
+## Was von mir noch offen ist
+
+Auf der Startseite steht unter **Wartet auf …** alles, was ich losgeschickt habe und was noch
+niemand entschieden hat: gemeldete Quests, beantragte Belohnungen samt Terminwunsch und
+angebotene Übertragungen. Steht dazu eine Rückfrage, sagt die Zeile das ebenfalls.
 
 ## Rückfragen
 
@@ -270,7 +281,7 @@ hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
 worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
-                api.js (Regeln), plan.js (wiederkehrende Aufgaben),
+                api.js (Regeln), plan.js (Quests mit Rhythmus),
                 rueckmeldung.js (Rückfragen, Empfang, Strafe),
                 melden.js und push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte

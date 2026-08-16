@@ -9,8 +9,7 @@ import { vapid } from "./push.js";
 import { melde, meldeAlle } from "./melden.js";
 import {
   RHYTHMEN, planListe, planNachziehen, aufgabeDetail, bewerben, bewerbungZurueck,
-  vergabeEntscheiden, erledigtMelden, erledigungEntscheiden,
-  aufgabeAnlegen, aufgabeAendern, aufgabeLoeschen
+  vergabeEntscheiden, meldenErlaubt, nachErledigung, rhythmusSetzen, questMitRhythmus
 } from "./plan.js";
 import {
   rueckfrageStellen, rueckfrageBeantworten, offeneBelohnungen,
@@ -80,8 +79,6 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "plan" && teile[2] === "bewerben") return json(await bewerben(env, ich, teile[1]));
     if (teile[0] === "plan" && teile[2] === "zurueckziehen") return json(await bewerbungZurueck(env, ich, teile[1]));
     if (teile[0] === "plan" && teile[2] === "vergabe") return json(await vergabeEntscheiden(env, ich, teile[1], !!koerper.annehmen));
-    if (teile[0] === "plan" && teile[2] === "erledigt") return json(await erledigtMelden(env, ich, teile[1], koerper));
-    if (teile[0] === "erledigungen" && teile[2] === "decide") return json(await erledigungEntscheiden(env, ich, teile[1], koerper.status));
 
     if ((teile[0] === "claims" || teile[0] === "requests") && teile[2] === "rueckfrage") {
       return json(await rueckfrageStellen(env, ich, teile[0], teile[1], koerper));
@@ -498,7 +495,7 @@ async function zustand(env, ich) {
                         from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
-      env.DB.prepare(`select q.id, q.name, q.category, q.points,
+      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
       env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen,
@@ -595,21 +592,32 @@ async function zustand(env, ich) {
 
 /* ------------------------------------------------------------------ Melden */
 
-async function melden(env, ich, { questId, anzahl = 1, notiz = "" }) {
+async function melden(env, ich, daten) {
+  const { questId, anzahl = 1, notiz = "" } = daten;
   const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   const quest = await env.DB.prepare(
-    "select id, name, points, category from quests where id = ?1 and couple_id = ?2 and active = 1"
+    `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen
+       from quests where id = ?1 and couple_id = ?2 and active = 1`
   ).bind(questId, ich.couple_id).first();
   if (!quest) throw new Fehler("Diese Quest gibt es nicht");
 
+  // Bei einer wiederkehrenden Quest gilt zusätzlich die Sperre und die Zuteilung.
+  const vorzeitig = meldenErlaubt(quest, ich, daten);
+
+  const laeuft = quest.wiederkehrend
+    ? await env.DB.prepare("select 1 as da from claims where quest_id = ?1 and status = 'offen'").bind(quest.id).first()
+    : null;
+  if (laeuft) throw new Fehler("Dazu wartet schon eine Meldung auf Bestätigung");
+
   // Der Wert friert jetzt ein — inklusive einer gerade laufenden Aktion.
   const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));
+  const bemerkung = vorzeitig ? `Vorzeitig: ${vorzeitig}` : String(notiz).slice(0, 300);
 
   await env.DB.prepare(
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id(), ich.couple_id, quest.id, ich.id, menge, wert, String(notiz).slice(0, 300)).run();
+  ).bind(id(), ich.couple_id, quest.id, ich.id, menge, wert, bemerkung).run();
   await meldeAllen(env, ich, {
     art: "info",
     titel: `${vorname(ich.name)} hat etwas erledigt`,
@@ -622,7 +630,7 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
   if (!["bestaetigt", "abgelehnt"].includes(status)) throw new Fehler("Unbekannte Entscheidung");
 
   const meldung = await env.DB.prepare(
-    `select c.*, q.name as quest from claims c join quests q on q.id = c.quest_id
+    `select c.*, q.name as quest, q.wiederkehrend, q.tage from claims c join quests q on q.id = c.quest_id
       where c.id = ?1 and c.couple_id = ?2`
   ).bind(meldungId, ich.couple_id).first();
   if (!meldung) throw new Fehler("Meldung nicht gefunden", 404);
@@ -642,7 +650,11 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
          from claims c
         where c.id = ?2 and c.status = 'bestaetigt'
           and not exists (select 1 from ledger where source_id = c.id)`
-    ).bind(id(), meldungId)
+    ).bind(id(), meldungId),
+    // Bei einer wiederkehrenden Quest springt die Fälligkeit jetzt nach vorn.
+    ...(status === "bestaetigt"
+      ? nachErledigung(env, { id: meldung.quest_id, wiederkehrend: meldung.wiederkehrend })
+      : [])
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
 
@@ -944,14 +956,15 @@ async function aktionVorschlagen(env, ich, { aktionsart, prozent, kategorie = ""
 
 /** Eine wiederkehrende Aufgabe anlegen, ändern oder löschen — wie alles, was
  *  Punkte bewegt, nur gemeinsam. Rhythmus und Raum reisen im Anhang mit. */
-async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum = "Sonstiges", rhythmus = "1× pro Woche", grund = "" }) {
-  if (art !== "delete_aufgabe" && !RHYTHMEN[rhythmus]) throw new Fehler("Unbekannter Rhythmus");
+async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum = "Sonstiges",
+                                              rhythmus = "1× pro Woche", wiederkehrend = true, grund = "" }) {
+  if (wiederkehrend && !RHYTHMEN[rhythmus]) throw new Fehler("Unbekannter Rhythmus");
 
   let ziel = null;
   if (art !== "neue_aufgabe") {
-    ziel = await env.DB.prepare("select * from plan_aufgaben where id = ?1 and couple_id = ?2 and aktiv = 1")
+    ziel = await env.DB.prepare("select * from quests where id = ?1 and couple_id = ?2 and active = 1")
       .bind(zielId, ich.couple_id).first();
-    if (!ziel) throw new Fehler("Diese Aufgabe gibt es nicht");
+    if (!ziel) throw new Fehler("Diese Quest gibt es nicht");
 
     const schonOffen = await env.DB.prepare(
       "select 1 as da from proposals where couple_id = ?1 and target_id = ?2 and status = 'offen'"
@@ -959,7 +972,7 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
     if (schonOffen) throw new Fehler("Dazu läuft schon eine Abstimmung");
   }
 
-  const punkte = art === "delete_aufgabe" ? (ziel.punkte || 1) : Math.floor(Number(wert));
+  const punkte = art === "neue_aufgabe" ? Math.floor(Number(wert)) : ziel.points;
   if (!(punkte > 0)) throw new Fehler("Der Punktwert muss größer als null sein");
   const titel = art === "neue_aufgabe" ? String(name).trim().slice(0, 60) : ziel.name;
   if (!titel) throw new Fehler("Ein Name fehlt");
@@ -969,9 +982,9 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
     env.DB.prepare(
       `insert into proposals (id, couple_id, kind, target_id, old_value, new_value, name, category, reason, payload, created_by)
        values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
-    ).bind(vorschlag, ich.couple_id, art, zielId || null, ziel ? ziel.punkte : null, punkte,
+    ).bind(vorschlag, ich.couple_id, art, zielId || null, ziel ? ziel.points : null, punkte,
            titel, raum || "Sonstiges", String(grund).slice(0, 300),
-           JSON.stringify({ raum: raum || "Sonstiges", rhythmus }), ich.id),
+           JSON.stringify({ raum: raum || "Sonstiges", rhythmus, wiederkehrend: !!wiederkehrend }), ich.id),
     env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
       .bind(vorschlag, ich.id)
   ]);
@@ -980,6 +993,7 @@ async function aufgabeVorschlagen(env, ich, { art, zielId, wert, name = "", raum
     art: "info",
     titel: `${vorname(ich.name)} schlägt etwas für den Plan vor`,
     text: art === "delete_aufgabe" ? `${titel} soll aus dem Plan — deine Stimme fehlt.`
+        : !wiederkehrend ? `${titel} soll keine wiederkehrende Aufgabe mehr sein — deine Stimme fehlt.`
         : `${titel} · ${rhythmus} · ${punkte} Punkte — deine Stimme fehlt.`
   });
   return { ok: true };
@@ -1036,9 +1050,10 @@ async function auszaehlen(env, vorschlag) {
     delete_reward: () => env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
     neue_aktion: () => aktionAnlegen(env, vorschlag),
-    neue_aufgabe: () => aufgabeAnlegen(env, vorschlag),
-    aufgabe_aendern: () => aufgabeAendern(env, vorschlag),
-    delete_aufgabe: () => aufgabeLoeschen(env, vorschlag)
+    neue_aufgabe: () => questMitRhythmus(env, vorschlag),
+    aufgabe_aendern: () => rhythmusSetzen(env, vorschlag),
+    delete_aufgabe: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
+      .bind(vorschlag.target_id, vorschlag.couple_id)
   }[vorschlag.kind];
 
   if (!bauplan) throw new Fehler("Unbekannte Art von Vorschlag");
@@ -1201,8 +1216,7 @@ async function ausgabe(env, ich) {
     antraege: await hole("select * from requests where couple_id = ?1"),
     uebertragungen: await hole("select * from transfers where couple_id = ?1"),
     abstimmungen: await hole("select * from proposals where couple_id = ?1"),
-    plan: await hole("select * from plan_aufgaben where couple_id = ?1"),
-    plan_erledigungen: await hole("select * from plan_erledigungen where couple_id = ?1"),
+    bewerbungen: await hole("select * from bewerbungen where couple_id = ?1"),
     buchungen: await hole("select * from ledger where couple_id = ?1 order by created_at")
   };
 }

@@ -561,7 +561,6 @@ const zuPruefen = () => [
     .map((r) => ({ ...r, art: "empfang" })),
   ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "nachgeholt")
     .map((r) => ({ ...r, art: "nachhol" })),
-  ...planPruefungen().filter((e) => e.von !== S.ich.id).map((e) => ({ ...e, art: "plan" })),
   ...S.antraege.filter((a) => a.requested_by !== S.ich.id && !a.rueckfrage).map((a) => ({ ...a, art: "antrag" })),
   ...S.uebertragungen.filter((u) => u.to_member === S.ich.id).map((u) => ({ ...u, art: "uebertragung" }))
 ];
@@ -569,8 +568,6 @@ const zuPruefen = () => [
 /* ---------- Haushaltsplan ---------- */
 
 const plan = () => S.plan || [];
-const planPruefungen = () => plan().filter((a) => a.pruefung)
-  .map((a) => ({ ...a.pruefung, aufgabe: a.name, raum: a.raum }));
 const ueberfaellig = () => plan().filter((a) => a.offen < 0 && !a.pruefung);
 /** Wo ich selbst gefragt bin: entscheiden, erledigen oder eine Meldung prüfen. */
 const meinePlanSachen = () => plan().filter((a) =>
@@ -593,6 +590,25 @@ function planBalken(a) {
 }
 
 const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
+
+/** Alles, was ich losgeschickt habe und worauf ich noch warte — Meldungen,
+ *  Anträge auf Belohnungen und angebotene Übertragungen. */
+const meineOffenenSachen = () => [
+  ...meineOffenen().map((m) => ({
+    titel: m.quest + (m.quantity > 1 ? ` · ${m.quantity}×` : ""), was: "Quest gemeldet",
+    zusatz: m.rueckfrage ? "Rückfrage offen" : "", punkte: `+${m.quantity * m.points_each}`,
+    created_at: m.created_at
+  })),
+  ...S.antraege.filter((a) => a.requested_by === S.ich.id).map((a) => ({
+    titel: a.belohnung, was: "Belohnung beantragt",
+    zusatz: a.rueckfrage ? "Rückfrage offen" : (a.wish_date || ""), punkte: `−${a.cost}`,
+    created_at: a.created_at
+  })),
+  ...S.uebertragungen.filter((u) => u.from_member === S.ich.id).map((u) => ({
+    titel: `Punkte an ${nameVon(u.to_member)}`, was: "Übertragung angeboten",
+    zusatz: "", punkte: `−${u.amount}`, created_at: u.created_at
+  }))
+].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 const belohnungenOffen = () => S.belohnungenOffen || [];
 /** Rückfragen, auf die ich antworten muss — an meinen eigenen Anträgen. */
 const meineRueckfragen = () => [
@@ -640,7 +656,6 @@ function aktionsBanner(nur = null) {
 
 function schirmStart() {
   const offen = zuPruefen();
-  const wartet = meineOffenen();
   const abst = offeneAbstimmungen();
 
   return `
@@ -738,15 +753,21 @@ function schirmStart() {
         <button data-sheet="transfer">${icon("i-swap", 21)}Punkte senden</button>
       </div>
 
-      ${wartet.length ? `
+      ${meineOffenenSachen().length ? `
       <p class="section-label">Wartet auf ${esc(andereName())}</p>
-      <div class="card" style="gap:8px">
-        ${wartet.map((m) => `
+      <div class="card" style="gap:9px">
+        ${meineOffenenSachen().map((o) => `
           <div style="display:flex;align-items:center;gap:10px">
-            <span style="flex:1;font-size:13.5px">${esc(m.quest)}${m.quantity > 1 ? ` · ${m.quantity}×` : ""}</span>
-            <span class="chip wait">+${m.quantity * m.points_each}</span>
+            <span style="flex:1;min-width:0">
+              <span style="font-size:13.5px;display:block">${esc(o.titel)}</span>
+              <span style="font-size:11.5px;color:var(--ink-3)">${esc(o.was)}${
+                o.zusatz ? ` · ${esc(o.zusatz)}` : ""} · ${zeitpunkt(o.created_at)}</span>
+            </span>
+            <span class="chip wait">${o.punkte}</span>
           </div>`).join("")}
-      </div>` : ""}
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">
+        Offen, bis ${esc(andereName())} ${beugung("entscheidet", "entscheiden")}.</div>` : ""}
 
       ${abst.length ? `
       ${aktionsBanner()}
@@ -859,10 +880,12 @@ function questListe() {
 
   return liste.map((q) => `
     <div class="zeile">
-      <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${gemeldet.has(q.id) ? "disabled" : ""}>
+      <button class="rowlink" ${q.wiederkehrend ? `data-plan="${q.id}"` : `data-sheet="melden" data-id="${q.id}"`}
+        ${gemeldet.has(q.id) && !q.wiederkehrend ? "disabled" : ""}>
         <span class="grow">
-          <span class="t">${esc(q.name)}</span>
-          <span class="m">${esc(q.category)}${q.genutzt ? ` · ${q.genutzt}×` : ""}${
+          <span class="t">${esc(q.name)}${q.wiederkehrend ? ' <span class="chip open">↻</span>' : ""}</span>
+          <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
+            q.genutzt ? ` · ${q.genutzt}×` : ""}${
             gemeldet.has(q.id) ? ` · wartet auf ${esc(andereName())}` : ""}</span>
         </span>
         ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
@@ -960,25 +983,6 @@ function schirmPruefen() {
             <div class="btnrow">
               <button class="btn primary" data-nachhol="${e.id}" data-ja="ja">Stimmt</button>
               <button class="btn ghost" data-nachhol="${e.id}" data-ja="nein">Kam trotzdem nicht</button>
-            </div>
-          </div>`;
-        if (e.art === "plan") return `
-          <div class="card">
-            <div style="display:flex;gap:11px;align-items:center">
-              ${bild(mitglied(e.von), "sm")}
-              <span style="flex:1">
-                <span style="font-size:12px;color:var(--ink-3);display:block">${esc(wer(e.von))} meldet · ${zeitpunkt(e.created_at)}</span>
-                <span style="font-size:15px;font-weight:700;display:block">${esc(e.aufgabe)}</span>
-              </span>
-              <span class="pts-pill">+${e.punkte}</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap">
-              <span class="chip open">Haushaltsplan · ${esc(e.raum)}</span>
-              ${e.grund ? `<span class="chip wait">Vorzeitig</span><span>„${esc(e.grund)}“</span>` : ""}
-            </div>
-            <div class="btnrow">
-              <button class="btn primary" data-entscheiden="erledigungen" data-id="${e.id}" data-status="bestaetigt">Bestätigen</button>
-              <button class="btn ghost" data-entscheiden="erledigungen" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
             </div>
           </div>`;
         if (e.art === "antrag") return `
@@ -1606,6 +1610,7 @@ function sheetNeueAufgabe(vorlage = null) {
 }
 
 function sheetAufgabeMenue(a) {
+  const quest = S.quests.find((q) => q.id === a.id) || { id: a.id, name: a.name, points: a.punkte };
   sheet(`
     <div class="grabber"></div>
     <h3>${esc(a.name)}</h3>
@@ -1613,55 +1618,37 @@ function sheetAufgabeMenue(a) {
       <span style="flex:1;font-size:13px;color:var(--ink-2)">${esc(a.raum)} · ${esc(a.rhythmus)}</span>
       <span class="pts-pill">${a.punkte} Punkte</span>
     </div>
-    <button class="btn ghost block" data-sheet="aufgabe-aendern" data-id="${a.id}">Punkte oder Rhythmus ändern</button>
-    <button class="btn ghost block" data-sheet="aufgabe-loeschen" data-id="${a.id}"
-      style="color:var(--accent);border-color:var(--accent)">Aus dem Plan nehmen</button>
-    <div class="note">${icon("i-vote", 16)}<span>Beides geht nur gemeinsam:
+    <button class="btn ghost block" data-sheet="punktwert" data-id="${quest.id}">Punktwert ändern</button>
+    <button class="btn ghost block" data-sheet="rhythmus" data-id="${quest.id}">Rhythmus ändern</button>
+    <button class="btn ghost block" data-senden="nicht-mehr" data-id="${quest.id}">Keine wiederkehrende Aufgabe mehr</button>
+    <button class="btn ghost block" data-sheet="loeschen" data-art="quest" data-id="${quest.id}"
+      style="color:var(--accent);border-color:var(--accent)">Quest löschen</button>
+    <div class="note">${icon("i-vote", 16)}<span>Alles davon geht nur gemeinsam:
       ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen.</span></div>`);
 }
 
-function sheetAufgabeAendern(a) {
+/** Aus einer Quest eine wiederkehrende machen — oder den Rhythmus ändern. */
+function sheetRhythmus(quest) {
+  const schon = !!quest.wiederkehrend;
   sheet(`
     <div class="grabber"></div>
-    <h3>Aufgabe ändern</h3>
+    <h3>${schon ? "Rhythmus ändern" : "Wiederkehrende Aufgabe"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
-      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
-      <span class="pts-pill">jetzt ${a.punkte}</span>
-    </div>
-    <div class="field"><label>Raum</label>
-      <select id="araum">${raumListe().map((r) => `<option ${r === a.raum ? "selected" : ""}>${esc(r)}</option>`).join("")}</select></div>
-    <div class="field">
-      <label>Neuer Punktwert</label>
-      <div class="stepper">
-        <button data-menge="-1" aria-label="weniger">−</button>
-        <span class="val" id="menge">${a.punkte}</span>
-        <button data-menge="1" aria-label="mehr">+</button>
-      </div>
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="pts-pill">${quest.points} Punkte</span>
     </div>
     <div class="field">
       <label>Wie oft</label>
       <div class="rhythmuswahl" id="rhythmus">
-        ${RHYTHMEN.map((r) => `<button data-rhythmus="${esc(r)}" aria-pressed="${r === a.rhythmus}">${esc(r)}</button>`).join("")}
+        ${RHYTHMEN.map((r) => `<button data-rhythmus="${esc(r)}"
+          aria-pressed="${schon ? r === quest.rhythmus : r === RHYTHMEN[0]}">${esc(r)}</button>`).join("")}
       </div>
     </div>
-    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="Warum passt es nicht mehr?"></textarea></div>
-    <div class="note">${icon("i-vote", 16)}<span>Gilt erst, wenn alle zustimmen.</span></div>
-    <button class="btn primary block" data-senden="aufgabe-aendern" data-id="${a.id}">Zur Abstimmung geben</button>`);
-}
-
-function sheetAufgabeLoeschen(a) {
-  sheet(`
-    <div class="grabber"></div>
-    <h3>Aus dem Plan nehmen</h3>
-    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
-      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
-      <span class="pts-pill">${a.punkte}</span>
-    </div>
-    <div class="field"><label>Begründung</label>
-      <textarea id="grund" placeholder="Warum braucht ihr das nicht mehr?"></textarea></div>
-    <div class="note">${icon("i-info", 16)}<span>Die Aufgabe verschwindet nur aus dem Plan.
-      Bereits gebuchte Punkte und der Verlauf bleiben unangetastet.</span></div>
-    <button class="btn primary block" data-senden="aufgabe-loeschen" data-id="${a.id}">Zur Abstimmung geben</button>`);
+    <div class="note">${icon("i-info", 16)}<span>${schon
+      ? "Der neue Rhythmus gilt ab der nächsten Erledigung."
+      : "Die Quest wandert damit in den <b>Haushaltsplan</b>: mit Fälligkeit, Sperre nach dem Erledigen und Bewerbung, wenn mehrere sie wollen. Neu anlegen musst du nichts — es bleibt dieselbe Quest."}</span></div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="optional"></textarea></div>
+    <button class="btn primary block" data-senden="rhythmus" data-id="${quest.id}">Zur Abstimmung geben</button>`);
 }
 
 function sheetErledigt(a) {
@@ -1967,7 +1954,9 @@ function sheetMenue(art, eintrag) {
     <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
       ${istQuest ? "Punktwert ändern" : "Kosten ändern"}</button>
     ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>
-    <button class="btn ghost block" data-sheet="in-den-plan" data-id="${eintrag.id}">In den Haushaltsplan</button>` : ""}
+    <button class="btn ghost block" data-sheet="rhythmus" data-id="${eintrag.id}">
+      ${eintrag.wiederkehrend ? "Rhythmus ändern" : "Wiederkehrende Aufgabe daraus machen"}</button>
+    ${eintrag.wiederkehrend ? `<button class="btn ghost block" data-senden="nicht-mehr" data-id="${eintrag.id}">Keine wiederkehrende Aufgabe mehr</button>` : ""}` : ""}
     <button class="btn ghost block" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}"
       style="color:var(--accent);border-color:var(--accent)">
       ${istQuest ? "Quest löschen" : "Belohnung löschen"}</button>
@@ -2375,18 +2364,13 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
-    if (art === "in-den-plan") {
+
+    if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
+    if (art === "rhythmus") {
       const quest = S.quests.find((q) => q.id === el.dataset.id);
       if (!quest) return;
       sheetZu();
-      sheetNeueAufgabe(quest);
-      return;
-    }
-    if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
-    if (art === "aufgabe-aendern" || art === "aufgabe-loeschen") {
-      if (!aufgabe) return;
-      sheetZu();
-      art === "aufgabe-aendern" ? sheetAufgabeAendern(aufgabe) : sheetAufgabeLoeschen(aufgabe);
+      sheetRhythmus(quest);
       return;
     }
     if (art === "erledigt") {
@@ -2580,15 +2564,10 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
-    if (el.dataset.senden === "neue-aufgabe" || el.dataset.senden === "aufgabe-aendern") {
-      const neu = el.dataset.senden === "neue-aufgabe";
-      if (neu && !wert("aname")) throw new Error("Ein Name fehlt");
+    if (el.dataset.senden === "neue-aufgabe") {
+      if (!wert("aname")) throw new Error("Ein Name fehlt");
       await api("proposals", {
-        art: neu ? "neue_aufgabe" : "aufgabe_aendern",
-        zielId: el.dataset.id,
-        wert: zahl("menge"),
-        name: wert("aname"),
-        raum: wert("araum"),
+        art: "neue_aufgabe", wert: zahl("menge"), name: wert("aname"), raum: wert("araum"),
         rhythmus: scrim.querySelector('[data-rhythmus][aria-pressed="true"]')?.dataset.rhythmus || "1× pro Woche",
         grund: wert("grund")
       });
@@ -2597,17 +2576,28 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
-    if (el.dataset.senden === "aufgabe-loeschen") {
-      await api("proposals", { art: "delete_aufgabe", zielId: el.dataset.id, grund: wert("grund") });
+    if (el.dataset.senden === "rhythmus") {
+      await api("proposals", {
+        art: "aufgabe_aendern", zielId: el.dataset.id, wiederkehrend: true,
+        rhythmus: scrim.querySelector('[data-rhythmus][aria-pressed="true"]')?.dataset.rhythmus || "1× pro Woche",
+        grund: wert("grund")
+      });
       sheetZu(); ansicht = "wir"; await laden();
-      toast("Löschen steht zur Abstimmung.");
+      toast("Vorschlag steht zur Abstimmung.");
+      return;
+    }
+
+    if (el.dataset.senden === "nicht-mehr") {
+      await api("proposals", { art: "aufgabe_aendern", zielId: el.dataset.id, wiederkehrend: false });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Vorschlag steht zur Abstimmung.");
       return;
     }
 
     if (el.dataset.senden === "erledigt") {
-      await api(`plan/${el.dataset.id}/erledigt`, {
-        trotzdem: el.dataset.trotzdem === "ja",
-        grund: wert("grund")
+      await api("claims", {
+        questId: el.dataset.id, anzahl: 1,
+        trotzdem: el.dataset.trotzdem === "ja", grund: wert("grund")
       });
       sheetZu();
       await aufgabeLaden(el.dataset.id).catch(() => {});
@@ -2713,7 +2703,6 @@ document.addEventListener("click", async (ev) => {
       await laden();
       if (status === "bestaetigt") {
         if (bereich === "claims") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.quest });
-        else if (bereich === "erledigungen") feiern({ punkte: ergebnis.punkte, titel: "Bestätigt", text: ergebnis.aufgabe });
         else if (bereich === "requests") toast(`${ergebnis.belohnung} genehmigt.`);
         else toast("Punkte angenommen.");
       } else {
