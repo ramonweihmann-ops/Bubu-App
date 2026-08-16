@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Wiederkehrende Aufgaben</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --bald:#c47a00; --bald-tint:#fdf1dc;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:960px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:38px 0 10px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:64ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.buehne{display:flex;flex-direction:column;align-items:center;gap:14px}
+.phone{width:360px;max-width:100%;height:740px;background:var(--bg);border:10px solid var(--ink);
+  border-radius:38px;overflow:hidden;position:relative;box-shadow:0 30px 60px -30px rgba(21,44,79,.5);
+  display:flex;flex-direction:column}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.kopf{flex:none;padding:18px 16px 8px;display:flex;align-items:center;gap:10px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.025em;line-height:1.15}
+.kopf .sub{font-size:12.5px;color:var(--ink-3)}
+.inhalt{flex:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:11px}
+.inhalt>*{flex-shrink:0}
+.fuss{flex:none;padding:11px 16px 16px;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--line);background:var(--bg)}
+.steuerung{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.steuerung button{font:inherit;font-size:14px;font-weight:700;border-radius:11px;padding:9px 15px;cursor:pointer;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.steuerung button:disabled{opacity:.4}
+.punkte{display:flex;gap:6px;align-items:center}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block;cursor:pointer}
+.punkte i[data-an]{background:var(--accent);transform:scale(1.35)}
+.schrittname{font-family:var(--font-data);font-size:11px;color:var(--ink-3);text-align:center}
+
+.btn{font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:13px 16px;border:1px solid transparent;
+  cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);width:100%}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--bg);border-color:var(--line)}
+.btn.text{background:none;color:var(--ink-2);font-weight:600;padding:9px}
+.btn:disabled{opacity:.45}
+.btnrow{display:flex;gap:8px}.btnrow>.btn{flex:1}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:13px;display:flex;flex-direction:column;gap:10px}
+.card.flat{background:var(--tint);border-color:transparent}
+.card.alarm{border-color:var(--accent);background:var(--accent-tint)}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -4px}
+.note{font-size:12.5px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:10px 11px}
+.note b{color:var(--ink)}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:var(--tint-2);color:var(--ink-2);display:inline-flex;gap:5px;align-items:center}
+.chip.rot{background:var(--accent-tint);color:var(--accent)}
+.chip.gelb{background:var(--bald-tint);color:var(--bald)}
+.chip.navy{background:var(--ink);color:#fff}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--tint);display:grid;place-items:center;overflow:hidden;flex:none;font-size:17px}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar.gr{width:46px;height:46px;font-size:22px}
+
+/* ---------- Plan ---------- */
+.raumkopf{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);margin:8px 0 -2px;display:flex;align-items:center;gap:8px}
+.raumkopf::after{content:"";flex:1;height:1px;background:var(--line)}
+.aufgabe{border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:11px 12px;cursor:pointer;
+  font:inherit;color:inherit;text-align:left;display:flex;align-items:center;gap:11px;width:100%}
+.aufgabe .n{flex:1;min-width:0}
+.aufgabe .t{display:block;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aufgabe .m{display:block;font-size:11px;color:var(--ink-3);margin-top:1px}
+.frist{flex:none;width:96px;text-align:right}
+.balken{height:11px;border-radius:999px;background:var(--tint-2);overflow:hidden;display:flex}
+.balken i{display:block;height:100%;border-radius:999px}
+.frist .w{font-size:10.5px;font-family:var(--font-data);margin-top:4px;display:block;white-space:nowrap}
+.w.rot{color:var(--accent);font-weight:700}
+.w.gelb{color:var(--bald);font-weight:700}
+.w.ruhig{color:var(--ink-3)}
+.aufgabe[data-gesperrt]{opacity:.55}
+
+/* ---------- Rangliste ---------- */
+.rang{display:flex;align-items:center;gap:9px;padding:11px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.rang[data-erster]{border-color:var(--accent);background:var(--accent-tint)}
+.rang .platz{font-family:var(--font-display);font-weight:800;font-size:19px;width:22px;text-align:center;color:var(--ink-3)}
+.rang[data-erster] .platz{color:var(--accent)}
+.rang .n{flex:1;min-width:0}
+.rang .t{display:block;font-size:14px;font-weight:700}
+.rang .m{display:block;font-size:11px;color:var(--ink-3);line-height:1.3}
+.zahlen{display:flex;gap:6px;flex:none}
+.zahl{background:var(--tint);border-radius:9px;padding:4px 6px;text-align:center;min-width:34px}
+.zahl b{display:block;font-family:var(--font-data);font-size:13px;line-height:1.1}
+.zahl span{display:block;font-size:8px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+
+.feld{display:flex;flex-direction:column;gap:6px}
+.feld label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.feld input,.feld select{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:11px;width:100%;background:var(--bg);color:var(--ink)}
+.schalter{display:flex;align-items:center;gap:11px;cursor:pointer;padding:2px 0}
+.schalter .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:#fff;font-size:13px}
+.schalter[data-an] .box{background:var(--accent);border-color:var(--accent)}
+.schalter .t{font-size:14px;font-weight:600}
+.rhythmus{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.rhythmus button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:11px;
+  padding:9px 4px;background:var(--bg);color:var(--ink-2);cursor:pointer}
+.rhythmus button[data-an]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:7px 5px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);min-width:0}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:17px;font-weight:400;line-height:1}
+.rowlink{display:flex;align-items:center;gap:11px;padding:12px 13px;border:1px solid var(--line);border-radius:14px;
+  background:var(--bg);width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.rowlink .grow{flex:1;min-width:0}
+.rowlink .t{display:block;font-size:14px;font-weight:600}
+.rowlink .m{display:block;font-size:11.5px;color:var(--ink-3)}
+
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.erklaer{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:16px}
+.erklaer h3{font-family:var(--font-display);font-weight:800;font-size:16px;margin:0 0 7px}
+.erklaer p,.erklaer li{font-size:13.5px;color:var(--ink-2);margin:0 0 7px}
+.erklaer ul{margin:0;padding-left:18px}
+.erklaer strong{color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+.frage{border-left:3px solid var(--accent);background:var(--bg);border-radius:0 14px 14px 0;padding:14px 16px;margin:10px 0}
+.frage h3{margin:0 0 6px;font-size:15px}
+.frage p{margin:0 0 6px;font-size:13.5px;color:var(--ink-2)}
+.tabellenscroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · noch nichts davon ist gebaut</span>
+  <h1>Wiederkehrende Aufgaben</h1>
+  <p class="lead">
+    Der Plan, das Bewerbungsverfahren und die Sperre. Der Prototyp unten ist antippbar:
+    die Rangliste rechnet wirklich, Annehmen und Ablehnen führen weiter.
+    Darunter steht, wie die Reihenfolge zustande kommt, was sich an der Datenbank ändert —
+    und die vier Punkte, bei denen deine Beschreibung offen lässt, was passieren soll.
+  </p>
+
+  <div class="buehne">
+    <div class="phone"><div class="schirm" id="schirm"></div></div>
+    <div class="steuerung">
+      <button id="zurueck">‹ Zurück</button>
+      <span class="punkte" id="punkte"></span>
+      <button id="vor">Weiter ›</button>
+      <button id="neu">Von vorn</button>
+    </div>
+    <div class="schrittname" id="schrittname"></div>
+  </div>
+
+  <h2>Der Weg einer Aufgabe</h2>
+  <table>
+    <tr><th style="width:30%">Schritt</th><th>Was passiert</th></tr>
+    <tr><td><b>1 · Start</b></td><td>Über der Auswertung steht der <b>Haushaltsplan</b>. Ist etwas überfällig, springt eine rote Karte davor — bei allen.</td></tr>
+    <tr><td><b>2 · Plan</b></td><td>Alle Aufgaben nach Fälligkeit, das Dringendste oben. Der Balken zeigt, wie viel vom Zeitraum verbraucht ist. Voreingestellt eine Liste über alle Räume hinweg; wer will, gruppiert mit einem Tipp nach Raum.</td></tr>
+    <tr><td><b>3 · Aufgabe</b></td><td>Rhythmus, wer sie zuletzt hatte, und für jede Person: <b>am Stück</b> und <b>dieses Jahr</b>. Darunter <b>Bewerben</b>.</td></tr>
+    <tr><td><b>4 · Beworben</b></td><td>Solange noch Zeit ist, sammelt die App nur. Wer sich beworben hat, sieht die Mitbewerber.</td></tr>
+    <tr><td><b>5 · Rangliste</b></td><td>Einen Tag vor Fälligkeit steht die Reihenfolge fest. Alle Bewerber sehen dieselbe Liste, der oberste entscheidet.</td></tr>
+    <tr><td><b>6 · Angenommen</b></td><td>Die Aufgabe gehört ihm, alle anderen bekommen eine Absage — als Benachrichtigung wie alles andere auch.</td></tr>
+    <tr><td><b>7 · Abgelehnt</b></td><td>Rutscht weiter an Platz 2. Der entscheidet neu.</td></tr>
+    <tr><td><b>8 · Erledigt</b></td><td>Melden wie bei einer Quest, jemand anderes bestätigt. Danach ist die Aufgabe <b>für alle gesperrt</b>, bis der Zeitraum um ist.</td></tr>
+    <tr><td><b>9 · Anlegen</b></td><td>Haken bei <em>Wiederkehrend</em>, dann der Zeitraum. Ohne Haken bleibt es eine gewöhnliche Quest.</td></tr>
+    <tr><td><b>10 · Überfällig</b></td><td>Ab dem ersten Tag Benachrichtigung an alle. Nach sieben Tagen die Gruppenstrafe.</td></tr>
+  </table>
+
+  <h2>Wie die Reihenfolge entsteht</h2>
+  <div class="tabellenscroll">
+    <table>
+      <tr><th>Platz</th><th>Person</th><th>Am Stück</th><th>Dieses Jahr</th><th>Warum dort</th></tr>
+      <tr><td><b>1</b></td><td>Mia</td><td>0</td><td>5</td><td>Niemand hat sie seltener am Stück gemacht — und bei Gleichstand zählt die kleinere Jahreszahl.</td></tr>
+      <tr><td><b>2</b></td><td>Crusty</td><td>0</td><td>8</td><td>Gleich viele am Stück wie Mia, aber öfter im Jahr.</td></tr>
+      <tr><td><b>3</b></td><td>Ramon</td><td>3</td><td>12</td><td>Drei am Stück — ab hier immer nach unten, damit sich das dreht.</td></tr>
+    </table>
+  </div>
+  <p class="lead" style="margin-top:10px">
+    <b>Am Stück</b> heißt: wie oft diese Person <em>zuletzt hintereinander</em> dran war. Sobald jemand
+    anderes die Aufgabe erledigt, fängt ihr Zähler wieder bei null an. <b>Dieses Jahr</b> zählt alle
+    Erledigungen seit dem 1. Januar. Beide Zahlen stehen auch in der Aufgabe selbst, damit die
+    Reihenfolge nachvollziehbar bleibt und niemand raten muss.
+  </p>
+
+  <h2>Was sich dafür ändern muss</h2>
+  <div class="karten">
+    <div class="erklaer">
+      <h3>Eine neue Sorte Aufgabe</h3>
+      <p>Eure <strong>bestehenden Quests bleiben unangetastet</strong>. Wiederkehrende Aufgaben sind
+        eine eigene Liste mit eigenen Feldern: Zeitraum, wie oft darin, wann zuletzt erledigt.</p>
+      <p>Wer eine bestehende Quest in eine wiederkehrende verwandeln will, setzt den Haken von Hand —
+        automatisch wandert nichts.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Sperre</h3>
+      <p>Nach der Bestätigung ist die Aufgabe für <strong>alle</strong> gesperrt, bis der Zeitraum um
+        ist. Sie steht dann grau im Plan, mit dem Datum, ab wann wieder.</p>
+      <p>Für besondere Umstände gibt es <strong>Trotzdem erledigen</strong> — mit Begründung, und
+        jemand anderes muss zustimmen. Kein stiller Weg daran vorbei.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Bewerbung</h3>
+      <p>Bewerben kann sich jeder, sobald die Aufgabe in Sicht ist. <strong>Einen Tag vor
+        Fälligkeit</strong> friert die App die Reihenfolge ein und zeigt allen dieselbe Liste.</p>
+      <p>Ablehnen reicht weiter an den Nächsten. Lehnen alle ab, ist die Aufgabe wieder für jeden
+        offen — und wird überfällig, wenn sie liegen bleibt.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Überfällig</h3>
+      <p>Ab dem ersten überfälligen Tag: Benachrichtigung an alle und eine rote Karte auf der
+        Startseite — nicht nur bei den Bewerbern, sondern bei allen.</p>
+      <p>Nach sieben Tagen greift die Gruppenstrafe. Wie die aussehen soll, ist eine der Fragen unten.</p>
+    </div>
+  </div>
+
+  <h2>Vier Punkte, bei denen ich raten müsste</h2>
+
+  <div class="frage">
+    <h3>1 · Gibt es Punkte für wiederkehrende Aufgaben?</h3>
+    <p>Du hast es nicht erwähnt, und beides ist stimmig. <strong>Mein Vorschlag:</strong> ja — dieselbe
+      Mechanik wie bei Quests, mit Punktwert und Bestätigung durch jemand anderen. Sonst wäre
+      Staubsaugen die einzige Arbeit im Haus, für die es nichts gibt, und niemand bewirbt sich freiwillig.</p>
+    <p>Die Alternative: wiederkehrende Aufgaben sind reine Pflicht ohne Punkte, und der Anreiz ist
+      allein, keine Strafe zu kassieren.</p>
+  </div>
+
+  <div class="frage">
+    <h3>2 · Wie sieht die Gruppenstrafe aus?</h3>
+    <p><strong>Mein Vorschlag:</strong> nach sieben überfälligen Tagen verliert <em>jeder</em> im
+      Haushalt denselben Betrag — voreingestellt der Punktwert der Aufgabe, abschaltbar. Es trifft
+      alle gleich, weil es eine Gruppenaufgabe war.</p>
+    <p>Denkbar wäre stattdessen: Belohnungen sind gesperrt, solange etwas über sieben Tage
+      überfällig ist. Härter, aber ohne Punkteverlust.</p>
+  </div>
+
+  <div class="frage">
+    <h3>3 · Was, wenn sich niemand bewirbt?</h3>
+    <p><strong>Mein Vorschlag:</strong> dann gilt kein Verfahren — die Aufgabe ist für jeden offen und
+      wer sie macht, macht sie. Das Bewerbungsverfahren greift nur, wenn es tatsächlich mehr als
+      einen Interessenten gibt; bei genau einem bekommt der sie ohne Rangliste.</p>
+  </div>
+
+  <div class="frage">
+    <h3>4 · „Wie oft in der Woche“ — Zeitraum oder Zähler?</h3>
+    <p>Du schreibst beides: ein Zeitraum („nicht 3× die Woche saugen“) und eine Anzahl pro Woche.
+      <strong>Mein Vorschlag:</strong> beides in einem — <em>1× pro Woche</em>, <em>2× pro Woche</em>,
+      <em>1× alle zwei Wochen</em>, <em>1× im Monat</em>. Daraus ergibt sich die Sperrfrist von selbst:
+      bei 2× pro Woche sind das dreieinhalb Tage, bei 1× pro Woche sieben.</p>
+    <p>So gibt es nur eine Einstellung statt zwei, die sich widersprechen können.</p>
+  </div>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Daten */
+let ICH = "ramon";
+const LEUTE = {
+  ramon:  { name: "Ramon",  bild: "/fox.webp" },
+  crusty: { name: "Crusty", bild: "/wolf.webp" },
+  mia:    { name: "Mia",    zeichen: "★" }
+};
+
+// „stueck" = wie oft zuletzt hintereinander, „jahr" = seit 1. Januar
+const AUFGABE = {
+  name: "Wohnung saugen",
+  raum: "Wohnzimmer",
+  punkte: 6,
+  rhythmus: "1× pro Woche",
+  tage: 7,
+  faellig: -1,
+  zaehler: { ramon: { stueck: 3, jahr: 12 }, crusty: { stueck: 0, jahr: 8 }, mia: { stueck: 0, jahr: 5 } },
+  zuletzt: "Ramon, vor 8 Tagen"
+};
+
+const PLAN = [
+  { raum: "Badezimmer", name: "Waschbecken putzen",      tage: 7,  offen: -4 },
+  { raum: "Badezimmer", name: "Toilette putzen",         tage: 7,  offen: -2 },
+  { raum: "Badezimmer", name: "Handtücher wechseln",     tage: 7,  offen: 0 },
+  { raum: "Wohnzimmer", name: "Wohnung saugen",          tage: 7,  offen: -1 },
+  { raum: "Wohnzimmer", name: "Staubwischen",            tage: 14, offen: 5 },
+  { raum: "Badezimmer", name: "Badmatte wechseln",       tage: 14, offen: 7 },
+  { raum: "Küche",      name: "Kühlschrank auswischen",  tage: 30, offen: 9,  gesperrt: null },
+  { raum: "Küche",      name: "Boden wischen",           tage: 7,  offen: 4,  gesperrt: "Mia, noch 4 Tage" },
+  { raum: "Badezimmer", name: "Spiegel putzen",          tage: 30, offen: 16 },
+  { raum: "Wohnzimmer", name: "Fenster putzen",          tage: 90, offen: 41 }
+];
+
+const Z = { bewerber: ["ramon"], gruppiert: false, wiederkehrend: true, rhythmus: "1× pro Woche" };
+
+/* ---------------------------------------------------------------- Werkzeug */
+const bild = (id, klasse = "") => {
+  const p = LEUTE[id];
+  return p.bild ? `<span class="avatar ${klasse}"><img src="${p.bild}" alt=""></span>`
+                : `<span class="avatar ${klasse}">${p.zeichen}</span>`;
+};
+
+/** Die eine Regel: wenig am Stück nach oben, bei Gleichstand die kleinere Jahreszahl. */
+function rangliste(ids) {
+  return [...ids].sort((a, b) => {
+    const A = AUFGABE.zaehler[a], B = AUFGABE.zaehler[b];
+    return A.stueck - B.stueck || A.jahr - B.jahr || LEUTE[a].name.localeCompare(LEUTE[b].name, "de");
+  });
+}
+
+function fristText(offen) {
+  if (offen < 0) return { text: `${-offen} ${-offen === 1 ? "Tag" : "Tage"} überfällig`, art: "rot" };
+  if (offen === 0) return { text: "Heute fällig", art: "gelb" };
+  if (offen <= 2) return { text: `Fällig in ${offen} Tagen`, art: "gelb" };
+  return { text: `Fällig in ${offen} Tagen`, art: "ruhig" };
+}
+
+function balken(offen, tage) {
+  const verbraucht = Math.max(0, Math.min(1, (tage - offen) / tage));
+  const farbe = offen < 0 ? "var(--accent)" : offen <= 2 ? "var(--bald)" : "var(--ruhig)";
+  const breite = offen < 0 ? 100 : Math.round(verbraucht * 100);
+  return `<span class="balken"><i style="width:${breite}%;background:${farbe}"></i></span>`;
+}
+
+const leiste = (an) => `
+  <div class="leiste">
+    ${[["Start","⌂"],["Quests","✦"],["Prüfen","✓"],["Belohnung","♥"],["Wir","≡"]]
+      .map(([t, s]) => `<span ${an === t ? "data-an" : ""}><b>${s}</b>${t}</span>`).join("")}
+  </div>`;
+
+const zaehlerZeile = (id) => {
+  const z = AUFGABE.zaehler[id];
+  return `
+    <div style="display:flex;align-items:center;gap:10px">
+      ${bild(id)}
+      <span style="flex:1;font-size:13.5px;font-weight:600">${LEUTE[id].name}${id === ICH ? " (du)" : ""}</span>
+      <span class="zahlen">
+        <span class="zahl"><b>${z.stueck}</b><span>am Stück</span></span>
+        <span class="zahl"><b>${z.jahr}</b><span>dies. Jahr</span></span>
+      </span>
+    </div>`;
+};
+
+/* ---------------------------------------------------------------- Schirme */
+const SCHIRME = [
+{ name: "1 · Startseite", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Hallo Ramon</div><div class="sub">Sonntag, 16. August</div></div></div>
+  <div class="inhalt">
+    <div class="card alarm">
+      <div style="font-size:14.5px;font-weight:700">3 Aufgaben sind überfällig</div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Waschbecken seit 4 Tagen, Toilette seit 2,
+        Wohnung saugen seit gestern.</div>
+      <button class="btn primary" data-vor>Zum Haushaltsplan</button>
+    </div>
+    <button class="rowlink" data-vor>
+      <span class="avatar" style="background:var(--tint);color:var(--ruhig)">☰</span>
+      <span class="grow"><span class="t">Haushaltsplan</span>
+        <span class="m">10 wiederkehrende Aufgaben · 3 überfällig</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </button>
+    <button class="rowlink">
+      <span class="avatar" style="background:var(--tint);color:var(--ruhig)">▮</span>
+      <span class="grow"><span class="t">Auswertung</span>
+        <span class="m">Punkte je Tag, Wochen- und Monatsprognose</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </button>
+    <p class="label">Letzte Aktivität</p>
+    <div class="card flat" style="font-size:12.5px;color:var(--ink-2)">
+      <span><b>Mia</b> · Boden wischen <b>+4</b></span>
+      <span><b>Du</b> · Badezimmer putzen <b>+10</b></span>
+    </div>
+  </div>
+  ${leiste("Start")}` },
+
+{ name: "2 · Haushaltsplan", bau: () => {
+  const sortiert = [...PLAN].sort((a, b) => a.offen - b.offen);
+
+  const zeile = (a) => {
+    const f = fristText(a.offen);
+    return `
+      <button class="aufgabe" ${a.gesperrt ? "data-gesperrt" : ""} ${a.name === AUFGABE.name ? "data-vor" : ""}>
+        <span class="n">
+          <span class="t">${a.name}</span>
+          <span class="m">${a.gesperrt ? `Gesperrt · ${a.gesperrt}`
+            : `${a.raum} · alle ${a.tage} Tage`}</span>
+        </span>
+        <span class="frist">
+          ${balken(a.offen, a.tage)}
+          <span class="w ${f.art}">${a.gesperrt ? "erledigt" : f.text}</span>
+        </span>
+      </button>`;
+  };
+
+  const nachRaum = [...new Set(sortiert.map((a) => a.raum))];
+
+  return `
+  <div class="kopf">
+    <div><div class="titel">Haushaltsplan</div>
+      <div class="sub">${Z.gruppiert ? "Nach Räumen" : "Das Dringendste oben"}</div></div>
+    <button class="btn ghost" style="width:38px;height:38px;padding:0;border-radius:12px" data-zu="8">+</button>
+  </div>
+  <div class="inhalt">
+    <div class="btnrow">
+      <button class="btn ${Z.gruppiert ? "ghost" : "dark"}" style="font-size:13px;padding:9px"
+        data-ansicht="frist">Nach Fälligkeit</button>
+      <button class="btn ${Z.gruppiert ? "dark" : "ghost"}" style="font-size:13px;padding:9px"
+        data-ansicht="raum">Nach Raum</button>
+    </div>
+    ${Z.gruppiert
+      ? nachRaum.map((raum) => `
+          <div class="raumkopf">${raum}</div>
+          ${sortiert.filter((a) => a.raum === raum).map(zeile).join("")}`).join("")
+      : sortiert.map(zeile).join("")}
+  </div>
+  ${leiste("Start")}`;
+} },
+
+{ name: "3 · Die Aufgabe", bau: () => `
+  <div class="kopf">
+    <button class="btn ghost" style="width:38px;height:38px;padding:0;border-radius:12px" data-zurueck>‹</button>
+    <div><div class="titel">Wohnung saugen</div>
+      <div class="sub">Wohnzimmer · ${AUFGABE.rhythmus}</div></div>
+  </div>
+  <div class="inhalt">
+    <div class="card alarm" style="gap:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1;font-size:14px;font-weight:700">Seit gestern überfällig</span>
+        <span class="chip rot">+${AUFGABE.punkte} Punkte</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Zuletzt: ${AUFGABE.zuletzt}</div>
+    </div>
+
+    <p class="label">Wer war wie oft dran</p>
+    <div class="card" style="gap:9px">
+      ${Object.keys(LEUTE).map(zaehlerZeile).join("")}
+    </div>
+    <div class="note">Die linke Zahl entscheidet: wer am wenigsten <b>am Stück</b> dran war, steht in
+      der Rangliste oben. Bei Gleichstand zählt die rechte.</div>
+
+    <p class="label">Bewerber</p>
+    <div class="card flat" style="font-size:13px;color:var(--ink-2)">
+      ${Z.bewerber.length === 1 && Z.bewerber[0] === ICH
+        ? "Nur du bisher. Bis morgen können sich die anderen noch melden."
+        : `${Z.bewerber.length} Bewerbungen`}
+    </div>
+  </div>
+  <div class="fuss">
+    <button class="btn primary" data-bewerben>Ich übernehme das</button>
+    <button class="btn text" data-vor>Weiter im Mockup ›</button>
+  </div>` },
+
+{ name: "4 · Beworben, es läuft", bau: () => `
+  <div class="kopf">
+    <button class="btn ghost" style="width:38px;height:38px;padding:0;border-radius:12px" data-zurueck>‹</button>
+    <div><div class="titel">Wohnung saugen</div>
+      <div class="sub">Deine Bewerbung steht</div></div>
+  </div>
+  <div class="inhalt">
+    <div class="card" style="align-items:center;gap:8px;text-align:center">
+      <img src="/logo.webp" alt="" style="width:120px">
+      <div style="font-size:15px;font-weight:700">Beworben</div>
+      <div style="font-size:12.5px;color:var(--ink-2);max-width:28ch">
+        Morgen früh steht die Reihenfolge fest. Bis dahin können sich die anderen noch melden.</div>
+    </div>
+
+    <p class="label">Bisher beworben</p>
+    <div class="card" style="gap:9px">
+      ${["ramon", "crusty", "mia"].map((id) => `
+        <div style="display:flex;align-items:center;gap:10px">
+          ${bild(id)}
+          <span style="flex:1;font-size:13.5px;font-weight:600">${LEUTE[id].name}${id === ICH ? " (du)" : ""}</span>
+          <span class="chip">beworben</span>
+        </div>`).join("")}
+    </div>
+    <div class="note">Wäre nur einer übrig, bekäme er sie sofort — ohne Rangliste. Das Verfahren
+      greift erst, wenn sich mehrere melden.</div>
+  </div>
+  <div class="fuss">
+    <button class="btn ghost" data-zuruecknehmen>Bewerbung zurückziehen</button>
+    <button class="btn text" data-vor>Ein Tag später ›</button>
+  </div>` },
+
+{ name: "5 · Die Rangliste", bau: () => {
+  const liste = rangliste(["ramon", "crusty", "mia"]);
+  return `
+  <div class="kopf"><div>
+    <div class="titel">Wer ist dran?</div>
+    <div class="sub">Wohnung saugen · morgen fällig</div></div></div>
+  <div class="inhalt">
+    ${liste.map((id, i) => `
+      <div class="rang" ${i === 0 ? "data-erster" : ""}>
+        <span class="platz">${i + 1}</span>
+        ${bild(id)}
+        <span class="n">
+          <span class="t">${LEUTE[id].name}${id === ICH ? " (du)" : ""}</span>
+          <span class="m">${i === 0 ? "ist dran" : i === 2 ? "dreimal am Stück" : "öfter im Jahr"}</span>
+        </span>
+        <span class="zahlen">
+          <span class="zahl"><b>${AUFGABE.zaehler[id].stueck}</b><span>Stück</span></span>
+          <span class="zahl"><b>${AUFGABE.zaehler[id].jahr}</b><span>Jahr</span></span>
+        </span>
+      </div>`).join("")}
+    <div class="note">Alle Bewerber sehen dieselbe Liste. Entscheiden darf nur, wer oben steht —
+      und zwar bis morgen früh.</div>
+  </div>
+  <div class="fuss">
+    ${liste[0] === ICH ? `
+      <div class="btnrow">
+        <button class="btn primary" data-annehmen>Annehmen</button>
+        <button class="btn ghost" data-ablehnen>Ablehnen</button>
+      </div>`
+    : `<div class="card flat" style="font-size:13px;color:var(--ink-2);text-align:center">
+         ${LEUTE[liste[0]].name} entscheidet. Du erfährst es, sobald es feststeht.</div>
+       <button class="btn ghost" data-perspektive="${liste[0]}">Ansicht von ${LEUTE[liste[0]].name}</button>`}
+  </div>`;
+} },
+
+{ name: "6 · Angenommen", bau: () => {
+  const erster = rangliste(["ramon", "crusty", "mia"])[0];
+  return `
+  <div class="kopf"><div>
+    <div class="titel">Vergeben</div><div class="sub">Wohnung saugen</div></div></div>
+  <div class="inhalt">
+    <div class="card" style="align-items:center;gap:9px;text-align:center">
+      ${bild(erster, "gr")}
+      <div style="font-size:17px;font-weight:800;font-family:var(--font-display)">
+        ${LEUTE[erster].name} macht es</div>
+      <div style="font-size:12.5px;color:var(--ink-2);max-width:28ch">
+        Die anderen Bewerber haben eine Absage bekommen — als Benachrichtigung, wie alles andere auch.</div>
+      <span class="chip rot">+${AUFGABE.punkte} Punkte nach Bestätigung</span>
+    </div>
+
+    <p class="label">Absagen gingen an</p>
+    <div class="card" style="gap:9px">
+      ${rangliste(["ramon", "crusty", "mia"]).slice(1).map((id) => `
+        <div style="display:flex;align-items:center;gap:10px">
+          ${bild(id)}
+          <span style="flex:1;font-size:13.5px">${LEUTE[id].name}</span>
+          <span class="chip">nächstes Mal</span>
+        </div>`).join("")}
+    </div>
+    <div class="note">Der Zähler <b>am Stück</b> von ${LEUTE[erster].name} steigt erst, wenn die
+      Erledigung bestätigt ist — und der aller anderen fällt dann auf null zurück.</div>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Erledigt melden ›</button></div>`;
+} },
+
+{ name: "7 · Abgelehnt, einer weiter", bau: () => {
+  const liste = rangliste(["ramon", "crusty", "mia"]).slice(1);
+  return `
+  <div class="kopf"><div>
+    <div class="titel">Weitergereicht</div>
+    <div class="sub">Wohnung saugen · Platz 1 hat abgelehnt</div></div></div>
+  <div class="inhalt">
+    ${liste.map((id, i) => `
+      <div class="rang" ${i === 0 ? "data-erster" : ""}>
+        <span class="platz">${i + 1}</span>
+        ${bild(id)}
+        <span class="n">
+          <span class="t">${LEUTE[id].name}${id === ICH ? " (du)" : ""}</span>
+          <span class="m">${i === 0 ? "ist jetzt an der Reihe" : "danach"}</span>
+        </span>
+        <span class="zahlen">
+          <span class="zahl"><b>${AUFGABE.zaehler[id].stueck}</b><span>Stück</span></span>
+          <span class="zahl"><b>${AUFGABE.zaehler[id].jahr}</b><span>Jahr</span></span>
+        </span>
+      </div>`).join("")}
+    <div class="note">Lehnen alle ab, ist die Aufgabe wieder für jeden offen — und wird überfällig,
+      wenn sie liegen bleibt.</div>
+  </div>
+  <div class="fuss"><button class="btn text" data-vor>Weiter ›</button></div>`;
+} },
+
+{ name: "8 · Erledigt, jetzt gesperrt", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Wohnung saugen</div><div class="sub">Wohnzimmer · ${AUFGABE.rhythmus}</div></div></div>
+  <div class="inhalt">
+    <div class="card flat" style="align-items:center;gap:8px;text-align:center">
+      <div style="font-size:34px">🔒</div>
+      <div style="font-size:15px;font-weight:700">Gesperrt bis Sonntag</div>
+      <div style="font-size:12.5px;color:var(--ink-2);max-width:28ch">
+        Mia hat sie heute erledigt, Ramon hat bestätigt. Bis der Zeitraum um ist, kann sie niemand
+        noch einmal melden.</div>
+    </div>
+
+    <p class="label">Zähler danach</p>
+    <div class="card" style="gap:9px">
+      ${[["mia", 1, 6], ["ramon", 0, 12], ["crusty", 0, 8]].map(([id, stueck, jahr]) => `
+        <div style="display:flex;align-items:center;gap:10px">
+          ${bild(id)}
+          <span style="flex:1;font-size:13.5px;font-weight:600">${LEUTE[id].name}</span>
+          <span class="zahlen">
+            <span class="zahl"><b>${stueck}</b><span>am Stück</span></span>
+            <span class="zahl"><b>${jahr}</b><span>dies. Jahr</span></span>
+          </span>
+        </div>`).join("")}
+    </div>
+    <div class="note"><b>Ramons Zähler steht wieder auf null.</b> Genau das sorgt für den Wechsel:
+      wer zuletzt dran war, rutscht beim nächsten Mal nach unten.</div>
+  </div>
+  <div class="fuss">
+    <button class="btn ghost" data-vor>Besondere Umstände: trotzdem erledigen</button>
+  </div>` },
+
+{ name: "9 · Aufgabe anlegen", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Neue Aufgabe</div><div class="sub">Geht wie alles in die Abstimmung</div></div></div>
+  <div class="inhalt">
+    <div class="feld"><label>Name</label><input value="Wohnung saugen" readonly></div>
+    <div class="feld"><label>Raum</label>
+      <select><option>Wohnzimmer</option><option>Küche</option><option>Badezimmer</option></select></div>
+    <div class="feld"><label>Punktwert</label><input value="6" readonly></div>
+
+    <div class="card" style="gap:11px">
+      <button class="schalter" data-schalter ${Z.wiederkehrend ? "data-an" : ""}>
+        <span class="box">${Z.wiederkehrend ? "✓" : ""}</span>
+        <span class="t">Wiederkehrende Aufgabe</span>
+      </button>
+      ${Z.wiederkehrend ? `
+      <div class="feld">
+        <label>Wie oft</label>
+        <div class="rhythmus">
+          ${["1× pro Woche", "2× pro Woche", "3× pro Woche", "1× alle 2 Wochen", "1× im Monat", "1× im Quartal"]
+            .map((r) => `<button data-rhythmus="${r}" ${Z.rhythmus === r ? "data-an" : ""}>${r}</button>`).join("")}
+        </div>
+      </div>
+      <div class="note">Daraus ergibt sich die Sperre von selbst: <b>${Z.rhythmus}</b> heißt, sie ist
+        nach dem Erledigen ${({ "1× pro Woche": "7 Tage", "2× pro Woche": "3–4 Tage", "3× pro Woche": "2–3 Tage",
+          "1× alle 2 Wochen": "14 Tage", "1× im Monat": "30 Tage", "1× im Quartal": "90 Tage" })[Z.rhythmus]}
+        für alle gesperrt.</div>`
+      : `<div class="note">Ohne Haken bleibt es eine gewöhnliche Quest: jederzeit meldbar,
+           ohne Plan, ohne Sperre, ohne Bewerbung.</div>`}
+    </div>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Zur Abstimmung geben</button></div>` },
+
+{ name: "10 · Sieben Tage überfällig", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Hallo Ramon</div><div class="sub">Sonntag, 16. August</div></div></div>
+  <div class="inhalt">
+    <div class="card alarm" style="gap:9px">
+      <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">
+        Waschbecken putzen — 7 Tage überfällig</div>
+      <div style="font-size:12.5px;color:var(--ink-2)">
+        Niemand hat sie übernommen. Jetzt greift die Gruppenstrafe: <b>−4 Punkte für jeden</b>.</div>
+      <div class="card" style="gap:7px;background:var(--bg)">
+        ${["ramon", "crusty", "mia"].map((id) => `
+          <div style="display:flex;align-items:center;gap:10px">
+            ${bild(id)}
+            <span style="flex:1;font-size:13.5px;font-weight:600">${LEUTE[id].name}</span>
+            <span class="chip rot">−4</span>
+          </div>`).join("")}
+      </div>
+      <button class="btn primary">Jetzt erledigen und Strafe abwenden</button>
+    </div>
+    <div class="note">Die Strafe trifft alle gleich, weil es eine Gemeinschaftsaufgabe war.
+      Abschaltbar in den Einstellungen — ob das die richtige Form ist, ist Frage 2 unten.</div>
+  </div>
+  ${leiste("Start")}` }
+];
+
+/* ---------------------------------------------------------------- Steuerung */
+let i = 0;
+const schirm = document.getElementById("schirm");
+
+function zeichne() {
+  schirm.innerHTML = SCHIRME[i].bau();
+  document.getElementById("schrittname").textContent = SCHIRME[i].name;
+  document.getElementById("zurueck").disabled = i === 0;
+  document.getElementById("vor").disabled = i === SCHIRME.length - 1;
+  document.getElementById("punkte").innerHTML =
+    SCHIRME.map((_, n) => `<i data-sprung="${n}" ${n === i ? "data-an" : ""}></i>`).join("");
+}
+const gehe = (n) => { i = Math.max(0, Math.min(SCHIRME.length - 1, n)); zeichne(); };
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-vor],[data-zurueck],[data-zu],[data-sprung],[data-bewerben],[data-zuruecknehmen],[data-annehmen],[data-ablehnen],[data-schalter],[data-rhythmus],[data-perspektive],[data-ansicht]");
+  if (!el) return;
+
+  if (el.hasAttribute("data-vor")) return gehe(i + 1);
+  if (el.hasAttribute("data-zurueck")) return gehe(i - 1);
+  if (el.dataset.zu) return gehe(Number(el.dataset.zu));
+  if (el.dataset.sprung) return gehe(Number(el.dataset.sprung));
+  if (el.hasAttribute("data-bewerben")) { Z.bewerber = ["ramon", "crusty", "mia"]; return gehe(3); }
+  if (el.hasAttribute("data-zuruecknehmen")) { Z.bewerber = ["crusty", "mia"]; return gehe(2); }
+  if (el.hasAttribute("data-annehmen")) return gehe(5);
+  if (el.hasAttribute("data-ablehnen")) return gehe(6);
+  if (el.hasAttribute("data-schalter")) { Z.wiederkehrend = !Z.wiederkehrend; return zeichne(); }
+  if (el.dataset.rhythmus) { Z.rhythmus = el.dataset.rhythmus; return zeichne(); }
+  if (el.dataset.perspektive) { ICH = el.dataset.perspektive; return zeichne(); }
+  if (el.dataset.ansicht) { Z.gruppiert = el.dataset.ansicht === "raum"; return zeichne(); }
+});
+
+document.getElementById("vor").addEventListener("click", () => gehe(i + 1));
+document.getElementById("zurueck").addEventListener("click", () => gehe(i - 1));
+document.getElementById("neu").addEventListener("click", () => { Z.bewerber = ["ramon"]; ICH = "ramon"; gehe(0); });
+
+zeichne();
+</script>
+</body>
+</html>
