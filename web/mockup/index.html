@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Erster Start</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:940px;margin:0 auto;padding:26px 16px 70px}
+
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:38px 0 10px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:62ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---------- Telefonrahmen ---------- */
+.buehne{display:flex;flex-direction:column;align-items:center;gap:14px}
+.phone{
+  width:360px;max-width:100%;height:740px;background:var(--bg);border:10px solid var(--ink);
+  border-radius:38px;overflow:hidden;position:relative;box-shadow:0 30px 60px -30px rgba(21,44,79,.5);
+  display:flex;flex-direction:column
+}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.kopf{flex:none;padding:20px 18px 10px;display:flex;align-items:center;gap:10px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:23px;letter-spacing:-.025em;line-height:1.15}
+.kopf .sub{font-size:12.5px;color:var(--ink-3)}
+.inhalt{flex:1;overflow-y:auto;padding:0 18px 16px;display:flex;flex-direction:column;gap:12px}
+.fuss{flex:none;padding:12px 18px 18px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);background:var(--bg)}
+
+.steuerung{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+.steuerung button{
+  font:inherit;font-size:14px;font-weight:700;border-radius:11px;padding:9px 15px;cursor:pointer;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink)
+}
+.steuerung button:disabled{opacity:.4}
+.punkte{display:flex;gap:6px;align-items:center}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block;cursor:pointer}
+.punkte i[data-an]{background:var(--accent);transform:scale(1.35)}
+.schrittname{font-family:var(--font-data);font-size:11px;color:var(--ink-3);text-align:center}
+
+/* ---------- Bausteine der App ---------- */
+.mitte{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0;padding:8px 6px}
+.mitte img.held{width:min(190px,62%)}
+.mitte h3{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.03em;margin:16px 0 0}
+.mitte p{font-size:14px;color:var(--ink-2);margin:10px 0 0;max-width:30ch}
+
+.btn{font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:13px 16px;border:1px solid transparent;
+  cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);width:100%}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--bg);border-color:var(--line)}
+.btn.text{background:none;color:var(--ink-2);font-weight:600;padding:9px}
+.btnrow{display:flex;gap:8px}.btnrow>.btn{flex:1}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:13px;display:flex;flex-direction:column;gap:10px}
+.card.flat{background:var(--tint);border-color:transparent}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -4px}
+.note{font-size:12.5px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:10px 11px;display:flex;gap:9px;align-items:flex-start}
+.note b{color:var(--ink)}
+.feld{display:flex;flex-direction:column;gap:6px}
+.feld label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.feld input{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:12px;padding:12px;width:100%;background:var(--bg);color:var(--ink)}
+.feld input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+
+.avatare{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.av{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);background:var(--tint);cursor:pointer;
+  display:grid;place-items:center;overflow:hidden;padding:0;font-size:22px}
+.av img{width:100%;height:100%;object-fit:cover}
+.av[data-an]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+
+.wahl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.kachel{border:1px solid var(--line);border-radius:15px;background:var(--bg);padding:12px;cursor:pointer;text-align:left;
+  font:inherit;color:inherit;display:flex;flex-direction:column;gap:3px;position:relative}
+.kachel .k{font-size:14.5px;font-weight:700}
+.kachel .m{font-size:11.5px;color:var(--ink-3);line-height:1.35}
+.kachel[data-an]{border-color:var(--accent);background:var(--accent-tint)}
+.kachel[data-an]::after{content:"✓";position:absolute;top:9px;right:11px;color:var(--accent);font-weight:800;font-size:14px}
+
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--bg);
+  font-size:20px;line-height:1;cursor:pointer;color:var(--ink);font-family:var(--font-ui)}
+.stepper .val{font-family:var(--font-display);font-weight:800;font-size:23px;min-width:44px;text-align:center}
+.stepper .bei{margin-left:auto;font-size:12.5px;color:var(--ink-2)}
+
+.raeume{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.raum{border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:10px 11px;cursor:pointer;
+  font:inherit;color:inherit;text-align:left;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;
+  min-width:0;line-height:1.3}
+.raum span.n{min-width:0;hyphens:auto}
+.raum .haken{width:17px;height:17px;border-radius:5px;border:1.6px solid var(--line);flex:none;display:grid;place-items:center;
+  font-size:11px;color:#fff}
+.raum[data-an]{border-color:var(--accent);background:var(--accent-tint)}
+.raum[data-an] .haken{background:var(--accent);border-color:var(--accent)}
+
+.rowlink{display:flex;align-items:center;gap:11px;padding:12px 13px;border:1px solid var(--line);border-radius:14px;
+  background:var(--bg);width:100%;font:inherit;color:inherit;text-align:left}
+.rowlink .grow{flex:1;min-width:0}
+.rowlink .t{display:block;font-size:14px;font-weight:600}
+.rowlink .m{display:block;font-size:11.5px;color:var(--ink-3)}
+.pill{font-family:var(--font-data);font-size:12px;font-weight:700;background:var(--accent-tint);color:var(--accent);
+  border-radius:999px;padding:4px 9px;flex:none}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;background:var(--tint-2);color:var(--ink-2)}
+.chip.rot{background:var(--accent-tint);color:var(--accent)}
+.chip.navy{background:var(--ink);color:#fff}
+
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--tint);display:grid;place-items:center;overflow:hidden;flex:none;font-size:19px}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar.gr{width:76px;height:76px;font-size:36px}
+
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:7px 5px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);min-width:0}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:17px;font-weight:400;line-height:1}
+
+.codeanzeige{font-family:var(--font-display);font-weight:800;font-size:31px;letter-spacing:.2em;padding-left:.2em;text-align:center}
+
+/* ---------- Erläuterungen ---------- */
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.erklaer{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:16px}
+.erklaer h3{font-family:var(--font-display);font-weight:800;font-size:16px;margin:0 0 7px}
+.erklaer p,.erklaer li{font-size:13.5px;color:var(--ink-2);margin:0 0 7px}
+.erklaer ul{margin:0;padding-left:18px}
+.erklaer strong{color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+.frage{border-left:3px solid var(--accent);background:var(--bg);border-radius:0 14px 14px 0;padding:14px 16px;margin:10px 0}
+.frage h3{margin:0 0 6px;font-size:15px}
+.frage p{margin:0 0 6px;font-size:13.5px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · noch nichts davon ist gebaut</span>
+  <h1>Erster Start</h1>
+  <p class="lead">
+    Der Weg vom ersten Öffnen bis zum fertig eingerichteten Haushalt — Name, Begrüßung,
+    Haushaltstyp, Teilnehmer, Räume, die zwei Erklärseiten und „Jetzt starten“.
+    Der Prototyp unten ist antippbar: die Knöpfe führen wirklich weiter, Auswahl und
+    Zähler reagieren. Darunter steht, was sich dafür an der Datenbank ändert und
+    welche Entscheidung ich von dir brauche.
+  </p>
+
+  <div class="buehne">
+    <div class="phone">
+      <div class="schirm" id="schirm"></div>
+    </div>
+    <div class="steuerung">
+      <button id="zurueck">‹ Zurück</button>
+      <span class="punkte" id="punkte"></span>
+      <button id="vor">Weiter ›</button>
+      <button id="neu">Von vorn</button>
+    </div>
+    <div class="schrittname" id="schrittname"></div>
+  </div>
+
+  <h2>Was der Prototyp zeigt</h2>
+  <table>
+    <tr><th style="width:32%">Schritt</th><th>Was passiert</th></tr>
+    <tr><td><b>1 · Anmelden</b></td><td>Wie bisher mit Google. Danach beginnt die Einrichtung — sie erscheint nur beim allerersten Mal.</td></tr>
+    <tr><td><b>2 · Name &amp; Bild</b></td><td>Vorname oder Spitzname frei wählbar, Google schlägt nur vor. Dazu gleich ein Bild: Fuchs, Wolf, ein Zeichen — oder ein eigenes Foto. Beides später in den Einstellungen änderbar.</td></tr>
+    <tr><td><b>3 · Begrüßung</b></td><td>Ein Satz mit dem gewählten Namen. „Weiter“ oder zurück zum Namen, falls er doch nicht passt.</td></tr>
+    <tr><td><b>4 · Haushalt</b></td><td>WG, Familie, Pärchen oder Sonstige. Darunter die Zahl der Teilnehmer — bei Familie getrennt nach Erwachsenen und Kindern. Jederzeit änderbar.</td></tr>
+    <tr><td><b>5 · Räume</b></td><td>Vorschläge zum Antippen, eigene Räume dazu. Aus den Räumen werden die Kategorien der Quests.</td></tr>
+    <tr><td><b>6 · Ordnung finden</b></td><td>Deine Seite „Ordnung finden und Belohnungen schaffen“ mit deinem Text.</td></tr>
+    <tr><td><b>7 · Ordnung erhalten</b></td><td>Deine Seite „Ordnung konstant erhalten“ mit deinem Text.</td></tr>
+    <tr><td><b>8 · Jetzt starten</b></td><td>Abschluss. Danach die Einladecodes für die anderen — so viele, wie Teilnehmer eingestellt sind.</td></tr>
+    <tr><td><b>9 · Dashboard</b></td><td>Wie es danach aussieht: mehrere Personen statt zwei, Quests mit Raum.</td></tr>
+    <tr><td><b>10 · Quests</b></td><td>Raum als Filter oben, Raumzuordnung beim Ändern einer Quest.</td></tr>
+    <tr><td><b>11 · Einstellungen</b></td><td>Bild und Name, dazu der Haushalt: Typ, Teilnehmer, Rollen.</td></tr>
+  </table>
+
+  <h2>Was sich dafür ändern muss</h2>
+  <div class="karten">
+    <div class="erklaer">
+      <h3>Vom Paar zum Haushalt</h3>
+      <p>Heute heißt alles <strong>couples</strong> und ist auf genau zwei Personen festgenagelt — die
+        Datenbank erzwingt das sogar. Daraus wird ein <strong>Haushalt</strong> mit Typ und beliebig
+        vielen Mitgliedern.</p>
+      <p>Die bestehenden Daten wandern unverändert mit: euer Paar wird ein Haushalt vom Typ
+        „Pärchen“ mit zwei Mitgliedern. Punkte, Verlauf und Quests bleiben, wie sie sind.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Räume statt Kategorien</h3>
+      <p>Quests haben schon heute eine Kategorie („Bad“, „Küche“). Die wird zum <strong>Raum</strong> —
+        derselbe Text, aber aus einer gepflegten Liste statt frei getippt.</p>
+      <p>Beim Ändern einer Quest kommt ein Feld <strong>Raum</strong> dazu. Sortieren und Filtern
+        arbeiten dann auf denselben Räumen, die ihr hier angelegt habt. Aktionen wie
+        „+100 % auf Küche“ auch.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Bilder</h3>
+      <p>Jeder bekommt ein eigenes Bild: eine der mitgelieferten Figuren, ein Zeichen — oder ein
+        Foto vom Handy. Das Foto wird vor dem Hochladen auf 256 Pixel verkleinert, damit es
+        klein bleibt und nichts Fremdes mitwandert.</p>
+      <p>Änderbar in den Einstellungen, jederzeit, ohne Abstimmung.</p>
+    </div>
+    <div class="erklaer">
+      <h3>Rollen</h3>
+      <p>Wer einrichtet, ist <strong>Verwalter</strong>. Bei einer Familie können mehrere Erwachsene
+        Verwalter sein.</p>
+      <p>Am täglichen Gebrauch ändert das nichts: Melden, Bestätigen, Beantragen, Abstimmen —
+        alle dürfen alles, Kinder eingeschlossen. Der Verwalter darf zusätzlich nur das, was
+        sonst niemand tun sollte: jemanden einladen oder entfernen und den Haushaltstyp ändern.</p>
+    </div>
+  </div>
+
+  <h2>Wo es sich von BeTidy unterscheidet</h2>
+  <table>
+    <tr><th style="width:26%">Ebene</th><th>Unterschied</th></tr>
+    <tr><td><b>Farben</b></td><td>Weiß, Navy und Rot statt Rosé. Keine gemeinsame Farbfamilie.</td></tr>
+    <tr><td><b>Bilder</b></td><td>Eure eigenen Figuren, Fuchs und Wolf. Keine gekauften Flat-Illustrationen von Menschen.</td></tr>
+    <tr><td><b>Texte</b></td><td>Deine Formulierungen, nicht umgeschriebene fremde. Die zwei Erklärseiten stehen wörtlich so, wie du sie geschrieben hast.</td></tr>
+    <tr><td><b>Aufbau</b></td><td>Haushaltstyp und Teilnehmerzahl stehen bei uns <b>vor</b> den Räumen — bei BeTidy gibt es diesen Schritt gar nicht. Die Räume sind Kacheln zum Antippen statt einer Liste mit Schaltern und Griffen.</td></tr>
+    <tr><td><b>Kern</b></td><td>Der eigentliche Unterschied ist ohnehin die Idee dahinter: Punkte, Vier-Augen-Freigabe, Abstimmung, Belohnungen. Davon hat BeTidy nichts.</td></tr>
+  </table>
+
+  <h2>Die eine Entscheidung, die ich brauche</h2>
+  <div class="frage">
+    <h3>Wer muss zustimmen, wenn ihr mehr als zwei seid?</h3>
+    <p>Bei zwei Personen war das eindeutig: der andere. Bei vier ist es das nicht mehr — und die
+      Antwort steckt tief in den Regeln, deshalb frage ich lieber vorher.</p>
+    <p><strong>Quest melden → bestätigen:</strong> Mein Vorschlag — <b>eine beliebige andere Person</b>
+      reicht. Sich selbst bestätigen bleibt ausgeschlossen. Alles andere würde in einer WG dazu
+      führen, dass Punkte tagelang hängen.</p>
+    <p><strong>Punktwerte, neue Quests, Löschen, Aktionen:</strong> Mein Vorschlag — <b>die einfache
+      Mehrheit</b> aller Mitglieder, wobei der Vorschlagende schon zustimmt. Bei zwei Personen
+      heißt das weiterhin: beide müssen ja sagen. Die Alternative wäre, dass wirklich
+      <b>alle</b> zustimmen müssen — sauberer, aber in einer Fünfer-WG hakt jede Änderung an
+      der einen Person, die gerade im Urlaub ist.</p>
+    <p><strong>Belohnung beantragen und Punkte übertragen:</strong> weiterhin genau die Person, die es
+      angeht — bei einer Belohnung ein beliebiger anderer, bei einer Übertragung der Empfänger.</p>
+  </div>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Zustand */
+const Z = {
+  name: "Ramon",
+  bild: "🦊",
+  typ: "paar",
+  erwachsene: 2,
+  kinder: 0,
+  personen: 2,
+  raeume: new Set(["Küche", "Bad", "Wohnzimmer", "Schlafzimmer", "Flur"])
+};
+
+const TYPEN = [
+  { id: "wg",       k: "WG",       m: "Mehrere Erwachsene, geteilte Aufgaben" },
+  { id: "familie",  k: "Familie",  m: "Eltern und Kinder unter einem Dach" },
+  { id: "paar",     k: "Pärchen",  m: "Zwei Personen, ein Haushalt" },
+  { id: "sonstige", k: "Sonstige", m: "Passt nichts davon? Dann das hier" }
+];
+
+const RAUMVORSCHLAEGE = ["Küche","Bad","Wohnzimmer","Schlafzimmer","Flur","Kinderzimmer",
+  "Arbeitszimmer","Balkon","Garten","Keller","Hauswirtschaft","Garage"];
+
+const zahl = () => Z.typ === "familie" ? Z.erwachsene + Z.kinder : Z.personen;
+const vorname = () => (Z.name || "Du").split(" ")[0];
+
+/* ---------------------------------------------------------------- Bausteine */
+const bildchen = (b, klasse = "") =>
+  b === "🦊" ? `<span class="avatar ${klasse}"><img src="/fox.webp" alt=""></span>`
+  : b === "🐺" ? `<span class="avatar ${klasse}"><img src="/wolf.webp" alt=""></span>`
+  : `<span class="avatar ${klasse}">${b}</span>`;
+
+const leiste = (an) => `
+  <div class="leiste">
+    ${[["Start","⌂"],["Quests","✦"],["Prüfen","✓"],["Belohnung","♥"],["Wir","≡"]]
+      .map(([t, s]) => `<span ${an === t ? "data-an" : ""}><b>${s}</b>${t}</span>`).join("")}
+  </div>`;
+
+/* ---------------------------------------------------------------- Schirme */
+const SCHIRME = [
+{ name: "1 · Anmelden", bau: () => `
+  <div class="inhalt mitte">
+    <img class="held" src="/logo.webp" alt="">
+    <h3>Haus-Quest</h3>
+    <p>Punkte für erledigte Aufgaben.<br>Freigegeben nur gemeinsam.</p>
+  </div>
+  <div class="fuss">
+    <button class="btn ghost" data-vor>Mit Google anmelden</button>
+    <div style="font-size:11.5px;color:var(--ink-3);text-align:center">
+      Gespeichert werden Name, E-Mail und Profilbild — sonst nichts.</div>
+  </div>` },
+
+{ name: "2 · Name und Bild", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Wie sollen wir dich nennen?</div>
+    <div class="sub">Vorname, Spitzname — was dir lieber ist</div></div></div>
+  <div class="inhalt">
+    <div class="card" style="align-items:center;gap:12px">
+      ${bildchen(Z.bild, "gr")}
+      <div style="font-size:13px;color:var(--ink-3)">So sehen dich die anderen</div>
+    </div>
+    <div class="feld">
+      <label>Dein Name</label>
+      <input id="namensfeld" value="${Z.name}" maxlength="40" placeholder="z. B. Ramon">
+    </div>
+    <p class="label">Dein Bild</p>
+    <div class="avatare">
+      ${["🦊","🐺","★","☾","☀"].map((b) =>
+        `<button class="av" data-bild="${b}" ${Z.bild === b ? "data-an" : ""}>
+           ${b === "🦊" ? '<img src="/fox.webp" alt="">' : b === "🐺" ? '<img src="/wolf.webp" alt="">' : b}
+         </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="font-size:14px">Eigenes Foto wählen</button>
+    <div class="note"><span>Beides lässt sich später jederzeit in den Einstellungen ändern —
+      dafür braucht es keine Abstimmung.</span></div>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
+
+{ name: "3 · Begrüßung", bau: () => `
+  <div class="inhalt mitte">
+    <img class="held" src="/logo.webp" alt="">
+    <h3>Schön, dass du da bist,<br>${Z.name || "Du"}</h3>
+    <p>Ab hier zählt jede erledigte Aufgabe. Wir richten in vier kurzen Schritten
+      euren Haushalt ein — danach könnt ihr sofort loslegen.</p>
+  </div>
+  <div class="fuss">
+    <button class="btn primary" data-vor>Los geht's</button>
+    <button class="btn text" data-zu="1">Name doch noch ändern</button>
+  </div>` },
+
+{ name: "4 · Haushalt", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Euer Haushalt</div>
+    <div class="sub">Danach richtet sich, wie die App mit euch rechnet</div></div></div>
+  <div class="inhalt">
+    <div class="wahl">
+      ${TYPEN.map((t) => `
+        <button class="kachel" data-typ="${t.id}" ${Z.typ === t.id ? "data-an" : ""}>
+          <span class="k">${t.k}</span><span class="m">${t.m}</span>
+        </button>`).join("")}
+    </div>
+
+    <p class="label">Wie viele seid ihr?</p>
+    ${Z.typ === "familie" ? `
+      <div class="card">
+        <div class="stepper">
+          <button data-zaehl="erwachsene:-1">−</button>
+          <span class="val">${Z.erwachsene}</span>
+          <button data-zaehl="erwachsene:1">+</button>
+          <span class="bei">Erwachsene</span>
+        </div>
+        <div class="stepper">
+          <button data-zaehl="kinder:-1">−</button>
+          <span class="val">${Z.kinder}</span>
+          <button data-zaehl="kinder:1">+</button>
+          <span class="bei">Kinder</span>
+        </div>
+      </div>
+      <div class="note"><span><b>Erwachsene verwalten.</b> Einladen, entfernen, Haushaltstyp
+        ändern — das können nur sie. Beim Melden, Bestätigen, Beantragen und Abstimmen
+        haben Kinder dieselben Rechte.</span></div>`
+    : Z.typ === "paar" ? `
+      <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+        <span style="flex:1;font-size:14px;font-weight:600">Zwei Personen</span>
+        <span class="chip navy">fest</span>
+      </div>
+      <div class="note"><span>Beim Pärchen ist die Zahl gesetzt. Wenn jemand dazukommt,
+        wechselt ihr einfach den Typ.</span></div>`
+    : `
+      <div class="card">
+        <div class="stepper">
+          <button data-zaehl="personen:-1">−</button>
+          <span class="val">${Z.personen}</span>
+          <button data-zaehl="personen:1">+</button>
+          <span class="bei">Teilnehmer</span>
+        </div>
+      </div>
+      <div class="note"><span><b>${Z.typ === "wg" ? "Wer einrichtet, verwaltet." : "Du verwaltest."}</b>
+        Das heißt nur: einladen und entfernen. Sonst haben alle dieselben Rechte.</span></div>`}
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
+
+{ name: "5 · Räume", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Eure Räume</div>
+    <div class="sub">${Z.raeume.size} ausgewählt · jederzeit änderbar</div></div></div>
+  <div class="inhalt">
+    <div class="raeume">
+      ${RAUMVORSCHLAEGE.map((r) => `
+        <button class="raum" data-raum="${r}" ${Z.raeume.has(r) ? "data-an" : ""}>
+          <span class="haken">${Z.raeume.has(r) ? "✓" : ""}</span><span class="n">${r}</span>
+        </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="font-size:14px">+ Eigenen Raum anlegen</button>
+    <div class="note"><span>Die Räume sind später die <b>Kategorien eurer Quests</b>: danach wird
+      sortiert, gefiltert und gesucht. Auch eine Aktion wie „+100 % auf Küche“ hängt daran.</span></div>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
+
+{ name: "6 · Ordnung finden", bau: () => `
+  <div class="inhalt mitte">
+    <img class="held" src="/fox.webp" alt="" style="width:150px">
+    <h3>Ordnung finden und<br>Belohnungen schaffen</h3>
+    <p style="max-width:34ch">Entdecke mit Quests Schritt für Schritt eine neue Grundordnung für
+      dein Zuhause. Strukturiere deine Räume ganz einfach anhand verschiedener Questpunkte neu
+      und erlebe dabei, wie aus kleinen Aufgaben sichtbare Fortschritte werden. So wird es
+      langfristig leichter und sogar ein bisschen spaßiger, die Ordnung zu bewahren.</p>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
+
+{ name: "7 · Ordnung erhalten", bau: () => `
+  <div class="inhalt mitte">
+    <img class="held" src="/wolf.webp" alt="" style="width:150px">
+    <h3>Ordnung konstant erhalten</h3>
+    <p style="max-width:34ch">Plane wiederkehrende Haushaltsaufgaben ganz entspannt und sorge
+      dafür, dass Ordnung und Sauberkeit langfristig erhalten bleiben. Haus-Quest unterstützt
+      dich dabei mit einem individuellen Jahresplan, der sich ganz automatisch auf Basis deiner
+      Angaben erstellt. So habt ihr alle Aufgaben und Quests jederzeit im Blick und könnt euren
+      Haushalt Schritt für Schritt leichter organisieren.</p>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Weiter</button></div>` },
+
+{ name: "8 · Jetzt starten", bau: () => `
+  <div class="inhalt mitte">
+    <img class="held" src="/logo.webp" alt="">
+    <h3>Alles steht</h3>
+    <p>${TYPEN.find((t) => t.id === Z.typ).k} · ${zahl()} ${zahl() === 1 ? "Person" : "Personen"} ·
+      ${Z.raeume.size} Räume</p>
+  </div>
+  <div class="fuss"><button class="btn primary" data-vor>Jetzt starten</button></div>` },
+
+{ name: "9 · Andere einladen", bau: () => `
+  <div class="kopf"><div>
+    <div class="titel">Die anderen holen</div>
+    <div class="sub">Es fehlen noch ${Math.max(0, zahl() - 1)} von ${zahl()}</div></div></div>
+  <div class="inhalt">
+    <div class="card" style="align-items:center;gap:6px">
+      <span class="label" style="margin:0">Euer Einladecode</span>
+      <span class="codeanzeige">418 207</span>
+      <div class="btnrow" style="width:100%">
+        <button class="btn ghost" style="font-size:14px">Teilen</button>
+        <button class="btn ghost" style="font-size:14px">Neuer Code</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-3);text-align:center">
+        Gilt 24 Stunden und für ${Math.max(0, zahl() - 1)} ${zahl() - 1 === 1 ? "Person" : "Personen"}.</div>
+    </div>
+    <p class="label">Schon dabei</p>
+    <div class="rowlink">
+      ${bildchen(Z.bild)}
+      <span class="grow"><span class="t">${vorname()}</span>
+        <span class="m">Verwaltet den Haushalt</span></span>
+      <span class="chip rot">du</span>
+    </div>
+    ${Array.from({ length: Math.max(0, zahl() - 1) }, (_, i) => `
+      <div class="rowlink" style="border-style:dashed;opacity:.7">
+        <span class="avatar">?</span>
+        <span class="grow"><span class="t">Platz ${i + 2}</span>
+          <span class="m">Wartet auf den Code</span></span>
+      </div>`).join("")}
+  </div>
+  <div class="fuss"><button class="btn dark" data-vor>Später — erstmal ansehen</button></div>` },
+
+{ name: "10 · Dashboard", bau: () => {
+  const leute = [
+    { n: vorname(), b: Z.bild, p: 10 },
+    { n: "Crusty", b: "🐺", p: 88 },
+    { n: "Mia", b: "★", p: 41 },
+    { n: "Jan", b: "☾", p: 23 }
+  ].slice(0, Math.max(2, Math.min(4, zahl())));
+  return `
+  <div class="kopf">
+    <div><div class="titel">Hallo ${vorname()}</div>
+      <div class="sub">Sonntag, 16. August</div></div>
+  </div>
+  <div class="inhalt">
+    <div class="card" style="padding:11px;gap:8px">
+      ${leute.map((p, i) => `
+        <div style="display:flex;align-items:center;gap:10px${i ? ";border-top:1px solid var(--line);padding-top:8px" : ""}">
+          ${bildchen(p.b)}
+          <span style="flex:1;font-size:14px;font-weight:600">${p.n}${i === 0 ? " <span class='chip rot'>du</span>" : ""}</span>
+          <span style="font-family:var(--font-display);font-weight:800;font-size:24px">${p.p}</span>
+        </div>`).join("")}
+    </div>
+    <div class="card" style="border-color:var(--accent);background:var(--accent-tint)">
+      <div style="font-size:14px;font-weight:700">2 Sachen warten auf dich</div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Ohne dein OK gibt es keine Punkte.</div>
+    </div>
+    <p class="label">Wartet auf Bestätigung</p>
+    <div class="rowlink">
+      ${bildchen("🐺")}
+      <span class="grow"><span class="t">Badezimmer putzen</span>
+        <span class="m">Crusty · Bad · vor 20 Min.</span></span>
+      <span class="pill">+10</span>
+    </div>
+    <div class="rowlink">
+      ${bildchen("★")}
+      <span class="grow"><span class="t">Spülmaschine ausräumen</span>
+        <span class="m">Mia · Küche · vor 1 Std.</span></span>
+      <span class="pill">+3</span>
+    </div>
+  </div>
+  ${leiste("Start")}`;
+} },
+
+{ name: "11 · Quests mit Raum", bau: () => `
+  <div class="kopf">
+    <div><div class="titel">Quests</div><div class="sub">Punktwerte gelten für alle</div></div>
+  </div>
+  <div class="inhalt">
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">
+      ${["Alle", ...Array.from(Z.raeume)].slice(0, 6).map((r, i) =>
+        `<span class="chip ${i === 0 ? "navy" : ""}" style="white-space:nowrap;padding:6px 11px;font-size:12px">${r}</span>`).join("")}
+    </div>
+    ${[["Badezimmer putzen","Bad",10],["Spülmaschine ausräumen","Küche",3],
+       ["Staubsaugen","Wohnzimmer",6],["Betten beziehen","Schlafzimmer",5]].map(([n, r, p]) => `
+      <div style="display:flex;gap:8px">
+        <div class="rowlink" style="flex:1">
+          <span class="grow"><span class="t">${n}</span><span class="m">${r}</span></span>
+          <span class="pill">${p}</span>
+        </div>
+        <button class="btn ghost" style="width:44px;padding:0">✎</button>
+      </div>`).join("")}
+    <div class="card flat" style="gap:8px">
+      <span class="label" style="margin:0">Beim Ändern neu</span>
+      <div class="feld"><label>Raum</label>
+        <div class="rowlink" style="padding:11px 12px">
+          <span class="grow"><span class="t">Bad</span></span><span style="color:var(--ink-3)">▾</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-2)">Der Raum kommt aus eurer Liste — kein freies
+        Tippen mehr, damit Filter und Aktionen sicher greifen.</div>
+    </div>
+  </div>
+  ${leiste("Quests")}` },
+
+{ name: "12 · Einstellungen", bau: () => `
+  <div class="kopf">
+    <div><div class="titel">Einstellungen</div><div class="sub">Dein Konto und dieses Gerät</div></div>
+  </div>
+  <div class="inhalt">
+    <p class="label">Du</p>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${bildchen(Z.bild, "gr")}
+        <span style="flex:1">
+          <span style="font-size:15px;font-weight:700;display:block">${Z.name}</span>
+          <span style="font-size:12px;color:var(--ink-3)">Bild und Name jederzeit änderbar</span>
+        </span>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost" style="font-size:14px">Bild ändern</button>
+        <button class="btn ghost" style="font-size:14px">Name ändern</button>
+      </div>
+    </div>
+
+    <p class="label">Haushalt</p>
+    <div class="rowlink">
+      <span class="grow"><span class="t">${TYPEN.find((t) => t.id === Z.typ).k}</span>
+        <span class="m">${zahl()} ${zahl() === 1 ? "Person" : "Personen"} · ${Z.raeume.size} Räume</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </div>
+    <div class="rowlink">
+      <span class="grow"><span class="t">Teilnehmer verwalten</span>
+        <span class="m">Einladen, entfernen — nur als Verwalter</span></span>
+      <span class="chip rot">Verwalter</span>
+    </div>
+    <div class="rowlink">
+      <span class="grow"><span class="t">Räume</span>
+        <span class="m">Anlegen, umbenennen, ausblenden</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </div>
+
+    <p class="label">Darstellung</p>
+    <div class="card">
+      <div style="display:flex;gap:6px">
+        <span class="chip" style="padding:6px 12px">System</span>
+        <span class="chip navy" style="padding:6px 12px">Hell</span>
+        <span class="chip" style="padding:6px 12px">Dunkel</span>
+      </div>
+    </div>
+  </div>
+  ${leiste("Start")}` }
+];
+
+/* ---------------------------------------------------------------- Steuerung */
+let i = 0;
+const schirm = document.getElementById("schirm");
+
+function zeichne() {
+  schirm.innerHTML = SCHIRME[i].bau();
+  document.getElementById("schrittname").textContent = SCHIRME[i].name;
+  document.getElementById("zurueck").disabled = i === 0;
+  document.getElementById("vor").disabled = i === SCHIRME.length - 1;
+  document.getElementById("punkte").innerHTML =
+    SCHIRME.map((_, n) => `<i data-sprung="${n}" ${n === i ? "data-an" : ""}></i>`).join("");
+}
+
+function gehe(n) { i = Math.max(0, Math.min(SCHIRME.length - 1, n)); zeichne(); }
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-vor],[data-zu],[data-sprung],[data-bild],[data-typ],[data-zaehl],[data-raum]");
+  if (!el) return;
+
+  if (el.hasAttribute("data-vor")) return gehe(i + 1);
+  if (el.dataset.zu) return gehe(Number(el.dataset.zu));
+  if (el.dataset.sprung) return gehe(Number(el.dataset.sprung));
+
+  if (el.dataset.bild) { merkeNamen(); Z.bild = el.dataset.bild; return zeichne(); }
+
+  if (el.dataset.typ) {
+    Z.typ = el.dataset.typ;
+    if (Z.typ === "familie" && Z.erwachsene + Z.kinder < 2) { Z.erwachsene = 2; Z.kinder = 1; }
+    if (Z.typ === "wg" && Z.personen < 3) Z.personen = 3;
+    return zeichne();
+  }
+
+  if (el.dataset.zaehl) {
+    const [feld, schritt] = el.dataset.zaehl.split(":");
+    const untergrenze = feld === "kinder" ? 0 : feld === "erwachsene" ? 1 : 2;
+    Z[feld] = Math.max(untergrenze, Math.min(12, Z[feld] + Number(schritt)));
+    return zeichne();
+  }
+
+  if (el.dataset.raum) {
+    Z.raeume.has(el.dataset.raum) ? Z.raeume.delete(el.dataset.raum) : Z.raeume.add(el.dataset.raum);
+    return zeichne();
+  }
+});
+
+function merkeNamen() {
+  const feld = document.getElementById("namensfeld");
+  if (feld) Z.name = feld.value.trim() || "Du";
+}
+document.addEventListener("input", (ev) => { if (ev.target.id === "namensfeld") Z.name = ev.target.value; });
+
+document.getElementById("vor").addEventListener("click", () => { merkeNamen(); gehe(i + 1); });
+document.getElementById("zurueck").addEventListener("click", () => { merkeNamen(); gehe(i - 1); });
+document.getElementById("neu").addEventListener("click", () => gehe(0));
+
+zeichne();
+</script>
+</body>
+</html>

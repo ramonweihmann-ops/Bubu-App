@@ -9,6 +9,8 @@ Grundlage ist die Reinigungsquest-Tabelle (22 Quests, 11 Belohnungen, zwei Konte
 Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Projekten.
 
 - **Mockup:** [`docs/mockup.html`](./docs/mockup.html) — im Browser öffnen, der Prototyp oben ist antippbar.
+- **Mockup „Erster Start":** [`web/mockup/`](./web/mockup) — live unter `haus-quest.com/mockup/`.
+  Einrichtung vom Namen bis zum fertigen Haushalt. Noch nichts davon ist gebaut.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
