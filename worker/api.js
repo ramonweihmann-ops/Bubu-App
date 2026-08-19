@@ -16,6 +16,7 @@ import {
   belohnungEmpfang, belohnungNachholen, nachholEntscheiden,
   anfrageAendern, anfrageZuruecknehmen
 } from "./rueckmeldung.js";
+import { zeitraum, urlaubAnlegen, urlaubBeenden, urlaubeVon, urlaubsLage } from "./urlaub.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -100,6 +101,8 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "quests" && teile[2] === "raum") return json(await questRaum(env, ich, teile[1], koerper.raum));
     if (pfad === "raeume") return json(await raumAnlegen(env, ich, koerper));
     if (teile[0] === "raeume" && teile[1]) return json(await raumAendern(env, ich, teile[1], koerper));
+
+    if (teile[0] === "urlaub" && teile[2] === "beenden") return json(await urlaubBeenden(env, ich, teile[1]));
 
     if (pfad === "proposals") return json(await vorschlagen(env, ich, koerper));
     if (teile[0] === "proposals" && teile[2] === "vote") return json(await abstimmen(env, ich, teile[1], koerper.antwort));
@@ -573,6 +576,7 @@ async function zustand(env, ich) {
       return { ...b, kosten_jetzt: wert, rabatt: aktion ? aktion.prozent : 0 };
     }),
     aktionen: aktionen.results,
+    urlaube: await urlaubeVon(env, paar),
     plan: await planListe(env, paar, ich.id),
     belohnungenOffen: await offeneBelohnungen(env, paar),
     meldungen: meldungen.results,
@@ -594,6 +598,8 @@ async function zustand(env, ich) {
       tage: anhang(p).tage || null,
       rhythmus: anhang(p).rhythmus || null,
       wiederkehrend: anhang(p).wiederkehrend,
+      von: anhang(p).von || null,
+      bis: anhang(p).bis || null,
       alt_rhythmus: p.quest_rhythmus || null,
       alt_wiederkehrend: !!p.quest_wiederkehrend,
       status: p.status,
@@ -843,9 +849,11 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
 async function vorschlagen(env, ich, daten) {
   const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "", bestaetigen = true } = daten;
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
-                 "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe"];
+                 "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe",
+                 "urlaub_person", "urlaub_haushalt"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
+  if (art === "urlaub_person" || art === "urlaub_haushalt") return urlaubVorschlagen(env, ich, daten);
   if (art === "neue_aktion") return aktionVorschlagen(env, ich, daten);
   if (art === "neue_aufgabe" || art === "aufgabe_aendern" || art === "delete_aufgabe") {
     return aufgabeVorschlagen(env, ich, daten);
@@ -925,6 +933,59 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
   }
   return { ok: true, status, wert: vorschlag.new_value };
 }
+
+/** Urlaub vorschlagen — für sich selbst oder für den ganzen Haushalt. Beides
+ *  beschließt der Haushalt gemeinsam; wirksam wird es erst mit der letzten
+ *  Stimme, deshalb steht hier nur der Vorschlag. */
+async function urlaubVorschlagen(env, ich, { art, von, bis, grund = "" }) {
+  const { von: a, bis: b, tage } = zeitraum({ von, bis });
+  const haushalt = art === "urlaub_haushalt";
+
+  // Zwei gleichzeitig ergäben zwei Verschiebungen — für dieselbe Zeit einmal
+  // ist genug. Bei „nur ich" zählt nur der eigene.
+  const offen = await env.DB.prepare(
+    `select 1 as da from proposals
+      where couple_id = ?1 and status = 'offen' and kind = ?2
+        and (?2 = 'urlaub_haushalt' or created_by = ?3)`
+  ).bind(ich.couple_id, art, ich.id).first();
+  if (offen) throw new Fehler("Dazu läuft schon eine Abstimmung");
+
+  const laufend = await env.DB.prepare(
+    `select 1 as da from urlaube
+      where couple_id = ?1 and beendet_am is null and bis >= ?2 and von <= ?3
+        and art = ?4 and (?4 = 'haushalt' or member_id = ?5)`
+  ).bind(ich.couple_id, a, b, haushalt ? "haushalt" : "person", ich.id).first();
+  if (laufend) throw new Fehler("Für diese Zeit ist schon ein Urlaub eingetragen");
+
+  const titel = haushalt ? `${hausWort(await hausArt(env, ich.couple_id))} macht Urlaub`
+                         : `${vorname(ich.name)} macht Urlaub`;
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, new_value, name, reason, payload, created_by)
+       values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+    ).bind(vorschlag, ich.couple_id, art, tage, titel, String(grund).slice(0, 300),
+           JSON.stringify({ von: a, bis: b, member_id: haushalt ? null : ich.id }), ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+
+  await meldeAllen(env, ich, {
+    art: "info", quelle: vorschlag,
+    titel: `${vorname(ich.name)} schlägt Urlaub vor`,
+    text: haushalt
+      ? `${a} bis ${b} — alle Fälligkeiten rücken um ${tage} ${tage === 1 ? "Tag" : "Tage"} nach hinten. Deine Stimme fehlt.`
+      : `${a} bis ${b} — ${tage} ${tage === 1 ? "Tag" : "Tage"} ohne Mahnungen und Gruppenstrafe. Deine Stimme fehlt.`
+  });
+  return { ok: true, tage };
+}
+
+/** Wie der Haushalt sich selbst nennt — „die WG", „die Familie", … */
+async function hausArt(env, paar) {
+  const haus = await env.DB.prepare("select art from couples where id = ?1").bind(paar).first();
+  return haus?.art || "sonstige";
+}
+const hausWort = (art) => ({ wg: "Die WG", familie: "Die Familie", paar: "Wir" })[art] || "Der Haushalt";
 
 /** Eine Aktion vorschlagen: doppelte Cleanies oder Rabatt, befristet, auf Wunsch
  *  auf einen Raum begrenzt. Gültig wird sie erst mit beiden Stimmen. */
@@ -1072,14 +1133,18 @@ async function auszaehlen(env, vorschlag) {
     neue_aufgabe: () => questMitRhythmus(env, vorschlag),
     aufgabe_aendern: () => rhythmusSetzen(env, vorschlag),
     delete_aufgabe: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
-      .bind(vorschlag.target_id, vorschlag.couple_id)
+      .bind(vorschlag.target_id, vorschlag.couple_id),
+    urlaub_person: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
+    urlaub_haushalt: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag))
   }[vorschlag.kind];
 
   if (!bauplan) throw new Fehler("Unbekannte Art von Vorschlag");
-  const anwenden = bauplan();
+  // Ein Urlaub bewegt mehrere Tabellen auf einmal; alles andere genau eine.
+  const anwenden = await bauplan();
+  const schritte = anwenden?.anweisungen || (Array.isArray(anwenden) ? anwenden : [anwenden]);
 
   await env.DB.batch([
-    anwenden,
+    ...schritte,
     env.DB.prepare("update proposals set status = 'bestaetigt', decided_at = datetime('now') where id = ?1 and status = 'offen'")
       .bind(vorschlag.id)
   ]);

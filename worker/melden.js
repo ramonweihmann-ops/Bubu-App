@@ -36,9 +36,12 @@ export async function mitgliederVon(env, paarId) {
 }
 
 /** Dasselbe Ereignis an alle außer einer Person. Wer etwas meldet, muss nicht
- *  wissen, wer gerade Zeit hat — jeder darf bestätigen, also erfährt es jeder. */
-export async function meldeAlle(env, paarId, ausserId, ereignis) {
+ *  wissen, wer gerade Zeit hat — jeder darf bestätigen, also erfährt es jeder.
+ *
+ *  „ausser" darf auch eine Menge sein: im Urlaub bekommt niemand Mahnungen. */
+export async function meldeAlle(env, paarId, ausser, ereignis) {
+  const raus = ausser instanceof Set ? ausser : new Set(ausser === null || ausser === undefined ? [] : [ausser]);
   for (const wer of await mitgliederVon(env, paarId)) {
-    if (wer !== ausserId) await melde(env, paarId, wer, ereignis);
+    if (!raus.has(wer)) await melde(env, paarId, wer, ereignis);
   }
 }

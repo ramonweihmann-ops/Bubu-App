@@ -263,7 +263,7 @@ function zeichne() {
     start: schirmStart, quests: schirmQuests, pruefen: schirmPruefen,
     belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
     statistik: schirmStatistik, einstellungen: schirmEinstellungen,
-    raeume: schirmRaeume, haushalt: schirmHaushalt,
+    raeume: schirmRaeume, haushalt: schirmHaushalt, urlaub: schirmUrlaub,
     plan: schirmPlan, aufgabe: schirmAufgabe
   }[ansicht] || schirmStart;
 
@@ -586,6 +586,28 @@ const ueberfaellig = () => plan().filter((a) => a.offen < 0 && !a.pruefung);
 const meinePlanSachen = () => plan().filter((a) =>
   a.dran === S.ich.id || (a.zugewiesen === S.ich.id && a.offen <= 0 && !a.pruefung));
 
+/* ---------- Urlaub ---------- */
+
+const heute = () => new Date().toISOString().slice(0, 10);
+const urlaube = () => S.urlaube || [];
+const laeuft = (u) => u.von <= heute() && u.bis >= heute();
+/** Der laufende Haushaltsurlaub, falls einer läuft. */
+const hausUrlaub = () => urlaube().find((u) => u.art === "haushalt" && laeuft(u)) || null;
+/** Mein eigener laufender Urlaub. */
+const meinUrlaub = () => urlaube().find((u) => u.art === "person" && u.member_id === S.ich.id && laeuft(u)) || null;
+/** Alle, die heute weg sind — auch die anderen. */
+const abwesende = () => urlaube().filter((u) => u.art === "person" && laeuft(u));
+/** Was noch kommt, aber noch nicht angefangen hat. */
+const kommendeUrlaube = () => urlaube().filter((u) => u.von > heute());
+
+const datumKurz = (d) => d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.` : "";
+const TAG_MS = 86400000;
+const alsZahl = (d) => Date.parse(d + "T12:00:00Z");
+const tageZwischen = (von, bis) => Math.round((alsZahl(bis) - alsZahl(von)) / TAG_MS) + 1;
+const nochTage = (u) => Math.max(0, tageZwischen(heute(), u.bis));
+/** Wie der Haushalt von sich spricht. */
+const hausWort = () => ({ wg: "Die WG", familie: "Die Familie", paar: "Wir" })[S.haushalt?.art] || "Der Haushalt";
+
 const RHYTHMEN = ["1× pro Woche", "2× pro Woche", "3× pro Woche", "1× alle 2 Wochen", "1× im Monat", "1× im Quartal"];
 const RHYTHMUS_TAGE = { "1× pro Woche": 7, "2× pro Woche": 3, "3× pro Woche": 2,
                         "1× alle 2 Wochen": 14, "1× im Monat": 30, "1× im Quartal": 90 };
@@ -686,6 +708,8 @@ function schirmStart() {
     </div>
     <div class="body">
       ${kontenTafel()}
+
+      ${urlaubBanner()}
 
       ${aktionsBanner()}
 
@@ -1128,6 +1152,8 @@ function abstimmungWorum(a) {
     case "delete_quest": return "Bestehende Quest — soll gelöscht werden";
     case "delete_reward": return "Bestehende Belohnung — soll gelöscht werden";
     case "neue_aktion": return "Befristete Aktion für alle";
+    case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
+    case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     default: return "Vorschlag";
   }
 }
@@ -1147,6 +1173,11 @@ function abstimmungWandel(a) {
     return a.alt_wiederkehrend && a.alt_rhythmus
       ? `<span class="old">${esc(a.alt_rhythmus)}</span>→<span class="new">${esc(a.rhythmus || "")}</span>`
       : `<span class="old">jederzeit meldbar</span>→<span class="new">${esc(a.rhythmus || "")}</span>`;
+  }
+  if (a.art === "urlaub_person" || a.art === "urlaub_haushalt") {
+    return `<span class="new" style="color:var(--urlaub)">${datumKurz(a.von)} – ${datumKurz(a.bis)}</span>
+            <span style="color:var(--ink-2);font-weight:400">· ${a.neu} ${a.neu === 1 ? "Tag" : "Tage"}${
+              a.art === "urlaub_haushalt" ? " nach hinten" : " ohne Mahnung und Strafe"}</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
   if (a.art === "neue_aktion") {
@@ -1550,6 +1581,7 @@ function schirmPlan() {
       <button class="iconbtn" data-sheet="neue-aufgabe" aria-label="Aufgabe vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${urlaubBanner()}
       ${liste.length ? `
       <div class="btnrow">
         <button class="btn ${planGruppiert ? "ghost" : "dark"}" style="font-size:13px;padding:9px"
@@ -1851,6 +1883,17 @@ function schirmEinstellungen() {
         <span style="color:var(--ink-3)">›</span>
       </button>
 
+      <p class="section-label">Urlaub</p>
+      <button class="rowlink" data-go="urlaub"
+        style="${meinUrlaub() || hausUrlaub() ? "border-color:var(--urlaub)" : ""}">
+        <span class="avatar sm" style="background:var(--urlaub-tint);color:var(--urlaub)">${icon("i-koffer", 17)}</span>
+        <span class="grow"><span class="t">Urlaubsmodus</span>
+          <span class="m">${hausUrlaub() ? `${esc(hausWort())} ${beugung("ist", "sind")} bis ${datumKurz(hausUrlaub().bis)} weg`
+            : meinUrlaub() ? `Du bist bis ${datumKurz(meinUrlaub().bis)} weg`
+            : `Für dich oder für ${esc(hausWort().toLowerCase())}`}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>
+
       <p class="section-label">Benachrichtigungen</p>
       ${pushZeile.knopf ? `
       <button class="rowlink" data-push>
@@ -1871,6 +1914,114 @@ function schirmEinstellungen() {
           <span class="m">Kompletter Stand als Datei</span></span><span style="color:var(--ink-3)">›</span>
       </button>
       <button class="btn text block" data-abmelden>Abmelden</button>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ Urlaub */
+
+/** Ein laufender oder kommender Urlaub als Karte. */
+function urlaubKarte(u) {
+  const haushalt = u.art === "haushalt";
+  const meiner = !haushalt && u.member_id === S.ich.id;
+  const kommt = u.von > heute();
+  const darfBeenden = haushalt ? (u.created_by === S.ich.id || S.haushalt.ichVerwalte) : meiner;
+
+  return `
+    <div class="card urlaub">
+      <div style="display:flex;align-items:center;gap:11px">
+        <span class="avatar sm" style="background:var(--bg);color:var(--urlaub)">
+          ${icon(haushalt ? "i-home" : "i-koffer", 18)}</span>
+        <span style="flex:1;min-width:0">
+          <span style="font-size:14px;font-weight:700;display:block">${
+            haushalt ? `${esc(hausWort())} ${beugung("ist", "sind")} im Urlaub`
+                     : `${esc(meiner ? "Du bist" : nameVon(u.member_id) + " ist")} im Urlaub`}</span>
+          <span style="font-size:11.5px;color:var(--ink-2)">${datumKurz(u.von)} – ${datumKurz(u.bis)}${
+            kommt ? " · fängt noch an" : ` · noch ${nochTage(u)} ${nochTage(u) === 1 ? "Tag" : "Tage"}`}</span>
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--ink-2)">${haushalt
+        ? `Alles im Haushaltsplan ist um ${u.verschoben} ${u.verschoben === 1 ? "Tag" : "Tage"} nach hinten gerückt.
+           Solange nichts mahnt und nichts bestraft.`
+        : "Keine Mahnungen, keine Gruppenstrafe, nicht in der Rangliste. Der Plan bleibt, wie er ist."}</div>
+      ${u.grund ? `<div style="font-size:12px;color:var(--ink-2)">„${esc(u.grund)}“</div>` : ""}
+      ${darfBeenden ? `<button class="btn text block" data-urlaub-beenden="${u.id}"
+        style="color:var(--urlaub)">${kommt ? "Doch nicht" : "Früher zurück"}</button>` : ""}
+    </div>`;
+}
+
+/** Der kurze Hinweis oben auf Start und im Plan. */
+function urlaubBanner() {
+  const h = hausUrlaub();
+  if (h) return `
+    <div class="card urlaub" style="flex-direction:row;align-items:center;gap:11px">
+      <span class="avatar sm" style="background:var(--bg);color:var(--urlaub)">${icon("i-home", 18)}</span>
+      <span style="flex:1"><span style="font-size:13.5px;font-weight:700;display:block">
+        ${esc(hausWort())} ${beugung("ist", "sind")} im Urlaub</span>
+        <span style="font-size:11.5px;color:var(--ink-2)">Noch ${nochTage(h)} ${nochTage(h) === 1 ? "Tag" : "Tage"} ·
+          alles um ${h.verschoben} ${h.verschoben === 1 ? "Tag" : "Tage"} nach hinten gerückt</span></span>
+    </div>`;
+
+  const weg = abwesende();
+  if (!weg.length) return "";
+  const meiner = weg.find((u) => u.member_id === S.ich.id);
+  return `
+    <div class="card urlaub" style="flex-direction:row;align-items:center;gap:11px">
+      <span class="avatar sm" style="background:var(--bg);color:var(--urlaub)">${icon("i-koffer", 18)}</span>
+      <span style="flex:1"><span style="font-size:13.5px;font-weight:700;display:block">${
+        meiner ? "Du bist im Urlaub"
+               : `${esc(weg.map((u) => nameVon(u.member_id)).join(", "))} ${weg.length === 1 ? "ist" : "sind"} im Urlaub`}</span>
+        <span style="font-size:11.5px;color:var(--ink-2)">${meiner
+          ? `Noch ${nochTage(meiner)} ${nochTage(meiner) === 1 ? "Tag" : "Tage"} · keine Mahnungen, keine Gruppenstrafe`
+          : "Ohne Mahnung und ohne Gruppenstrafe — und nicht in der Rangliste"}</span></span>
+    </div>`;
+}
+
+function schirmUrlaub() {
+  const laufend = urlaube().filter((u) => laeuft(u));
+  const kommend = kommendeUrlaube();
+  const offen = offeneAbstimmungen().filter((a) => a.art === "urlaub_person" || a.art === "urlaub_haushalt");
+
+  return `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="einstellungen" aria-label="Zurück">‹</button>
+      <div><div class="title">Urlaubsmodus</div><div class="sub">Zwei Arten, eine Abstimmung</div></div>
+    </div>
+    <div class="body">
+      ${laufend.map(urlaubKarte).join("")}
+      ${kommend.length ? `<p class="section-label">Angemeldet</p>${kommend.map(urlaubKarte).join("")}` : ""}
+      ${offen.length ? `
+      <p class="section-label">Steht zur Abstimmung</p>
+      ${offen.map(abstimmungKarte).join("")}` : ""}
+
+      <p class="section-label">Neu anmelden</p>
+      <div class="note">${icon("i-vote", 16)}<span>Beides ${beugung("muss", "müssen")} ${esc(andereName())}
+        mitbeschließen. Solange nicht alle zugestimmt haben, ändert sich nichts.</span></div>
+
+      <div class="wahl">
+        <button class="urlaubsart" data-urlaubsart="urlaub_person" aria-pressed="true">
+          <span class="ico">${icon("i-koffer", 19)}</span>
+          <span><span class="t">Nur mich</span>
+            <span class="m">Ich bin weg, für ${esc(andereName())} läuft alles weiter. Ich bekomme keine
+              Mahnungen und zahle keine Gruppenstrafe mit.</span></span>
+        </button>
+        <button class="urlaubsart" data-urlaubsart="urlaub_haushalt" aria-pressed="false">
+          <span class="ico">${icon("i-home", 19)}</span>
+          <span><span class="t">${esc(hausWort())}</span>
+            <span class="m">Wir sind alle weg. Jede Fälligkeit im Haushaltsplan rückt um dieselbe
+              Zeit nach hinten.</span></span>
+        </button>
+      </div>
+
+      <div class="zweifeld">
+        <div class="field"><label>Von</label><input type="date" id="uvon" value="${heute()}"></div>
+        <div class="field"><label>Bis</label><input type="date" id="ubis" value="${heute()}"></div>
+      </div>
+      <div class="note" id="udauer">${icon("i-info", 16)}<span><b>1 Tag.</b> Der letzte Tag zählt mit.</span></div>
+      <div class="field"><label>Warum</label>
+        <textarea id="ugrund" placeholder="optional" maxlength="300"></textarea></div>
+
+      <button class="btn block" data-senden="urlaub"
+        style="background:var(--urlaub);color:#fff">Zur Abstimmung geben</button>
     </div>`;
 }
 
@@ -2323,7 +2474,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2360,6 +2511,20 @@ document.addEventListener("click", async (ev) => {
   }
 
   if (el.dataset.plansicht) { planGruppiert = el.dataset.plansicht === "raum"; zeichne(); return; }
+
+  // Die Art wechseln, ohne den Schirm neu zu zeichnen — sonst wären die schon
+  // eingetippten Daten wieder weg.
+  if (el.dataset.urlaubsart) {
+    for (const k of document.querySelectorAll(".urlaubsart")) k.setAttribute("aria-pressed", String(k === el));
+    return;
+  }
+
+  if (el.dataset.urlaubBeenden) {
+    const ergebnis = await api(`urlaub/${el.dataset.urlaubBeenden}/beenden`, {});
+    await laden();
+    toast(ergebnis.art === "haushalt" ? "Urlaub beendet — der Plan läuft wieder." : "Willkommen zurück.");
+    return;
+  }
 
   if (el.hasAttribute("data-wiederkehrend")) {
     const an = el.getAttribute("aria-pressed") !== "true";
@@ -2631,6 +2796,16 @@ document.addEventListener("click", async (ev) => {
       await api(`${el.dataset.bereich}/${el.dataset.id}/aendern`, körper);
       sheetZu(); await laden();
       toast(`${andereName()} ${beugung("sieht", "sehen")} deine Ergänzung.`);
+      return;
+    }
+
+    if (el.dataset.senden === "urlaub") {
+      const art = document.querySelector('.urlaubsart[aria-pressed="true"]')?.dataset.urlaubsart || "urlaub_person";
+      const ergebnis = await api("proposals", {
+        art, von: wert("uvon"), bis: wert("ubis"), grund: wert("ugrund")
+      });
+      await laden();
+      toast(`${ergebnis.tage} ${ergebnis.tage === 1 ? "Tag" : "Tage"} — steht jetzt zur Abstimmung.`);
       return;
     }
 
@@ -2954,6 +3129,21 @@ function listeZeichnen() {
   if (!behaelter) return;
   behaelter.innerHTML = ansicht === "quests" ? questListe() : belohnungsListe();
 }
+
+/** Die Tageszahl beim Urlaub rechnet mit, während man tippt — sonst weiß
+ *  niemand, worüber gleich abgestimmt wird. */
+document.addEventListener("input", (ev) => {
+  if (!ev.target.closest("#uvon, #ubis")) return;
+  const hinweis = document.getElementById("udauer")?.querySelector("span");
+  if (!hinweis) return;
+  const von = document.getElementById("uvon")?.value;
+  const bis = document.getElementById("ubis")?.value;
+  if (!von || !bis) { hinweis.innerHTML = "Wähle einen Zeitraum."; return; }
+  const tage = tageZwischen(von, bis);
+  hinweis.innerHTML = tage < 1
+    ? "Das Ende liegt vor dem Anfang."
+    : `<b>${tage} ${tage === 1 ? "Tag" : "Tage"}.</b> Der letzte Tag zählt mit.`;
+});
 
 document.addEventListener("input", (ev) => {
   const feld = ev.target.closest("#suchfeld");

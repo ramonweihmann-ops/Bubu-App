@@ -15,6 +15,7 @@
 // Gleichstand die kleinere Jahreszahl. Das sorgt für den Wechsel.
 
 import { melde, meldeAlle, mitgliederVon } from "./melden.js";
+import { urlaubsLage } from "./urlaub.js";
 
 const id = () => crypto.randomUUID();
 const vorname = (n) => String(n || "").split(" ")[0];
@@ -163,6 +164,11 @@ export async function aufgabeDetail(env, ich, questId) {
  * gelaufen ist — deshalb schadet doppeltes Aufrufen nichts.
  */
 export async function planNachziehen(env, paar) {
+  const { abwesend, pausiert } = await urlaubsLage(env, paar);
+  // Im Haushaltsurlaub ruht der Plan: nichts wird vergeben, nichts gemahnt,
+  // nichts bestraft. Die Fälligkeiten stehen ohnehin schon verschoben.
+  if (pausiert) return;
+
   const haus = await env.DB.prepare("select strafe_an from couples where id = ?1").bind(paar).first();
   const quests = await env.DB.prepare(
     "select * from quests where couple_id = ?1 and active = 1 and wiederkehrend = 1"
@@ -172,21 +178,23 @@ export async function planNachziehen(env, paar) {
     try {
       const offen = tageBis(q.faellig_am);
       if (offen === null) continue;
-      if (offen <= 1 && q.vergabe_runde !== q.faellig_am && !q.zugewiesen) await vergeben(env, paar, q);
-      if (offen < 0 && q.mahnung_runde !== q.faellig_am) await mahnen(env, paar, q);
-      if (offen <= -7 && q.strafe_runde !== q.faellig_am && haus?.strafe_an) await strafen(env, paar, q);
+      if (offen <= 1 && q.vergabe_runde !== q.faellig_am && !q.zugewiesen) await vergeben(env, paar, q, abwesend);
+      if (offen < 0 && q.mahnung_runde !== q.faellig_am) await mahnen(env, paar, q, abwesend);
+      if (offen <= -7 && q.strafe_runde !== q.faellig_am && haus?.strafe_an) await strafen(env, paar, q, abwesend);
     } catch {
       // Eine einzelne Aufgabe darf das Laden der App nie verhindern.
     }
   }
 }
 
-/** Einen Tag vor Fälligkeit steht die Reihenfolge fest. */
-async function vergeben(env, paar, q) {
+/** Einen Tag vor Fälligkeit steht die Reihenfolge fest. Wer im Urlaub ist,
+ *  steht nicht drin: sonst wartet die Aufgabe zwei Wochen auf eine Entscheidung
+ *  aus dem Ausland. */
+async function vergeben(env, paar, q, abwesend = new Set()) {
   const bewerber = await env.DB.prepare(
     "select member_id from bewerbungen where quest_id = ?1 and runde = ?2 and status = 'offen'"
   ).bind(q.id, q.faellig_am).all();
-  const ids = bewerber.results.map((b) => b.member_id);
+  const ids = bewerber.results.map((b) => b.member_id).filter((w) => !abwesend.has(w));
   if (!ids.length) return;                       // Niemand will — bleibt für alle offen.
 
   const personen = await env.DB.prepare(
@@ -224,10 +232,10 @@ async function vergeben(env, paar, q) {
   }
 }
 
-async function mahnen(env, paar, q) {
+async function mahnen(env, paar, q, abwesend = new Set()) {
   await env.DB.prepare("update quests set mahnung_runde = ?1 where id = ?2").bind(q.faellig_am, q.id).run();
   const tage = -tageBis(q.faellig_am);
-  await meldeAlle(env, paar, null, {
+  await meldeAlle(env, paar, abwesend, {
     art: "info",
     titel: `${q.name} ist überfällig`,
     text: `${tage} ${tage === 1 ? "Tag" : "Tage"} über der Zeit. Wer macht sie?`
@@ -235,21 +243,31 @@ async function mahnen(env, paar, q) {
 }
 
 /** Nach sieben überfälligen Tagen zahlt der ganze Haushalt — es war eine
- *  Gemeinschaftsaufgabe, also trifft es alle gleich. */
-async function strafen(env, paar, q) {
-  const alle = await mitgliederVon(env, paar);
+ *  Gemeinschaftsaufgabe, also trifft es alle gleich.
+ *
+ *  Wer im Urlaub ist, zahlt nicht mit. Die Anwesenden zahlen deshalb aber auch
+ *  nicht mehr: den Ausfall umzulegen hieße, sie für die Abwesenheit der anderen
+ *  zu bestrafen. Die Strafe wird kleiner, nicht schwerer. */
+async function strafen(env, paar, q, abwesend = new Set()) {
+  const zahlen = (await mitgliederVon(env, paar)).filter((wer) => !abwesend.has(wer));
+  if (!zahlen.length) {
+    // Alle weg, ohne Haushaltsurlaub: dann steht die Runde einfach still.
+    await env.DB.prepare("update quests set strafe_runde = ?1 where id = ?2").bind(q.faellig_am, q.id).run();
+    return;
+  }
+
   await env.DB.batch([
     env.DB.prepare("update quests set strafe_runde = ?1 where id = ?2").bind(q.faellig_am, q.id),
-    ...alle.map((wer) => env.DB.prepare(
+    ...zahlen.map((wer) => env.DB.prepare(
       `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
        values (?1, ?2, ?3, ?4, ?5, 'strafe', ?6)`
     ).bind(id(), paar, wer, -q.points, `Gruppenstrafe: ${q.name}`, `${q.id}:${q.faellig_am}`))
   ]);
 
-  await meldeAlle(env, paar, null, {
+  await meldeAlle(env, paar, abwesend, {
     art: "abgelehnt",
     titel: `${q.name} — sieben Tage überfällig`,
-    text: `Gruppenstrafe: ${q.points} Cleanies für jeden.`,
+    text: `Gruppenstrafe: ${q.points} Cleanies für jeden, der da ist.`,
     punkte: -q.points
   });
 }

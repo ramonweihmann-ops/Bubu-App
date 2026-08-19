@@ -24,6 +24,8 @@
   --kontrast-bg: #152c4f;
   --kontrast-ink: #ffffff;
   --akzent-flaeche: #ec0f06;
+  --urlaub: #0f8a6a;
+  --urlaub-tint: #e4f5ef;
   --schleier: rgba(21, 44, 79, .5);
 
   --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
@@ -51,6 +53,8 @@
   /* Gefüllte Flächen tragen weißen Text erst ab diesem Rot — das hellere
      --accent bleibt für Schrift und Linien auf dunklem Grund. */
   --akzent-flaeche: #d8271f;
+  --urlaub: #4fc7a1;
+  --urlaub-tint: #16352c;
   --schleier: rgba(4, 9, 18, .66);
 
   --reihe-ich: #6ba4ff;
@@ -162,6 +166,21 @@ body {
 .pts-pill .cleanie, .card.navy .cleanie { filter: brightness(1.9) saturate(.6); }
 :root[data-theme="dunkel"] .pts-pill .cleanie,
 :root[data-theme="dunkel"] .card.navy .cleanie { filter: none; }
+/* Urlaub bekommt eine eigene Farbe: nicht Rot (das warnt), nicht Navy (das ist
+ * überall), sondern ein ruhiges Grün — abwesend ist kein Fehler. */
+.card.urlaub { border-color: var(--urlaub); background: var(--urlaub-tint); }
+.wahl { display: grid; gap: 8px; }
+.urlaubsart {
+  font: inherit; text-align: left; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--bg); padding: 12px 13px; cursor: pointer; color: inherit;
+  display: flex; gap: 11px; align-items: flex-start; width: 100%;
+}
+.urlaubsart[aria-pressed="true"] { border-color: var(--urlaub); background: var(--urlaub-tint); }
+.urlaubsart .ico { flex: none; color: var(--urlaub); display: grid; place-items: center; padding-top: 1px; }
+.urlaubsart .t { display: block; font-size: 14px; font-weight: 700; }
+.urlaubsart .m { display: block; font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
+.zweifeld { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
 /* Eine eigene abgeschickte Sache im Wartekasten — sieht aus wie eine Zeile,
  * ist aber ein Knopf: solange niemand entschieden hat, gehört sie noch mir. */
 .offene-zeile {

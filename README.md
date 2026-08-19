@@ -20,7 +20,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Quest-Liste mit Cleanies":** [`web/mockup-quests/`](./web/mockup-quests) — live unter
   `haus-quest.com/mockup-quests/`. Drei Entwürfe für den Cleanies-Chip; gewählt wurde C.
 - **Mockup „Urlaubsmodus":** [`web/mockup-urlaub/`](./web/mockup-urlaub) — live unter
-  `haus-quest.com/mockup-urlaub/`. Noch nicht gebaut — wartet auf Zustimmung.
+  `haus-quest.com/mockup-urlaub/`. Der Entwurf, aus dem der Urlaubsmodus entstanden ist.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
@@ -212,6 +212,29 @@ weckt den Worker deshalb jeden Morgen um 6 Uhr UTC und zieht sie für alle Haush
 beim Laden der App passiert dasselbe noch einmal. Doppelt schadet nicht, weil jeder Schritt
 am Fälligkeitsdatum festhält, dass er gelaufen ist.
 
+## Urlaubsmodus
+
+Zwei Dinge, die beide „Urlaub" heißen. Beide beschließt der Haushalt gemeinsam, beide
+stehen unter **Einstellungen → Urlaubsmodus**, und beide lassen sich vorzeitig beenden,
+ohne noch einmal abzustimmen — früher zurück zu sein ist nie ein Vorteil.
+
+| | **Nur eine Person** | **Der ganze Haushalt** |
+| --- | --- | --- |
+| Fälligkeiten | bleiben stehen | rücken um die Urlaubstage nach hinten |
+| Mahnungen | gehen an alle anderen | fallen weg, solange er läuft |
+| Gruppenstrafe | die Person zahlt nicht mit; die Anwesenden zahlen deshalb **nicht mehr**, sondern weiter nur ihren eigenen Anteil | fällt weg, solange er läuft |
+| Rangliste | die Person wird übersprungen | ruht |
+| Melden, Belohnungen, Cleanies senden | unberührt | unberührt |
+| Beenden | die Person selbst | wer ihn vorgeschlagen hat, oder die Verwaltung |
+
+Ein Rückstand wird beim Haushaltsurlaub **verschoben, nicht erlassen**: was vorher überfällig
+war, ist es danach wieder, mit demselben Abstand. Sonst wäre „kurz vor dem Urlaub nichts mehr
+machen" eine Strategie. Wird erst mitten im Urlaub abgestimmt, verschiebt die App nur noch die
+verbleibenden Tage — sonst bekäme der Plan Tage geschenkt, die längst vorbei sind.
+
+Die Zähler „am Stück" und „dieses Jahr" laufen im Urlaub nicht weiter, weil sie aus den
+Meldungen kommen. Wer zurückkommt, steht also nicht schlechter da als vorher.
+
 ## Was von mir noch offen ist
 
 Auf der Startseite steht unter **Wartet auf …** alles, was ich losgeschickt habe und was noch
@@ -286,7 +309,8 @@ web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
 worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
                 api.js (Regeln), plan.js (Quests mit Rhythmus),
-                rueckmeldung.js (Rückfragen, Empfang, Strafe),
+                rueckmeldung.js (Rückfragen, Empfang, Strafe, Zurückziehen),
+                urlaub.js (Urlaubsmodus),
                 melden.js und push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 docs/           Mockup und Anleitungen
