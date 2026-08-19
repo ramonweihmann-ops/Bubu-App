@@ -57,6 +57,9 @@ const andere = () => S?.andere || [];
 const mehrere = () => andere().length > 1;
 const andereName = () => mehrere() ? "die anderen" : (andere()[0] ? vorname(andere()[0].name) : "niemand");
 const beugung = (einzahl, mehrzahl) => mehrere() ? mehrzahl : einzahl;
+/** Am Satzanfang wird aus „die anderen“ ein „Die anderen“. Namen bleiben, wie
+ *  sie sind — sie sind ohnehin schon groß. */
+const gross = (text) => String(text).charAt(0).toUpperCase() + String(text).slice(1);
 const allein = () => andere().length === 0;
 const nameVon = (id) => id === S?.ich?.id ? "Du"
   : vorname((S?.mitglieder || []).find((m) => m.id === id)?.name) || "jemand";
@@ -605,18 +608,22 @@ const meineOffenen = () => S.meldungen.filter((m) => m.claimed_by === S.ich.id);
  *  Anträge auf Belohnungen und angebotene Übertragungen. */
 const meineOffenenSachen = () => [
   ...meineOffenen().map((m) => ({
+    id: m.id, bereich: "claims",
     titel: m.quest + (m.quantity > 1 ? ` · ${m.quantity}×` : ""), was: "Quest gemeldet",
     zusatz: m.rueckfrage ? "Rückfrage offen" : "", punkte: `+${cl(m.quantity * m.points_each)}`,
-    created_at: m.created_at
+    nachricht: m.note || "", created_at: m.created_at
   })),
   ...S.antraege.filter((a) => a.requested_by === S.ich.id).map((a) => ({
+    id: a.id, bereich: "requests",
     titel: a.belohnung, was: "Belohnung beantragt",
     zusatz: a.rueckfrage ? "Rückfrage offen" : (a.wish_date || ""), punkte: `−${cl(a.cost)}`,
-    created_at: a.created_at
+    nachricht: a.message || "", termin: a.wish_date || "", created_at: a.created_at
   })),
   ...S.uebertragungen.filter((u) => u.from_member === S.ich.id).map((u) => ({
+    id: u.id, bereich: "transfers",
     titel: `Cleanies an ${nameVon(u.to_member)}`, was: "Übertragung angeboten",
-    zusatz: "", punkte: `−${cl(u.amount)}`, created_at: u.created_at
+    zusatz: "", punkte: `−${cl(u.amount)}`,
+    nachricht: u.message || "", created_at: u.created_at
   }))
 ].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 const belohnungenOffen = () => S.belohnungenOffen || [];
@@ -767,17 +774,20 @@ function schirmStart() {
       <p class="section-label">Wartet auf ${esc(andereName())}</p>
       <div class="card" style="gap:9px">
         ${meineOffenenSachen().map((o) => `
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="flex:1;min-width:0">
+          <button class="offene-zeile" data-sheet="meins" data-bereich="${o.bereich}" data-id="${o.id}">
+            <span style="flex:1;min-width:0;text-align:left">
               <span style="font-size:13.5px;display:block">${esc(o.titel)}</span>
               <span style="font-size:11.5px;color:var(--ink-3)">${esc(o.was)}${
                 o.zusatz ? ` · ${esc(o.zusatz)}` : ""} · ${zeitpunkt(o.created_at)}</span>
+              ${o.nachricht ? `<span style="font-size:11.5px;color:var(--ink-2);display:block">„${esc(o.nachricht)}“</span>` : ""}
             </span>
             <span class="pts-pill">${o.punkte}</span>
-          </div>`).join("")}
+            <span style="color:var(--ink-3);flex:none">›</span>
+          </button>`).join("")}
       </div>
       <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">
-        Offen, bis ${esc(andereName())} ${beugung("entscheidet", "entscheiden")}.</div>` : ""}
+        Offen, bis ${esc(andereName())} ${beugung("entscheidet", "entscheiden")}.
+        Solange kannst du nachbessern oder zurückziehen.</div>` : ""}
 
       ${abst.length ? `
       ${aktionsBanner()}
@@ -1038,7 +1048,7 @@ function schirmPruefen() {
           <img src="/logo.webp" alt="">
           <div class="h">Alles geprüft</div>
           <div class="t">${allein() ? "Sobald jemand dazukommt, landen hier die Meldungen."
-            : `Keine Meldungen, Anträge oder Abstimmungen offen. ${esc(andereName())} ${beugung("weiß", "wissen")} Bescheid.`}</div>
+            : `Keine Meldungen, Anträge oder Abstimmungen offen. ${esc(gross(andereName()))} ${beugung("weiß", "wissen")} Bescheid.`}</div>
         </div>`}
     </div>`;
 }
@@ -1451,6 +1461,35 @@ function sheetAntwort(bereich, satz) {
     <div class="note">${icon("i-info", 16)}<span>Danach steht der Antrag wieder zur Entscheidung.</span></div>
     <button class="btn primary block" data-senden="antwort" data-bereich="${bereich}" data-id="${satz.id}">
       Erneut schicken</button>`);
+}
+
+/** Meine eigene, noch offene Anfrage. Solange niemand entschieden hat, darf
+ *  ich den Hinweis nachschärfen oder sie ganz zurückziehen. Der Wert steht
+ *  nicht zur Debatte — er ist beim Absenden eingefroren. */
+function sheetMeins(o) {
+  const belohnung = o.bereich === "requests";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Deine ${o.bereich === "claims" ? "Meldung" : belohnung ? "Anfrage" : "Übertragung"}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(o.titel)}</span>
+      <span class="pts-pill">${o.punkte}</span>
+    </div>
+    ${o.zusatz === "Rückfrage offen" ? `
+    <div class="note">${icon("i-info", 16)}<span>Dazu steht eine Rückfrage offen —
+      die beantwortest du oben auf der Startseite.</span></div>` : ""}
+    ${belohnung ? `
+    <div class="field"><label>Terminwunsch</label>
+      <input id="mtermin" value="${esc(o.termin || "")}" placeholder="z. B. heute Abend"></div>` : ""}
+    <div class="field"><label>Hinweis für ${esc(andereName())}</label>
+      <textarea id="mtext" placeholder="optional">${esc(o.nachricht || "")}</textarea></div>
+    <button class="btn primary block" data-senden="meins-aendern"
+      data-bereich="${o.bereich}" data-id="${o.id}">Ergänzung schicken</button>
+    <div class="note">${icon("i-info", 16)}<span>Zurückziehen heißt: es war nie da.
+      ${esc(gross(andereName()))} ${beugung("sieht", "sehen")} es dann nicht mehr, und die
+      Benachrichtigung dazu verschwindet mit.</span></div>
+    <button class="btn text block" data-senden="meins-storno"
+      data-bereich="${o.bereich}" data-id="${o.id}" style="color:var(--accent)">Zurückziehen</button>`);
 }
 
 function sheetZusage(r) {
@@ -1930,7 +1969,7 @@ function sheetAntrag(belohnung) {
     </div>
     <div class="note">${icon("i-info", 16)}<span>${fehlt
       ? "Dir fehlen noch Cleanies — der Antrag lässt sich erst genehmigen, wenn du sie hast."
-      : `${esc(andereName())} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Cleanies abgebucht.`}</span></div>
+      : `${esc(gross(andereName()))} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Cleanies abgebucht.`}</span></div>
     <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}">Antrag senden</button>`);
 }
 
@@ -2423,6 +2462,11 @@ document.addEventListener("click", async (ev) => {
       if (r) sheetZusage(r);
       return;
     }
+    if (art === "meins") {
+      const o = meineOffenenSachen().find((x) => x.id === el.dataset.id && x.bereich === el.dataset.bereich);
+      if (o) sheetMeins(o);
+      return;
+    }
     if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
 
     if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
@@ -2578,6 +2622,22 @@ document.addEventListener("click", async (ev) => {
       });
       sheetZu(); await laden();
       toast("Antwort raus — der Antrag steht wieder zur Entscheidung.");
+      return;
+    }
+
+    if (el.dataset.senden === "meins-aendern") {
+      const körper = { nachricht: wert("mtext") };
+      if (el.dataset.bereich === "requests") körper.termin = wert("mtermin");
+      await api(`${el.dataset.bereich}/${el.dataset.id}/aendern`, körper);
+      sheetZu(); await laden();
+      toast(`${andereName()} ${beugung("sieht", "sehen")} deine Ergänzung.`);
+      return;
+    }
+
+    if (el.dataset.senden === "meins-storno") {
+      await api(`${el.dataset.bereich}/${el.dataset.id}/storno`, {});
+      sheetZu(); await laden();
+      toast("Zurückgezogen — als wäre nichts gewesen.");
       return;
     }
 

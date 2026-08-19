@@ -11,7 +11,7 @@
 //    hat, denselben Betrag — rückholbar, wenn sie binnen drei Tagen doch noch
 //    kommt und der Empfänger das bestätigt.
 
-import { melde, meldeAlle } from "./melden.js";
+import { melde, meldeAlle, ereignisseWeg } from "./melden.js";
 
 const id = () => crypto.randomUUID();
 const vorname = (n) => String(n || "").split(" ")[0];
@@ -54,7 +54,7 @@ export async function rueckfrageStellen(env, ich, bereich, satzId, { text = "", 
   ).bind(frage || "Passt der Termin auch anders?", ich.id, vorschlag || null, satzId).run();
 
   await melde(env, ich.couple_id, satz[b.steller], {
-    art: "info",
+    art: "info", quelle: satzId,
     titel: `${vorname(ich.name)} hat eine Rückfrage`,
     text: vorschlag ? `Vorschlag: ${vorschlag}${frage ? ` — „${frage}“` : ""}` : frage
   });
@@ -92,12 +92,80 @@ export async function rueckfrageBeantworten(env, ich, bereich, satzId, { termin 
   }
 
   await meldeAlle(env, ich.couple_id, ich.id, {
-    art: "info",
+    art: "info", quelle: satzId,
     titel: `${vorname(ich.name)} hat geantwortet`,
     text: bereich === "requests" && termin ? `Neuer Terminwunsch: ${termin}` : (antwort || "Der Antrag steht wieder zur Entscheidung.")
   });
   return { ok: true };
 }
+
+/* ------------------------------------------------------------------ Nachbessern und Zurückziehen */
+
+/** Was noch niemand entschieden hat, gehört noch der Person, die es abgeschickt
+ *  hat. Sie darf den Hinweis nachschärfen — für die Übertragung ist das die
+ *  Nachricht, für einen Antrag zusätzlich der Wunschtermin.
+ *
+ *  Der Wert bleibt unberührt: er ist beim Absenden eingefroren, und daran soll
+ *  auch ein zweiter Gedanke nichts ändern. */
+export async function anfrageAendern(env, ich, bereich, satzId, { nachricht = "", termin } = {}) {
+  const { satz, b } = await meineOffeneAnfrage(env, ich, bereich, satzId);
+
+  const text = String(nachricht).trim().slice(0, 300);
+  const neuerTermin = termin === undefined ? undefined : String(termin).trim().slice(0, 60);
+  if (!text && neuerTermin === undefined) throw new Fehler("Schreib etwas dazu, sonst ändert sich nichts");
+
+  if (bereich === "claims") {
+    await env.DB.prepare("update claims set note = ?1 where id = ?2").bind(text, satzId).run();
+  } else if (bereich === "requests") {
+    await env.DB.prepare("update requests set message = ?1, wish_date = ?2 where id = ?3")
+      .bind(text, neuerTermin === undefined ? satz.wish_date : neuerTermin, satzId).run();
+  } else {
+    await env.DB.prepare("update transfers set message = ?1 where id = ?2").bind(text, satzId).run();
+  }
+
+  // Eine Ergänzung ist keine neue Anfrage. Sie ersetzt die alte Nachricht,
+  // damit beim Empfänger nicht zweimal dasselbe steht.
+  await ereignisseWeg(env, satzId);
+  await meldeAlle(env, ich.couple_id, ich.id, {
+    art: "info", quelle: satzId,
+    titel: `${vorname(ich.name)} hat etwas ergänzt`,
+    text: [b.was, text, neuerTermin ? `Wunsch: ${neuerTermin}` : ""].filter(Boolean).join(" · ")
+  });
+  return { ok: true, nachricht: text, termin: neuerTermin === undefined ? satz.wish_date : neuerTermin };
+}
+
+/** Zurückziehen heißt: es war nie da. Deshalb geht auch die Nachricht beim
+ *  Empfänger mit — und es kommt keine neue hinterher, die vom Rückzug erzählt. */
+export async function anfrageZuruecknehmen(env, ich, bereich, satzId) {
+  const { b } = await meineOffeneAnfrage(env, ich, bereich, satzId);
+
+  await env.DB.batch([
+    env.DB.prepare(`delete from ${b.tabelle} where id = ?1 and couple_id = ?2 and status = 'offen'`)
+      .bind(satzId, ich.couple_id),
+    env.DB.prepare("delete from ereignisse where quelle_id = ?1").bind(satzId)
+  ]);
+  return { ok: true, zurueckgezogen: b.was };
+}
+
+/** Der gemeinsame Türsteher: gibt es das, ist es noch offen, und ist es meins? */
+async function meineOffeneAnfrage(env, ich, bereich, satzId) {
+  const b = NACHBESSERBAR[bereich];
+  if (!b) throw new Fehler("Unbekannter Bereich", 404);
+
+  const satz = await env.DB.prepare(
+    `select * from ${b.tabelle} where id = ?1 and couple_id = ?2`
+  ).bind(satzId, ich.couple_id).first();
+  if (!satz) throw new Fehler(`${b.was} nicht gefunden`, 404);
+  if (satz.status !== "offen") throw new Fehler(`${b.was} ist bereits entschieden — daran lässt sich nichts mehr ändern`);
+  if (satz[b.steller] !== ich.id) throw new Fehler(`Das kann nur, wer ${b.wen} abgeschickt hat`);
+  return { satz, b };
+}
+
+const NACHBESSERBAR = {
+  claims: { tabelle: "claims", steller: "claimed_by", was: "Die Meldung", wen: "die Meldung" },
+  requests: { tabelle: "requests", steller: "requested_by", was: "Der Antrag", wen: "den Antrag" },
+  transfers: { tabelle: "transfers", steller: "from_member", was: "Die Übertragung", wen: "die Übertragung" }
+};
 
 /* ------------------------------------------------------------------ Belohnung */
 

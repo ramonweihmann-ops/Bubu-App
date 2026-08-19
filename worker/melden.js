@@ -9,17 +9,24 @@ const id = () => crypto.randomUUID();
 
 export async function melde(env, paarId, empfaengerId, ereignis) {
   await env.DB.prepare(
-    `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte)
-     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+    `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte, quelle_id)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
   ).bind(id(), paarId, empfaengerId, ereignis.art, ereignis.titel,
-         ereignis.text || null, ereignis.punkte ?? null).run();
+         ereignis.text || null, ereignis.punkte ?? null, ereignis.quelle || null).run();
 
   await sendePush(env, empfaengerId, {
     titel: ereignis.titel,
     text: ereignis.text || "",
     url: "/app/",
-    tag: ereignis.art
+    // Nachrichten zur selben Anfrage lösen einander ab, statt sich zu stapeln.
+    tag: ereignis.quelle || ereignis.art
   });
+}
+
+/** Wegräumen, was zu einer zurückgenommenen Anfrage gehört. Sie war nie da,
+ *  also darf auch keine Nachricht mehr davon erzählen. */
+export async function ereignisseWeg(env, quelleId) {
+  await env.DB.prepare("delete from ereignisse where quelle_id = ?1").bind(quelleId).run();
 }
 
 /** Alle Mitglieder des Haushalts. */

@@ -13,7 +13,8 @@ import {
 } from "./plan.js";
 import {
   rueckfrageStellen, rueckfrageBeantworten, offeneBelohnungen,
-  belohnungEmpfang, belohnungNachholen, nachholEntscheiden
+  belohnungEmpfang, belohnungNachholen, nachholEntscheiden,
+  anfrageAendern, anfrageZuruecknehmen
 } from "./rueckmeldung.js";
 
 const json = (daten, status = 200) =>
@@ -85,6 +86,13 @@ export async function handleApi(request, env, url) {
     }
     if ((teile[0] === "claims" || teile[0] === "requests") && teile[2] === "antwort") {
       return json(await rueckfrageBeantworten(env, ich, teile[0], teile[1], koerper));
+    }
+    // Solange niemand entschieden hat, gehört die Anfrage noch dem Absender.
+    if (["claims", "requests", "transfers"].includes(teile[0]) && teile[2] === "aendern") {
+      return json(await anfrageAendern(env, ich, teile[0], teile[1], koerper));
+    }
+    if (["claims", "requests", "transfers"].includes(teile[0]) && teile[2] === "storno") {
+      return json(await anfrageZuruecknehmen(env, ich, teile[0], teile[1]));
     }
     if (teile[0] === "requests" && teile[2] === "empfang") return json(await belohnungEmpfang(env, ich, teile[1], !!koerper.erhalten));
     if (teile[0] === "requests" && teile[2] === "nachholen") return json(await belohnungNachholen(env, ich, teile[1]));
@@ -622,12 +630,13 @@ async function melden(env, ich, daten) {
   const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));
   const bemerkung = vorzeitig ? `Vorzeitig: ${vorzeitig}` : String(notiz).slice(0, 300);
 
+  const meldung = id();
   await env.DB.prepare(
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id(), ich.couple_id, quest.id, ich.id, menge, wert, bemerkung).run();
+  ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung).run();
   await meldeAllen(env, ich, {
-    art: "info",
+    art: "info", quelle: meldung,
     titel: `${vorname(ich.name)} hat etwas erledigt`,
     text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Cleanies warten auf eine Bestätigung.`
   });
@@ -685,13 +694,14 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
   // Auch der Preis friert jetzt ein — wer im Rabatt beantragt, behält ihn.
   const { wert } = belohnungWert(belohnung, await laufendeAktionen(env, ich.couple_id));
 
+  const antrag = id();
   await env.DB.prepare(
     `insert into requests (id, couple_id, reward_id, requested_by, cost, wish_date, message)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id(), ich.couple_id, belohnung.id, ich.id, wert,
+  ).bind(antrag, ich.couple_id, belohnung.id, ich.id, wert,
          String(termin).slice(0, 60), String(nachricht).slice(0, 300)).run();
   await meldeAllen(env, ich, {
-    art: "info",
+    art: "info", quelle: antrag,
     titel: `${vorname(ich.name)} möchte etwas einlösen`,
     text: `${belohnung.name} — ${wert} Cleanies. Ihr entscheidet.`
   });
@@ -770,13 +780,14 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
   ).bind(ich.id).first();
   if (stand.punkte < menge) throw new Fehler(`Du hast nur ${stand.punkte} Cleanies`);
 
+  const uebertragung = id();
   await env.DB.prepare(
     `insert into transfers (id, couple_id, from_member, to_member, amount, message)
      values (?1, ?2, ?3, ?4, ?5, ?6)`
-  ).bind(id(), ich.couple_id, ich.id, partner.user_id, menge, String(nachricht).slice(0, 300)).run();
+  ).bind(uebertragung, ich.couple_id, ich.id, partner.user_id, menge, String(nachricht).slice(0, 300)).run();
 
   await melde(env, ich.couple_id, partner.user_id, {
-    art: "info",
+    art: "info", quelle: uebertragung,
     titel: `${vorname(ich.name)} schickt dir Cleanies`,
     text: `${menge} Cleanies — du musst sie annehmen.`
   });
