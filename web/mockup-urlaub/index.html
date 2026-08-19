@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Urlaubsmodus</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --bald:#c47a00; --bald-tint:#fdf1dc;
+  --urlaub:#0f8a6a; --urlaub-tint:#e4f5ef;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1060px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:40px 0 10px}
+h3{font-family:var(--font-display);font-weight:800;font-size:16px;margin:0 0 4px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:66ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.spalte>.bu{font-size:12.5px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+
+.phone{width:340px;max-width:100%;height:700px;background:var(--bg);border:9px solid var(--ink);
+  border-radius:36px;overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);
+  display:flex;flex-direction:column;margin:0 auto}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.kopf{flex:none;padding:16px 15px 6px;display:flex;align-items:center;gap:10px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.15}
+.kopf .sub{font-size:12px;color:var(--ink-3)}
+.inhalt{flex:1;overflow-y:auto;padding:0 15px 14px;display:flex;flex-direction:column;gap:10px}
+.inhalt>*{flex-shrink:0}
+
+.btn{font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:12px 15px;border:1px solid transparent;
+  cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);width:100%}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--bg);border-color:var(--line)}
+.btn.gruen{background:var(--urlaub);color:#fff}
+.btn.text{background:none;color:var(--ink-2);font-weight:600;padding:8px}
+.btnrow{display:flex;gap:8px}.btnrow>.btn{flex:1}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:9px}
+.card.flat{background:var(--tint);border-color:transparent}
+.card.urlaub{border-color:var(--urlaub);background:var(--urlaub-tint)}
+.card.alarm{border-color:var(--accent);background:var(--accent-tint)}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:5px 0 -4px}
+.note{font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:9px 10px}
+.note b{color:var(--ink)}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:var(--tint-2);color:var(--ink-2);display:inline-flex;gap:5px;align-items:center}
+.chip.rot{background:var(--accent-tint);color:var(--accent)}
+.chip.gruen{background:var(--urlaub);color:#fff}
+.chip.navy{background:var(--ink);color:#fff}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--tint);display:grid;place-items:center;flex:none;font-size:16px}
+
+.aufgabe{border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:10px 11px;
+  display:flex;align-items:center;gap:10px;width:100%}
+.aufgabe .n{flex:1;min-width:0}
+.aufgabe .t{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aufgabe .m{display:block;font-size:11px;color:var(--ink-3);margin-top:1px}
+.frist{flex:none;width:98px;text-align:right}
+.balken{height:10px;border-radius:999px;background:var(--tint-2);overflow:hidden;display:flex}
+.balken i{display:block;height:100%;border-radius:999px}
+.frist .w{font-size:10.5px;font-family:var(--font-data);margin-top:4px;display:block;white-space:nowrap}
+.w.rot{color:var(--accent);font-weight:700}
+.w.gelb{color:var(--bald);font-weight:700}
+.w.ruhig{color:var(--ink-3)}
+.w.gruen{color:var(--urlaub);font-weight:700}
+.pfeil{font-family:var(--font-data);font-size:10.5px;color:var(--urlaub);font-weight:700}
+
+.feld{display:flex;flex-direction:column;gap:5px}
+.feld label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.feld input,.feld textarea{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:10px;width:100%;background:var(--bg);color:var(--ink)}
+.feld textarea{min-height:58px;resize:none}
+.zwei{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.wahl{display:grid;gap:8px}
+.wahl button{font:inherit;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--bg);
+  padding:11px 12px;cursor:pointer;color:inherit;display:flex;gap:10px;align-items:flex-start}
+.wahl button[data-an]{border-color:var(--urlaub);background:var(--urlaub-tint)}
+.wahl .t{display:block;font-size:14px;font-weight:700}
+.wahl .m{display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+
+.rowlink{display:flex;align-items:center;gap:11px;padding:12px 13px;border:1px solid var(--line);border-radius:16px;
+  background:var(--bg);width:100%;font:inherit;color:inherit;text-align:left}
+.rowlink .grow{flex:1;min-width:0}
+.rowlink .t{display:block;font-size:14px;font-weight:600}
+.rowlink .m{display:block;font-size:11.5px;color:var(--ink-3)}
+
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:7px 5px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);min-width:0}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1}
+
+.vote{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px}
+.change{font-family:var(--font-data);font-size:13px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.change .old{text-decoration:line-through;color:var(--ink-3)}
+.change .new{color:var(--urlaub);font-weight:700}
+.stance{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}
+.stance i{font-style:normal;font-weight:700;color:var(--ink)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td b{white-space:nowrap}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Abstimmung</span>
+  <h1>Urlaubsmodus</h1>
+  <p class="lead">
+    Zwei verschiedene Dinge, die beide „Urlaub“ heißen. Beim einen ist eine Person weg und der
+    Haushalt läuft weiter. Beim anderen sind alle weg und der Plan wartet. Deshalb liegen sie
+    hier nebeneinander — und deshalb tun sie unterschiedliche Dinge.
+  </p>
+
+  <h2>Wo es steht</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Einstellungen</div><div class="sub">Anna · WG zu dritt</div></div></div>
+        <div class="inhalt">
+          <p class="label">Dein Konto</p>
+          <div class="rowlink"><span class="avatar">🦊</span>
+            <span class="grow"><span class="t">Name und Bild</span><span class="m">Anna</span></span>
+            <span style="color:var(--ink-3)">›</span></div>
+          <div class="rowlink"><span class="avatar">🌙</span>
+            <span class="grow"><span class="t">Darstellung</span><span class="m">System</span></span>
+            <span style="color:var(--ink-3)">›</span></div>
+
+          <p class="label">Urlaub</p>
+          <div class="rowlink" style="border-color:var(--urlaub)">
+            <span class="avatar" style="background:var(--urlaub-tint)">🏝️</span>
+            <span class="grow"><span class="t">Urlaubsmodus</span>
+              <span class="m">Für dich oder für die ganze WG</span></span>
+            <span style="color:var(--ink-3)">›</span></div>
+
+          <p class="label">Haushalt</p>
+          <div class="rowlink"><span class="avatar">🏠</span>
+            <span class="grow"><span class="t">WG verwalten</span><span class="m">3 von 3 Plätzen</span></span>
+            <span style="color:var(--ink-3)">›</span></div>
+          <div class="rowlink"><span class="avatar">🚪</span>
+            <span class="grow"><span class="t">Räume</span><span class="m">4 Räume</span></span>
+            <span style="color:var(--ink-3)">›</span></div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span data-an><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Ein eigener Punkt in den <b>Einstellungen</b>. Nicht in der unteren Leiste —
+        Urlaub stellt man einmal ein, nicht täglich.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Urlaubsmodus</div><div class="sub">Zwei Arten, eine Abstimmung</div></div></div>
+        <div class="inhalt">
+          <div class="note">Beides muss die WG beschließen. Solange nicht alle zugestimmt haben,
+            ändert sich nichts.</div>
+
+          <p class="label">Wen betrifft es</p>
+          <div class="wahl">
+            <button data-an><span style="font-size:19px">🎒</span><span>
+              <span class="t">Nur mich</span>
+              <span class="m">Ich bin weg, bei euch läuft alles weiter. Ich bekomme keine
+                Mahnungen und zahle keine Gruppenstrafe mit.</span></span></button>
+            <button><span style="font-size:19px">🏝️</span><span>
+              <span class="t">Die ganze WG</span>
+              <span class="m">Wir sind alle weg. Jede Fälligkeit im Haushaltsplan rückt um
+                dieselbe Zeit nach hinten.</span></span></button>
+          </div>
+
+          <p class="label">Zeitraum</p>
+          <div class="zwei">
+            <div class="feld"><label>Von</label><input value="24.08.2026"></div>
+            <div class="feld"><label>Bis</label><input value="07.09.2026"></div>
+          </div>
+          <div class="note"><b>15 Tage.</b> Der letzte Tag zählt mit.</div>
+          <div class="feld"><label>Warum</label>
+            <textarea placeholder="optional">Zwei Wochen bei meinen Eltern in Portugal</textarea></div>
+
+          <button class="btn gruen">Zur Abstimmung geben</button>
+        </div>
+      </div></div>
+      <p class="bu">Ein Blatt, zwei Arten. Der Zeitraum ist bei beiden gleich aufgebaut —
+        was er bewirkt, steht direkt in der Auswahl.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Prüfen</div><div class="sub">Wartet auf deine Entscheidung</div></div></div>
+        <div class="inhalt">
+          <div class="vote">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:14.5px;font-weight:700;display:block">Anna macht Urlaub</span>
+                <span style="font-size:11.5px;color:var(--ink-3);display:block">Nur eine Person — der Plan bleibt, wie er ist</span>
+              </span>
+              <span class="chip rot">Offen</span>
+            </div>
+            <div class="change"><span class="new">24.08. – 07.09.</span>
+              <span style="color:var(--ink-2)">· 15 Tage</span></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Vorgeschlagen von Anna · gerade eben</div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Anna: „Zwei Wochen bei meinen Eltern in Portugal“</div>
+            <div class="stance"><span>Anna: <i>zugestimmt</i></span><span>Du: <i>offen</i></span>
+              <span>Jonas: <i>offen</i></span></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Übernommen wird der Vorschlag erst,
+              wenn alle 3 zugestimmt haben.</div>
+            <div class="btnrow"><button class="btn dark">Zustimmen</button>
+              <button class="btn ghost">Ablehnen</button></div>
+          </div>
+
+          <div class="vote">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:14.5px;font-weight:700;display:block">Die WG macht Urlaub</span>
+                <span style="font-size:11.5px;color:var(--ink-3);display:block">Alle Fälligkeiten rücken nach hinten</span>
+              </span>
+              <span class="chip rot">Offen</span>
+            </div>
+            <div class="change"><span class="old">Bad: 26.08.</span>→<span class="new">10.09.</span>
+              <span style="color:var(--ink-2)">· und 6 weitere</span></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Vorgeschlagen von Jonas · vor 2 Std.</div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Keine Begründung angegeben.</div>
+            <div class="stance"><span>Jonas: <i>zugestimmt</i></span><span>Du: <i>offen</i></span>
+              <span>Anna: <i>offen</i></span></div>
+            <div class="btnrow"><button class="btn dark">Zustimmen</button>
+              <button class="btn ghost">Ablehnen</button></div>
+          </div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span data-an><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Wie jede andere Abstimmung — bei <b>Prüfen</b>, mit einer Zeile, die sagt,
+        was passiert. Bei der WG-Variante steht die erste betroffene Fälligkeit gleich dabei.</p>
+    </div>
+  </div>
+
+  <h2>Was der Plan danach macht</h2>
+  <p class="lead">Links: Anna ist allein weg, die Termine bleiben stehen. Rechts: alle sind weg,
+    alles rutscht um 15 Tage.</p>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Haushaltsplan</div><div class="sub">Anna ist bis 07.09. weg</div></div></div>
+        <div class="inhalt">
+          <div class="card urlaub" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="font-size:20px">🎒</span>
+            <span style="flex:1">
+              <span style="font-size:13.5px;font-weight:700;display:block">Anna ist im Urlaub</span>
+              <span style="font-size:11.5px;color:var(--ink-2)">Noch 12 Tage · keine Mahnungen,
+                keine Gruppenstrafe, nicht in der Rangliste</span></span>
+          </div>
+
+          <div class="aufgabe"><span class="n"><span class="t">Bad putzen</span>
+            <span class="m">Bad · 1× pro Woche · Jonas ist dran</span></span>
+            <span class="frist"><span class="balken"><i style="width:62%;background:var(--bald)"></i></span>
+              <span class="w gelb">Fällig in 2 Tagen</span></span></div>
+          <div class="aufgabe"><span class="n"><span class="t">Müll runterbringen</span>
+            <span class="m">Küche · 2× pro Woche</span></span>
+            <span class="frist"><span class="balken"><i style="width:100%;background:var(--accent)"></i></span>
+              <span class="w rot">3 Tage überfällig</span></span></div>
+          <div class="aufgabe"><span class="n"><span class="t">Wohnung saugen</span>
+            <span class="m">Wohnzimmer · 1× pro Woche</span></span>
+            <span class="frist"><span class="balken"><i style="width:30%;background:var(--ruhig)"></i></span>
+              <span class="w ruhig">Fällig in 5 Tagen</span></span></div>
+          <div class="note"><b>Für Anna ändert sich nichts am Datum.</b> „Müll runterbringen“ ist
+            weiter überfällig — nur mahnt und bestraft es sie nicht, solange sie weg ist.
+            Die anderen mahnt und bestraft es wie immer.</div>
+        </div>
+      </div></div>
+      <p class="bu"><b>Urlaub für mich.</b> Der Haushalt bleibt unangetastet, genau wie du es
+        beschrieben hast.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Haushaltsplan</div><div class="sub">WG-Urlaub bis 07.09.</div></div></div>
+        <div class="inhalt">
+          <div class="card urlaub" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="font-size:20px">🏝️</span>
+            <span style="flex:1">
+              <span style="font-size:13.5px;font-weight:700;display:block">Die WG ist im Urlaub</span>
+              <span style="font-size:11.5px;color:var(--ink-2)">Noch 12 Tage · alles um 15 Tage
+                nach hinten gerückt</span></span>
+          </div>
+
+          <div class="aufgabe"><span class="n"><span class="t">Bad putzen</span>
+            <span class="m">Bad · 1× pro Woche</span></span>
+            <span class="frist"><span class="balken"><i style="width:12%;background:var(--urlaub)"></i></span>
+              <span class="w gruen">10.09. <span class="pfeil">+15</span></span></span></div>
+          <div class="aufgabe"><span class="n"><span class="t">Müll runterbringen</span>
+            <span class="m">Küche · 2× pro Woche</span></span>
+            <span class="frist"><span class="balken"><i style="width:8%;background:var(--urlaub)"></i></span>
+              <span class="w gruen">08.09. <span class="pfeil">+15</span></span></span></div>
+          <div class="aufgabe"><span class="n"><span class="t">Wohnung saugen</span>
+            <span class="m">Wohnzimmer · 1× pro Woche</span></span>
+            <span class="frist"><span class="balken"><i style="width:15%;background:var(--urlaub)"></i></span>
+              <span class="w gruen">13.09. <span class="pfeil">+15</span></span></span></div>
+          <div class="note"><b>Auch das Überfällige rückt mit.</b> „Müll“ war 3 Tage über der
+            Zeit und ist es nach dem Urlaub wieder — der Rückstand wird nicht erlassen,
+            nur verschoben.</div>
+        </div>
+      </div></div>
+      <p class="bu"><b>Urlaub für die WG.</b> Jede Fälligkeit bekommt dieselben Tage dazu.
+        Der Rhythmus bleibt, nur der Startpunkt wandert.</p>
+    </div>
+  </div>
+
+  <h2>Was genau passiert</h2>
+  <table>
+    <tr><th style="width:32%">&nbsp;</th><th>Nur eine Person</th><th>Die ganze WG</th></tr>
+    <tr><td><b>Wer muss zustimmen</b></td><td>alle</td><td>alle</td></tr>
+    <tr><td><b>Fälligkeiten</b></td><td>bleiben stehen</td><td>rücken um die Urlaubstage nach hinten</td></tr>
+    <tr><td><b>Mahnungen</b></td><td>gehen an die anderen, nicht an die Person im Urlaub</td><td>fallen weg, solange der Urlaub läuft</td></tr>
+    <tr><td><b>Gruppenstrafe</b></td><td>wird unter den Anwesenden aufgeteilt — die Person im Urlaub zahlt nicht mit</td><td>fällt weg, solange der Urlaub läuft</td></tr>
+    <tr><td><b>Rangliste / Vergabe</b></td><td>die Person im Urlaub wird übersprungen</td><td>ruht — es wird nichts vergeben</td></tr>
+    <tr><td><b>Quest melden</b></td><td>geht weiter — wer im Urlaub doch etwas macht, darf es melden</td><td>geht weiter</td></tr>
+    <tr><td><b>Belohnungen, Cleanies senden</b></td><td>unberührt</td><td>unberührt</td></tr>
+    <tr><td><b>Vorzeitig beenden</b></td><td>die Person selbst, ohne Abstimmung</td><td>wer ihn vorgeschlagen hat oder die Verwaltung, ohne Abstimmung</td></tr>
+  </table>
+
+  <h2>Drei Entscheidungen, die ich getroffen habe</h2>
+  <p class="lead">Sie standen nicht in deiner Beschreibung. Sag Bescheid, wenn eine davon
+    anders sein soll — dann ändere ich sie vor dem Einbau.</p>
+
+  <div class="frage">
+    <b>Die Gruppenstrafe wird kleiner, nicht größer.</b>
+    Bisher zahlt jeder den vollen Cleanies-Wert der Aufgabe. Ist eine Person im Urlaub, zahlt
+    sie nicht mit — die anderen zahlen aber auch nicht mehr, sondern weiterhin nur ihren
+    eigenen Anteil. Die Alternative wäre, den Ausfall auf die Anwesenden umzulegen; das
+    bestraft aber die, die da sind, für die Abwesenheit der anderen.
+  </div>
+
+  <div class="frage">
+    <b>Wer im Urlaub ist, wird bei der Vergabe übersprungen.</b>
+    Sonst steht Anna in der Rangliste ganz oben (sie war lange nicht dran) und die Aufgabe
+    wartet zwei Wochen auf eine Entscheidung aus Portugal. Ihre Zähler „am Stück“ und „dieses
+    Jahr“ laufen dabei nicht weiter — sie steht nach dem Urlaub also nicht schlechter da.
+  </div>
+
+  <div class="frage">
+    <b>Der Rückstand wird verschoben, nicht erlassen.</b>
+    Was vor dem WG-Urlaub schon überfällig war, ist es danach wieder — mit demselben Abstand.
+    Alles andere hieße: kurz vor dem Urlaub nichts mehr machen und der Rückstand ist weg.
+  </div>
+
+  <h2>Ein Sonderfall</h2>
+  <p class="lead">
+    Wird über den WG-Urlaub erst abgestimmt, wenn er schon angefangen hat, verschiebt die App
+    nur noch die verbleibenden Tage — von heute bis zum letzten Urlaubstag. Sonst bekäme der
+    Plan Tage geschenkt, die längst vorbei sind. Im Normalfall — Abstimmung vor der Abreise —
+    ist das genau der volle Zeitraum.
+  </p>
+
+</div>
+</body>
+</html>
