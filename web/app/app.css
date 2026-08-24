@@ -66,6 +66,10 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* „hidden“ soll wirklich verstecken. Ohne das gewinnt jedes eigene display —
+ * und .field wie .filters bringen eines mit. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -590,3 +594,12 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   display: inline-block; flex: none;
 }
 :root[data-theme="dunkel"] .cleanie { filter: brightness(1.3) saturate(1.05); }
+
+/* Der Hinweis, dass die Cleanies dieses Antrags jemandem gutgeschrieben werden.
+ * Grün wie der Urlaub: es ist keine Warnung, sondern ein Zufluss. */
+.gutschein {
+  display: flex; align-items: center; gap: 8px; font-size: 12px;
+  color: var(--ink-2); background: var(--urlaub-tint); border-radius: 12px; padding: 9px 10px;
+}
+.gutschein > svg { flex: none; color: var(--urlaub); }
+.gutschein b { color: var(--ink); }

@@ -173,7 +173,7 @@ const NACHBESSERBAR = {
 export async function offeneBelohnungen(env, paar) {
   const treffer = await env.DB.prepare(
     `select r.id, r.reward_id, r.requested_by, r.decided_by, r.cost, r.wish_date, r.message,
-            r.erfuellt, r.erfuellt_am, r.strafe_am, r.nachhol_von, r.nachhol_am, r.decided_at,
+            r.erfuellt, r.erfuellt_am, r.strafe_am, r.nachhol_von, r.nachhol_am, r.decided_at, r.gutschrift_an,
             b.name as belohnung,
             cast(julianday('now') - julianday(r.strafe_am) as real) as seit_strafe
        from requests r join rewards b on b.id = r.reward_id

@@ -517,7 +517,7 @@ async function zustand(env, ich) {
                         from claims c join quests q on q.id = c.quest_id
                        where c.couple_id = ?1 and c.status = 'offen' order by c.created_at desc`).bind(paar).all(),
       env.DB.prepare(`select r.id, r.requested_by, r.cost, r.wish_date, r.message, r.created_at,
-                             r.rueckfrage, r.rueckfrage_von, r.vorschlag_datum, b.name as belohnung
+                             r.rueckfrage, r.rueckfrage_von, r.vorschlag_datum, r.gutschrift_an, b.name as belohnung
                         from requests r join rewards b on b.id = r.reward_id
                        where r.couple_id = ?1 and r.status = 'offen' order by r.created_at desc`).bind(paar).all(),
       env.DB.prepare(`select id, from_member, to_member, amount, message, created_at
@@ -691,7 +691,7 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
 
 /* ------------------------------------------------------------------ Belohnungen */
 
-async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }) {
+async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "", gutschriftAn = null }) {
   const belohnung = await env.DB.prepare(
     "select id, name, cost from rewards where id = ?1 and couple_id = ?2 and active = 1"
   ).bind(rewardId, ich.couple_id).first();
@@ -699,19 +699,39 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "" }
 
   // Auch der Preis friert jetzt ein — wer im Rabatt beantragt, behält ihn.
   const { wert } = belohnungWert(belohnung, await laufendeAktionen(env, ich.couple_id));
+  const empfaenger = await gutschriftPruefen(env, ich, gutschriftAn);
 
   const antrag = id();
   await env.DB.prepare(
-    `insert into requests (id, couple_id, reward_id, requested_by, cost, wish_date, message)
-     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+    `insert into requests (id, couple_id, reward_id, requested_by, cost, wish_date, message, gutschrift_an)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
   ).bind(antrag, ich.couple_id, belohnung.id, ich.id, wert,
-         String(termin).slice(0, 60), String(nachricht).slice(0, 300)).run();
+         String(termin).slice(0, 60), String(nachricht).slice(0, 300), empfaenger).run();
   await meldeAllen(env, ich, {
     art: "info", quelle: antrag,
     titel: `${vorname(ich.name)} möchte etwas einlösen`,
-    text: `${belohnung.name} — ${wert} Cleanies. Ihr entscheidet.`
+    text: `${belohnung.name} — ${wert} Cleanies.${
+      empfaenger ? ` Sie gehen an ${vorname((await person(env, empfaenger))?.name)}.` : ""} Ihr entscheidet.`
   });
-  return { ok: true };
+  return { ok: true, gutschriftAn: empfaenger };
+}
+
+const person = (env, wer) =>
+  env.DB.prepare("select id, name from users where id = ?1").bind(wer).first();
+
+/** Wem die Cleanies gutgeschrieben werden — oder niemandem.
+ *
+ *  Die Wahl gilt nur für diesen einen Antrag und wird nirgends gemerkt. Sich
+ *  selbst gutschreiben geht nicht: das wäre eine Belohnung zum Nulltarif. */
+async function gutschriftPruefen(env, ich, wen) {
+  if (!wen) return null;
+  if (wen === ich.id) throw new Fehler("Dir selbst kannst du die Cleanies nicht gutschreiben");
+
+  const drin = await env.DB.prepare(
+    "select 1 as da from members where couple_id = ?1 and user_id = ?2"
+  ).bind(ich.couple_id, wen).first();
+  if (!drin) throw new Fehler("Diese Person gehört nicht zum Haushalt");
+  return wen;
 }
 
 async function antragEntscheiden(env, ich, antragId, status) {
@@ -746,6 +766,18 @@ async function antragEntscheiden(env, ich, antragId, status) {
         where r.id = ?2 and r.status = 'bestaetigt'
           and not exists (select 1 from ledger where source_id = r.id)`
     ).bind(id(), antragId),
+    // Die Gegenbuchung, falls der Antrag jemanden benannt hat. Eigene Kennung,
+    // damit die Sperre der Abbuchung sie nicht mitverschluckt — und eine eigene
+    // Sperre, damit auch sie nur einmal läuft.
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select ?1, r.couple_id, r.gutschrift_an, r.cost,
+              (select name from rewards where id = r.reward_id) || ' (von '
+                || (select name from users where id = r.requested_by) || ')', 'request', r.id || ':gut'
+         from requests r
+        where r.id = ?2 and r.status = 'bestaetigt' and r.gutschrift_an is not null
+          and not exists (select 1 from ledger where source_id = r.id || ':gut')`
+    ).bind(id(), antragId),
     // Eine zugesagte Belohnung ist noch keine erhaltene — außer bei Ausnahme-
     // und Vetoanträgen, die nichts zu liefern haben.
     env.DB.prepare(
@@ -760,7 +792,17 @@ async function antragEntscheiden(env, ich, antragId, status) {
     ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat genehmigt`, text: antrag.belohnung, punkte: -antrag.cost }
     : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: antrag.belohnung });
 
-  return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost };
+  // Wer die Cleanies bekommt, soll es auch erfahren — außer die Person hat
+  // gerade selbst genehmigt und sieht es ohnehin.
+  if (status === "bestaetigt" && antrag.gutschrift_an && antrag.gutschrift_an !== ich.id) {
+    await melde(env, ich.couple_id, antrag.gutschrift_an, {
+      art: "bestaetigt",
+      titel: `${vorname((await person(env, antrag.requested_by))?.name)} hat dir Cleanies gutgeschrieben`,
+      text: antrag.belohnung, punkte: antrag.cost
+    });
+  }
+
+  return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost, gutschriftAn: antrag.gutschrift_an };
 }
 
 /* ------------------------------------------------------------------ Übertragen */

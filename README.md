@@ -265,6 +265,23 @@ Ausnahme- und Vetoanträge haben nichts zu liefern — für sie entfällt die Be
 Beim Anlegen oder Ändern einer Belohnung steht dafür ein Haken bereit, der wie alles
 andere über eine Abstimmung gesetzt wird.
 
+### Cleanies an den Empfänger
+
+Normalerweise sind die Cleanies einer Einlösung danach einfach weg. Für „ich koche heute für
+dich" ist das falsch herum: wer die Belohnung erbringt, soll sie auch bekommen können.
+
+Im Antrag steht deshalb ein Haken **Cleanies an Empfänger senden**. Ist er gesetzt, wird der
+Betrag bei der Genehmigung nicht nur abgebucht, sondern der gewählten Person gutgeschrieben —
+beides in derselben Transaktion. Neben *Konto nach Einlösung* erscheint dann eine zweite
+Zeile mit dem alten und neuen Stand dieser Person.
+
+Wer mehr als eine Person im Haushalt hat, wählt zusätzlich aus, wer sie bekommt. Bei genau
+einer anderen Person entfällt die Wahl — es gibt nur eine Möglichkeit.
+
+Der Haken wird **nie gemerkt**: jeder Antrag fängt wieder ohne an. Sich selbst gutschreiben
+geht nicht, und wer nicht zum Haushalt gehört, auch nicht. Bleibt die Belohnung aus, greift
+dieselbe Regel wie sonst — wer zugesagt hat, verliert den Betrag wieder.
+
 ## Auswertung
 
 Punkte je Tag der letzten zwei Wochen als Balken — du und alle anderen zusammen, dazu

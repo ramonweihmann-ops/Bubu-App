@@ -638,7 +638,9 @@ const meineOffenenSachen = () => [
   ...S.antraege.filter((a) => a.requested_by === S.ich.id).map((a) => ({
     id: a.id, bereich: "requests",
     titel: a.belohnung, was: "Belohnung beantragt",
-    zusatz: a.rueckfrage ? "Rückfrage offen" : (a.wish_date || ""), punkte: `−${cl(a.cost)}`,
+    zusatz: a.rueckfrage ? "Rückfrage offen"
+      : a.gutschrift_an ? `an ${nameVon(a.gutschrift_an)}${a.wish_date ? ` · ${a.wish_date}` : ""}`
+      : (a.wish_date || ""), punkte: `−${cl(a.cost)}`,
     nachricht: a.message || "", termin: a.wish_date || "", created_at: a.created_at
   })),
   ...S.uebertragungen.filter((u) => u.from_member === S.ich.id).map((u) => ({
@@ -1044,6 +1046,8 @@ function schirmPruefen() {
             </div>
             ${e.wish_date || e.message ? `<div style="font-size:12.5px;color:var(--ink-2)">
               ${e.wish_date ? `<b>${esc(e.wish_date)}</b>` : ""}${e.wish_date && e.message ? " · " : ""}${e.message ? `„${esc(e.message)}“` : ""}</div>` : ""}
+            ${e.gutschrift_an ? `<div class="gutschein">${icon("i-send", 15)}<span>Die ${cl(e.cost)} gehen
+              an <b>${e.gutschrift_an === S.ich.id ? "dich" : esc(nameVon(e.gutschrift_an))}</b> — mit dem Genehmigen.</span></div>` : ""}
             <div class="btnrow">
               <button class="btn primary" data-entscheiden="requests" data-id="${e.id}" data-status="bestaetigt">Genehmigen</button>
               <button class="btn ghost" data-entscheiden="requests" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
@@ -2103,6 +2107,7 @@ function sheetMelden(quest) {
 function sheetAntrag(belohnung) {
   const kosten = belohnung.kosten_jetzt ?? belohnung.cost;
   const fehlt = kosten > S.ich.punkte;
+  const ziel = andere();
   sheet(`
     <div class="grabber"></div>
     <h3>Antrag stellen</h3>
@@ -2114,14 +2119,66 @@ function sheetAntrag(belohnung) {
       der Preis friert beim Absenden ein, auch wenn erst später entschieden wird.</span></div>` : ""}
     <div class="field"><label>Wunschtermin</label><input id="termin" placeholder="z. B. heute Abend"></div>
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
+
+    ${ziel.length ? `
+    <button class="schalter" data-gutschrift aria-pressed="false">
+      <span class="box"></span>
+      <span class="t">Cleanies an Empfänger senden</span>
+    </button>
+    <div style="font-size:11.5px;color:var(--ink-3);margin-top:-4px">
+      Ohne Haken sind die Cleanies einfach ab. Mit Haken bekommt ${
+        ziel.length === 1 ? esc(vorname(ziel[0].name)) : "die gewählte Person"} sie gutgeschrieben —
+      jedes Mal neu zu wählen.</div>
+    ${ziel.length > 1 ? `
+    <div class="field" id="gutschriftwahl" hidden>
+      <label>An wen</label>
+      <div class="filters">
+        ${ziel.map((m, i) => `<button data-gutempfaenger="${m.id}" aria-pressed="${i === 0}">${esc(vorname(m.name))}</button>`).join("")}
+      </div>
+    </div>` : ""}` : ""}
+
     <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
       <span>Konto nach Einlösung</span>
       <span><b>${cl(S.ich.punkte)}</b> → <b style="color:var(--accent)">${cl(S.ich.punkte - kosten)}</b></span>
     </div>
+    <div id="gutschriftstand" hidden
+      style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
+      <span id="gutschriftwer"></span><span id="gutschriftzahlen"></span>
+    </div>
+
     <div class="note">${icon("i-info", 16)}<span>${fehlt
       ? "Dir fehlen noch Cleanies — der Antrag lässt sich erst genehmigen, wenn du sie hast."
       : `${esc(gross(andereName()))} ${beugung("muss", "müssen")} zustimmen. Erst dann werden die Cleanies abgebucht.`}</span></div>
-    <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}">Antrag senden</button>`);
+    <button class="btn primary block" data-senden="antrag" data-id="${belohnung.id}"
+      data-kosten="${kosten}">Antrag senden</button>`);
+}
+
+/** Wer die Gutschrift bekommt: die gewählte Person, sonst die einzige andere. */
+function gutschriftEmpfaenger() {
+  const gewaehlt = scrim.querySelector('[data-gutempfaenger][aria-pressed="true"]');
+  return gewaehlt ? gewaehlt.dataset.gutempfaenger : (andere()[0]?.id || null);
+}
+
+/** Ist der Haken gesetzt? */
+const gutschriftAn = () => scrim.querySelector("[data-gutschrift]")?.getAttribute("aria-pressed") === "true";
+
+/** Die zweite Kontozeile: alter und neuer Stand der Person, die die Cleanies
+ *  bekommt. Erst mit dem Haken sichtbar — vorher gibt es nichts zu zeigen. */
+function gutschriftStandZeichnen() {
+  const zeile = scrim.querySelector("#gutschriftstand");
+  if (!zeile) return;
+  const an = gutschriftAn();
+  const wahl = scrim.querySelector("#gutschriftwahl");
+  if (wahl) wahl.hidden = !an;
+  zeile.hidden = !an;
+  if (!an) return;
+
+  const wer = mitglied(gutschriftEmpfaenger());
+  const kosten = Number(scrim.querySelector('[data-senden="antrag"]')?.dataset.kosten || 0);
+  const stand = wer?.punkte ?? 0;
+  zeile.querySelector("#gutschriftwer").textContent = `Konto ${vorname(wer?.name || "")}`;
+  zeile.querySelector("#gutschriftzahlen").innerHTML =
+    `<b>${cl(stand)}</b> → <b style="color:var(--urlaub)">${cl(stand + kosten)}</b>`;
 }
 
 function sheetTransfer() {
@@ -2474,7 +2531,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2557,6 +2614,21 @@ document.addEventListener("click", async (ev) => {
 
   if (el.dataset.empfaenger) {
     scrim.querySelectorAll("[data-empfaenger]").forEach((b) => b.setAttribute("aria-pressed", b === el));
+    return;
+  }
+
+  // Der Haken „Cleanies an Empfänger senden" und die Wahl dahinter. Beides
+  // zeichnet nur die zweite Kontozeile neu, nicht das ganze Blatt — sonst wären
+  // Termin und Nachricht wieder leer.
+  if (el.hasAttribute("data-gutschrift")) {
+    el.setAttribute("aria-pressed", String(el.getAttribute("aria-pressed") !== "true"));
+    el.querySelector(".box").textContent = el.getAttribute("aria-pressed") === "true" ? "\u2713" : "";
+    gutschriftStandZeichnen();
+    return;
+  }
+  if (el.dataset.gutempfaenger) {
+    scrim.querySelectorAll("[data-gutempfaenger]").forEach((b) => b.setAttribute("aria-pressed", b === el));
+    gutschriftStandZeichnen();
     return;
   }
 
@@ -2920,9 +2992,13 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (el.dataset.senden === "antrag") {
-      await api("requests", { rewardId: el.dataset.id, termin: wert("termin"), nachricht: wert("nachricht") });
+      const an = gutschriftAn() ? gutschriftEmpfaenger() : null;
+      await api("requests", {
+        rewardId: el.dataset.id, termin: wert("termin"), nachricht: wert("nachricht"), gutschriftAn: an
+      });
       sheetZu(); await laden();
-      toast("Antrag gesendet.");
+      toast(an ? `Antrag gesendet — die Cleanies gehen an ${vorname(mitglied(an)?.name || "")}.`
+               : "Antrag gesendet.");
       return;
     }
     if (el.dataset.senden === "transfer") {
