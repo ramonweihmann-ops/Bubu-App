@@ -22,7 +22,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Urlaubsmodus":** [`web/mockup-urlaub/`](./web/mockup-urlaub) — live unter
   `haus-quest.com/mockup-urlaub/`. Der Entwurf, aus dem der Urlaubsmodus entstanden ist.
 - **Mockup „Zurücktreten":** [`web/mockup-ruecktritt/`](./web/mockup-ruecktritt) — live unter
-  `haus-quest.com/mockup-ruecktritt/`. Noch nicht gebaut — wartet auf Zustimmung.
+  `haus-quest.com/mockup-ruecktritt/`. Der Entwurf, aus dem der Rücktritt entstanden ist.
+- **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
@@ -201,6 +202,7 @@ ist etwas überfällig, springt eine rote Karte davor.
 | **Reihenfolge** | Wer am wenigsten **am Stück** dran war, steht oben. Bei Gleichstand die kleinere Jahreszahl. Wer zuletzt dran war, rutscht nach unten — genau das sorgt für den Wechsel. |
 | **Annehmen** | Nur wer oben steht. Ablehnen reicht an Platz 2 weiter; lehnen alle ab, ist die Aufgabe wieder für jeden offen. |
 | **Ein Bewerber** | Bekommt sie ohne Rangliste. Bewirbt sich niemand, macht sie, wer sie macht. |
+| **Zurücktreten** | Wem die Runde gehört, kann sie abgeben — mit Begründung. Darüber entscheidet eine **Mehrheit** des Haushalts, nicht alle. Geht sie durch, fällt die Zuteilung weg und die Runde ist wieder für jeden offen; **die Frist bleibt stehen**. Ein einzelnes Nein beendet den Antrag nicht, und wer ablehnt, darf sagen warum. |
 | **Überfällig** | Ab dem ersten Tag Benachrichtigung an alle. Nach sieben Tagen verliert jeder den Punktwert der Aufgabe — abschaltbar unter Einstellungen → Haushalt. |
 
 „Am Stück" kann nur die Person haben, die zuletzt dran war: sobald jemand anderes erledigt,
@@ -332,5 +334,6 @@ worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
                 urlaub.js (Urlaubsmodus),
                 melden.js und push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
+tests/          Regressionssuiten: API über curl, Oberfläche über Playwright
 docs/           Mockup und Anleitungen
 ```

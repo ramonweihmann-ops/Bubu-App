@@ -120,15 +120,31 @@ export async function aufgabeDetail(env, ich, questId) {
   ).bind(questId, ich.couple_id).first();
   if (!q) throw new Fehler("Diese Aufgabe gibt es nicht", 404);
 
-  const [personen, bewerbungen, letzte] = await Promise.all([
+  const [personen, bewerbungen, letzte, ruecktritt] = await Promise.all([
     env.DB.prepare(`select u.id, u.name, u.bild, u.avatar_url from members m join users u on u.id = m.user_id
                      where m.couple_id = ?1`).bind(ich.couple_id).all(),
     env.DB.prepare("select member_id, status from bewerbungen where quest_id = ?1 and runde = ?2")
       .bind(questId, q.faellig_am).all(),
     env.DB.prepare(`select claimed_by as member_id, created_at from claims
                      where quest_id = ?1 and status = 'bestaetigt'
-                     order by created_at desc limit 1`).bind(questId).first()
+                     order by created_at desc limit 1`).bind(questId).first(),
+    // Der jüngste Rücktritt zu dieser Aufgabe — offen oder entschieden. Er
+    // erklärt, warum die Runde frei ist oder warum sie trotzdem noch dir gehört.
+    env.DB.prepare(`select id, created_by, reason, status, decided_at, created_at from proposals
+                     where couple_id = ?1 and kind = 'ruecktritt' and target_id = ?2
+                     order by created_at desc limit 1`).bind(ich.couple_id, questId).first()
   ]);
+
+  // Wer abgelehnt hat, durfte sagen warum — das gehört an die Aufgabe.
+  if (ruecktritt) {
+    const stimmen = await env.DB.prepare(
+      `select member_id, answer, grund from proposal_votes where proposal_id = ?1`
+    ).bind(ruecktritt.id).all();
+    ruecktritt.stimmen = stimmen.results;
+    ruecktritt.ja = stimmen.results.filter((s) => s.answer).length;
+    ruecktritt.gegenstimmen = stimmen.results.filter((s) => !s.answer && s.grund)
+      .map((s) => ({ von: s.member_id, grund: s.grund }));
+  }
 
   const zaehler = await zaehlerFuer(env, questId);
   const mitglieder = personen.results.map((p) => ({ ...p, ...(zaehler[p.id] || { stueck: 0, jahr: 0 }) }));
@@ -151,7 +167,10 @@ export async function aufgabeDetail(env, ich, questId) {
     abgelehnt: bewerbungen.results.filter((b) => b.status === "abgelehnt").map((b) => b.member_id),
     rangliste: liste ? liste.map((m) => m.id) : null,
     ichBeworben: offeneBewerber.includes(ich.id),
-    zuletzt: letzte || null
+    zuletzt: letzte || null,
+    ruecktritt: ruecktritt || null,
+    // Wer die Aufgabe hat und sie noch nicht gemeldet hat, darf zurücktreten.
+    ichKannZurueck: q.zugewiesen === ich.id && ruecktritt?.status !== "offen"
   };
 }
 

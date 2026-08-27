@@ -1158,6 +1158,7 @@ function abstimmungWorum(a) {
     case "neue_aktion": return "Befristete Aktion für alle";
     case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
+    case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
     default: return "Vorschlag";
   }
 }
@@ -1179,9 +1180,13 @@ function abstimmungWandel(a) {
       : `<span class="old">jederzeit meldbar</span>→<span class="new">${esc(a.rhythmus || "")}</span>`;
   }
   if (a.art === "urlaub_person" || a.art === "urlaub_haushalt") {
-    return `<span class="new" style="color:var(--urlaub)">${datumKurz(a.von)} – ${datumKurz(a.bis)}</span>
+    return `<span class="new" style="color:var(--urlaub)">${datumKurz(a.urlaub_von)} – ${datumKurz(a.urlaub_bis)}</span>
             <span style="color:var(--ink-2);font-weight:400">· ${a.neu} ${a.neu === 1 ? "Tag" : "Tage"}${
               a.art === "urlaub_haushalt" ? " nach hinten" : " ohne Mahnung und Strafe"}</span>`;
+  }
+  if (a.art === "ruecktritt") {
+    return `<span class="old">gehört ${esc(nameVon(a.von))}</span>→<span class="new" style="color:var(--urlaub)">für alle offen</span>
+            <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
   if (a.art === "neue_aktion") {
@@ -1204,6 +1209,11 @@ function abstimmungKarte(a) {
   const entschieden = a.status !== "offen";
   const angenommen = a.status === "bestaetigt";
   const stimme = (w) => w === undefined || w === null ? "offen" : (w ? "zugestimmt" : "abgelehnt");
+  // Ein Rücktritt braucht nur eine Mehrheit; alles andere alle Stimmen.
+  const koepfe = a.koepfe || S.mitglieder.length;
+  const noetig = a.noetig || koepfe;
+  const mehrheitsSache = noetig < koepfe;
+  const jaZahl = (a.stimmen || []).filter((s) => s.antwort === true).length;
 
   return `
     <div class="card vote">
@@ -1224,12 +1234,22 @@ function abstimmungKarte(a) {
         ${(a.stimmen || []).map((s) => `
           <span>${esc(s.id === S.ich.id ? "Du" : vorname(s.name))}: <i>${stimme(s.antwort)}</i></span>`).join("")}
       </div>
-      ${!entschieden ? `<div style="font-size:11.5px;color:var(--ink-3)">Übernommen wird der
-        Vorschlag erst, wenn alle ${S.mitglieder.length} zugestimmt haben.</div>` : ""}
+      ${!entschieden ? (mehrheitsSache
+        ? `<div class="zaehlbalken">${Array.from({ length: koepfe },
+             (_, i) => `<i ${i < jaZahl ? "data-ja" : ""}></i>`).join("")}</div>
+           <div style="font-size:11.5px;color:var(--ink-3)">${jaZahl} von ${koepfe} ·
+             ${noetig - jaZahl <= 0 ? "die Mehrheit steht"
+               : noetig - jaZahl === 1 ? "<b>eine Stimme fehlt noch</b>, dann ist die Mehrheit da"
+               : `noch <b>${noetig - jaZahl} Stimmen</b> bis zur Mehrheit`}.</div>`
+        : `<div style="font-size:11.5px;color:var(--ink-3)">Übernommen wird der
+             Vorschlag erst, wenn alle ${koepfe} zugestimmt haben.</div>`) : ""}
       ${!entschieden && (a.meine === undefined || a.meine === null) ? `
       <div class="btnrow">
         <button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zustimmen</button>
-        <button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>
+        ${mehrheitsSache
+          ? `<button class="btn ghost" data-sheet="ablehnen" data-id="${a.id}"
+               data-titel="${esc(a.titel || "")}">Ablehnen</button>`
+          : `<button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>`}
       </div>` : ""}
       ${entschieden && !angenommen ? '<div style="font-size:12px;color:var(--ink-3)">Der alte Stand gilt weiter.</div>' : ""}
     </div>`;
@@ -1669,6 +1689,8 @@ function schirmAufgabe() {
                       : "Noch nie erledigt."}</div>
       </div>
 
+      ${ruecktrittKarte(a)}
+
       ${rang ? `
       <p class="section-label">Rangliste — wer ist dran?</p>
       ${rang.map((m, i) => zaehlerZeile(m, i + 1)).join("")}
@@ -1707,10 +1729,88 @@ function schirmAufgabe() {
         ${jemandAnders ? "disabled" : ""}>
         ${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</button>`}
 
+      ${!a.pruefung && a.ichKannZurueck ? `
+      <button class="btn ghost block" data-sheet="ruecktritt" data-id="${a.id}">
+        Zurücktreten von der Aufgabe</button>` : ""}
+
       ${gesperrt ? `<div class="note">${icon("i-lock", 16)}<span>Gesperrt bis
         <b>${esc(a.faellig_am)}</b>. Für besondere Umstände geht es trotzdem — mit Begründung, und
         jemand anderes muss bestätigen.</span></div>` : ""}
     </div>`;
+}
+
+/** Der Zustand eines Rücktritts an der Aufgabe: läuft er, ist er durch, wurde
+ *  er abgelehnt? Jedes Mal etwas anderes zu sagen. */
+function ruecktrittKarte(a) {
+  const r = a.ruecktritt;
+  if (!r) return "";
+  const meiner = r.created_by === S.ich.id;
+  const wer = meiner ? "dir" : nameVon(r.created_by);
+
+  if (r.status === "offen") return `
+    <div class="card urlaub" style="gap:7px">
+      <div style="font-size:13.5px;font-weight:700">${
+        meiner ? "Dein Rücktritt steht zur Abstimmung" : `${esc(nameVon(r.created_by))} möchte zurücktreten`}</div>
+      <div style="font-size:12px;color:var(--ink-2)">„${esc(r.reason)}“</div>
+      <div style="font-size:11.5px;color:var(--ink-3)">${r.ja} von ${S.mitglieder.length} ·
+        bis dahin gehört die Aufgabe weiter ${esc(wer)}.</div>
+    </div>`;
+
+  if (r.status === "bestaetigt" && !a.zugewiesen) return `
+    <div class="card urlaub" style="gap:7px">
+      <div style="font-size:13.5px;font-weight:700">Wieder für alle offen</div>
+      <div style="font-size:12px;color:var(--ink-2)">${
+        meiner ? "Du bist" : `${esc(nameVon(r.created_by))} ist`} zurückgetreten —
+        wer sie macht, meldet sie.</div>
+    </div>`;
+
+  if (r.status === "abgelehnt" && a.zugewiesen === r.created_by) return `
+    <div class="card alert" style="gap:7px">
+      <div style="font-size:13.5px;font-weight:700">Rücktritt abgelehnt</div>
+      <div style="font-size:12px;color:var(--ink-2)">Die Aufgabe gehört weiter ${esc(wer)}.</div>
+      ${(r.gegenstimmen || []).map((g) =>
+        `<div style="font-size:12px;color:var(--ink-2)">${esc(nameVon(g.von))}: „${esc(g.grund)}“</div>`).join("")}
+    </div>`;
+
+  return "";
+}
+
+/** Zurücktreten braucht einen Grund — die anderen entscheiden darüber und
+ *  müssen dafür wissen, worum es geht. */
+function sheetRuecktritt(a) {
+  const weitere = Math.floor(S.mitglieder.length / 2);
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Zurücktreten</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
+      <span class="pts-pill">+${cl(a.punkte)}</span>
+    </div>
+    <div class="field">
+      <label>Warum geht es nicht <span style="color:var(--accent)">· nötig</span></label>
+      <textarea id="rtgrund" maxlength="300" placeholder="Kurz, damit die anderen entscheiden können"></textarea>
+    </div>
+    <div class="note">${icon("i-info", 16)}<span><b>Ohne Grund geht es nicht.</b>
+      ${esc(gross(andereName()))} ${beugung("entscheidet", "entscheiden")} darüber — und dafür
+      ${beugung("muss", "müssen")} sie wissen, worum es geht.</span></div>
+    <div class="note">${icon("i-vote", 16)}<span>Es reicht, wenn eine <b>Mehrheit</b> zustimmt:
+      <b>${weitere === 1 ? "eine weitere Stimme" : `${weitere} weitere Stimmen`}</b>.
+      Bis dahin gehört die Aufgabe weiter dir, und die Frist bleibt stehen.</span></div>
+    <button class="btn dark block" data-senden="ruecktritt" data-id="${a.id}">Zur Abstimmung geben</button>`);
+}
+
+/** Ein Rücktritt darf mit Begründung abgelehnt werden — sie steht danach an
+ *  der Aufgabe. Bei allen anderen Abstimmungen bleibt Ablehnen ein Tipp. */
+function sheetAblehnen(vorschlagId, titel) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Rücktritt ablehnen</h3>
+    <div class="card flat" style="font-size:14px;font-weight:600">${esc(titel)}</div>
+    <div class="field"><label>Warum</label>
+      <textarea id="abgrund" maxlength="300" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Ein Nein beendet den Antrag nicht sofort —
+      gezählt wird, bis eine Mehrheit steht oder nicht mehr zu erreichen ist.</span></div>
+    <button class="btn primary block" data-senden="ablehnen" data-id="${vorschlagId}">Ablehnen</button>`);
 }
 
 function sheetNeueAufgabe(vorlage = null) {
@@ -2531,7 +2631,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2704,6 +2804,8 @@ document.addEventListener("click", async (ev) => {
       if (o) sheetMeins(o);
       return;
     }
+    if (art === "ruecktritt") { if (aufgabe) sheetRuecktritt(aufgabe); return; }
+    if (art === "ablehnen") { sheetAblehnen(el.dataset.id, el.dataset.titel); return; }
     if (art === "neue-aufgabe") { sheetNeueAufgabe(); return; }
 
     if (art === "aufgabe-menue") { if (aufgabe) sheetAufgabeMenue(aufgabe); return; }
@@ -2868,6 +2970,24 @@ document.addEventListener("click", async (ev) => {
       await api(`${el.dataset.bereich}/${el.dataset.id}/aendern`, körper);
       sheetZu(); await laden();
       toast(`${andereName()} ${beugung("sieht", "sehen")} deine Ergänzung.`);
+      return;
+    }
+
+    if (el.dataset.senden === "ruecktritt") {
+      const ergebnis = await api("proposals", {
+        art: "ruecktritt", zielId: el.dataset.id, grund: wert("rtgrund")
+      });
+      sheetZu(); await aufgabeLaden(el.dataset.id); await laden();
+      const weitere = ergebnis.noetig - 1;
+      toast(`Steht zur Abstimmung — ${weitere === 1 ? "eine Stimme" : `${weitere} Stimmen`} fehlen noch.`);
+      return;
+    }
+
+    if (el.dataset.senden === "ablehnen") {
+      const ergebnis = await api(`proposals/${el.dataset.id}/vote`, { antwort: false, grund: wert("abgrund") });
+      sheetZu(); await laden();
+      toast(ergebnis.status === "abgelehnt" ? "Abgelehnt — es bleibt, wie es war."
+                                            : "Vermerkt. Es fehlen noch Stimmen.");
       return;
     }
 

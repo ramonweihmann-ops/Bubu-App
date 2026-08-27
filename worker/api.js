@@ -105,7 +105,7 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "urlaub" && teile[2] === "beenden") return json(await urlaubBeenden(env, ich, teile[1]));
 
     if (pfad === "proposals") return json(await vorschlagen(env, ich, koerper));
-    if (teile[0] === "proposals" && teile[2] === "vote") return json(await abstimmen(env, ich, teile[1], koerper.antwort));
+    if (teile[0] === "proposals" && teile[2] === "vote") return json(await abstimmen(env, ich, teile[1], koerper.antwort, koerper.grund));
 
     return json({ fehler: "Unbekannter Endpunkt" }, 404);
   } catch (fehler) {
@@ -550,8 +550,13 @@ async function zustand(env, ich) {
   const mein = mit.find((p) => p.id === ich.id) || { id: ich.id, name: ich.name, punkte: 0 };
   const andere = mit.filter((p) => p.id !== ich.id);
 
+  const namenJe = Object.fromEntries(mit.map((m) => [m.id, m.name]));
   const stimmenJe = {};
-  for (const s of stimmen.results) (stimmenJe[s.proposal_id] ||= {})[s.member_id] = !!s.answer;
+  const gruendeJe = {};
+  for (const s of stimmen.results) {
+    (stimmenJe[s.proposal_id] ||= {})[s.member_id] = !!s.answer;
+    if (s.grund) (gruendeJe[s.proposal_id] ||= {})[s.member_id] = s.grund;
+  }
 
   return {
     angemeldet: true,
@@ -587,7 +592,9 @@ async function zustand(env, ich) {
       art: p.kind,
       titel: p.kind === "quest_points" || p.kind === "delete_quest" ? p.quest_name
            : p.kind === "reward_cost" || p.kind === "delete_reward" ? p.belohnung_name
+           : p.kind === "ruecktritt" ? `${vorname(namenJe[p.created_by] || "")} tritt zurück`
            : p.name,
+      aufgabe: p.kind === "ruecktritt" ? p.name : null,
       alt: p.old_value,
       neu: p.new_value,
       grund: p.reason,
@@ -598,14 +605,19 @@ async function zustand(env, ich) {
       tage: anhang(p).tage || null,
       rhythmus: anhang(p).rhythmus || null,
       wiederkehrend: anhang(p).wiederkehrend,
-      von: anhang(p).von || null,
-      bis: anhang(p).bis || null,
+      // Eigene Namen: „von" ist schon der Vorschlagende. Die Urlaubsdaten
+      // bekommen deshalb ihre eigenen Felder.
+      urlaub_von: anhang(p).von || null,
+      urlaub_bis: anhang(p).bis || null,
       alt_rhythmus: p.quest_rhythmus || null,
       alt_wiederkehrend: !!p.quest_wiederkehrend,
       status: p.status,
       created_at: p.created_at,
       meine: stimmenJe[p.id]?.[ich.id],
-      stimmen: mit.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id] }))
+      koepfe: mit.length,
+      noetig: p.kind === "ruecktritt" ? mehrheit(mit.length) : mit.length,
+      stimmen: mit.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id],
+                                 grund: gruendeJe[p.id]?.[m.id] || null }))
     })),
     verlauf: verlauf.results,
     ereignisse: ereignisse.results
@@ -892,9 +904,10 @@ async function vorschlagen(env, ich, daten) {
   const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "", bestaetigen = true } = daten;
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
                  "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe",
-                 "urlaub_person", "urlaub_haushalt"];
+                 "urlaub_person", "urlaub_haushalt", "ruecktritt"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
+  if (art === "ruecktritt") return ruecktrittVorschlagen(env, ich, daten);
   if (art === "urlaub_person" || art === "urlaub_haushalt") return urlaubVorschlagen(env, ich, daten);
   if (art === "neue_aktion") return aktionVorschlagen(env, ich, daten);
   if (art === "neue_aufgabe" || art === "aufgabe_aendern" || art === "delete_aufgabe") {
@@ -954,7 +967,7 @@ async function vorschlagen(env, ich, daten) {
   return { ok: true };
 }
 
-async function abstimmen(env, ich, vorschlagId, antwort) {
+async function abstimmen(env, ich, vorschlagId, antwort, grund = "") {
   const vorschlag = await env.DB.prepare(
     "select * from proposals where id = ?1 and couple_id = ?2"
   ).bind(vorschlagId, ich.couple_id).first();
@@ -962,9 +975,9 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
   if (vorschlag.status !== "offen") throw new Fehler("Diese Abstimmung ist bereits entschieden");
 
   await env.DB.prepare(
-    `insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, ?3)
+    `insert into proposal_votes (proposal_id, member_id, answer, grund) values (?1, ?2, ?3, ?4)
      on conflict(proposal_id, member_id) do nothing`
-  ).bind(vorschlagId, ich.id, antwort ? 1 : 0).run();
+  ).bind(vorschlagId, ich.id, antwort ? 1 : 0, String(grund).trim().slice(0, 300) || null).run();
 
   const status = await auszaehlen(env, vorschlag);
 
@@ -974,6 +987,51 @@ async function abstimmen(env, ich, vorschlagId, antwort) {
       : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: "Der alte Stand gilt weiter" });
   }
   return { ok: true, status, wert: vorschlag.new_value };
+}
+
+/** Von einer zugeteilten Aufgabe zurücktreten. Nur die Person, der sie in
+ *  dieser Runde gehört, und nur mit Grund: die anderen entscheiden darüber und
+ *  müssen dafür wissen, worum es geht. */
+async function ruecktrittVorschlagen(env, ich, { zielId, grund = "" }) {
+  const q = await env.DB.prepare(
+    "select * from quests where id = ?1 and couple_id = ?2 and active = 1 and wiederkehrend = 1"
+  ).bind(zielId, ich.couple_id).first();
+  if (!q) throw new Fehler("Diese Aufgabe gibt es nicht", 404);
+  if (q.zugewiesen !== ich.id) throw new Fehler("Zurücktreten kann nur, wem die Aufgabe gerade gehört");
+
+  const text = String(grund).trim().slice(0, 300);
+  if (text.length < 3) throw new Fehler("Schreib kurz dazu, warum es nicht geht");
+
+  const gemeldet = await env.DB.prepare(
+    "select 1 as da from claims where quest_id = ?1 and status = 'offen'"
+  ).bind(q.id).first();
+  if (gemeldet) throw new Fehler("Sie ist schon erledigt gemeldet — dann zieh die Meldung zurück");
+
+  const laeuft = await env.DB.prepare(
+    "select 1 as da from proposals where couple_id = ?1 and kind = 'ruecktritt' and target_id = ?2 and status = 'offen'"
+  ).bind(ich.couple_id, q.id).first();
+  if (laeuft) throw new Fehler("Dazu läuft schon eine Abstimmung");
+
+  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+    .bind(ich.couple_id).first();
+
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, target_id, new_value, name, category, reason, created_by)
+       values (?1, ?2, 'ruecktritt', ?3, ?4, ?5, ?6, ?7, ?8)`
+    ).bind(vorschlag, ich.couple_id, q.id, q.points, q.name, q.category, text, ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+
+  const noetig = mehrheit(koepfe.n);
+  await meldeAllen(env, ich, {
+    art: "info", quelle: vorschlag,
+    titel: `${vorname(ich.name)} möchte zurücktreten`,
+    text: `${q.name} — „${text}“. Eine Mehrheit entscheidet: ${noetig} von ${koepfe.n}.`
+  });
+  return { ok: true, noetig, koepfe: koepfe.n };
 }
 
 /** Urlaub vorschlagen — für sich selbst oder für den ganzen Haushalt. Beides
@@ -1126,28 +1184,50 @@ function anhang(vorschlag) {
   try { return JSON.parse(vorschlag.payload || "{}"); } catch { return {}; }
 }
 
+/** Mehr als die Hälfte aller im Haushalt. Wer den Antrag stellt, zählt mit —
+ *  der eigene Antrag ist die eigene Stimme. */
+export const mehrheit = (koepfe) => Math.floor(koepfe / 2) + 1;
+
 /** Ein Nein beendet den Vorschlag sofort, der alte Wert gilt weiter.
- *  Übernommen wird er erst, wenn beide zugestimmt haben. */
+ *  Übernommen wird er erst, wenn alle zugestimmt haben.
+ *
+ *  Der Rücktritt ist die eine Ausnahme: dort reicht eine Mehrheit, und ein
+ *  einzelnes Nein beendet nichts — sonst könnte eine Person jemanden zwingen,
+ *  krank zu putzen. Gezählt wird, bis die Mehrheit steht oder rechnerisch
+ *  nicht mehr zu erreichen ist. */
 async function auszaehlen(env, vorschlag) {
   const stimmen = await env.DB.prepare(
     "select answer from proposal_votes where proposal_id = ?1"
   ).bind(vorschlag.id).all();
 
-  const nein = stimmen.results.some((s) => !s.answer);
+  const neinZahl = stimmen.results.filter((s) => !s.answer).length;
   const ja = stimmen.results.filter((s) => s.answer).length;
 
-  if (nein) {
+  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+    .bind(vorschlag.couple_id).first();
+
+  const abgelehnt = async () => {
     await env.DB.prepare(
       "update proposals set status = 'abgelehnt', decided_at = datetime('now') where id = ?1 and status = 'offen'"
     ).bind(vorschlag.id).run();
     return "abgelehnt";
+  };
+
+  if (vorschlag.kind === "ruecktritt") {
+    const noetig = mehrheit(koepfe.n);
+    if (ja >= noetig) return uebernehmen(env, vorschlag);
+    if (neinZahl > koepfe.n - noetig) return abgelehnt();
+    return "offen";
   }
 
-  // Nur gemeinsam heißt: wirklich alle. Ein einziges Nein beendet den Vorschlag
-  // sofort, eine fehlende Stimme lässt ihn offen — der alte Wert gilt weiter.
-  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
-    .bind(vorschlag.couple_id).first();
+  if (neinZahl) return abgelehnt();
   if (ja < koepfe.n) return "offen";
+  return uebernehmen(env, vorschlag);
+}
+
+/** Den Vorschlag wirklich anwenden — in derselben Transaktion, in der die
+ *  Abstimmung geschlossen wird: entweder beides oder nichts. */
+async function uebernehmen(env, vorschlag) {
 
   // Nur die Anweisung der tatsächlichen Art bauen. Vorher wurden alle Arten auf
   // einmal erzeugt — bei einer Änderung der Cleanies sind die Felder einer Aktion leer,
@@ -1177,7 +1257,20 @@ async function auszaehlen(env, vorschlag) {
     delete_aufgabe: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
     urlaub_person: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
-    urlaub_haushalt: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag))
+    urlaub_haushalt: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
+    // Die Zuteilung fällt weg, die Frist bleibt stehen: der Haushalt braucht
+    // das saubere Bad genauso dringend wie vorher. „vergabe_runde" bleibt auf
+    // dieser Runde stehen, damit nicht sofort neu vergeben wird — die Runde ist
+    // jetzt für alle offen, so wie wenn sich niemand beworben hätte.
+    ruecktritt: () => [
+      env.DB.prepare("update quests set zugewiesen = null, dran = null where id = ?1 and couple_id = ?2")
+        .bind(vorschlag.target_id, vorschlag.couple_id),
+      env.DB.prepare(
+        `update bewerbungen set status = 'abgesagt'
+          where quest_id = ?1 and member_id = ?2 and status = 'offen'
+            and runde = (select faellig_am from quests where id = ?1)`
+      ).bind(vorschlag.target_id, vorschlag.created_by)
+    ]
   }[vorschlag.kind];
 
   if (!bauplan) throw new Fehler("Unbekannte Art von Vorschlag");
