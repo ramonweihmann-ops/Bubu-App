@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Von einer Aufgabe zurücktreten</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --bald:#c47a00; --bald-tint:#fdf1dc;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1060px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:40px 0 10px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:66ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.bu{font-size:12.5px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+
+.phone{width:340px;max-width:100%;height:700px;background:var(--bg);border:9px solid var(--ink);
+  border-radius:36px;overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);
+  display:flex;flex-direction:column;margin:0 auto}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.kopf{flex:none;padding:16px 15px 6px;display:flex;align-items:center;gap:10px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.15}
+.kopf .sub{font-size:12px;color:var(--ink-3)}
+.inhalt{flex:1;overflow-y:auto;padding:0 15px 14px;display:flex;flex-direction:column;gap:10px}
+.inhalt>*{flex-shrink:0}
+
+.btn{font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:12px 15px;border:1px solid transparent;
+  cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);width:100%}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--bg);border-color:var(--line)}
+.btn.text{background:none;color:var(--ink-2);font-weight:600;padding:8px}
+.btnrow{display:flex;gap:8px}.btnrow>.btn{flex:1}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:9px}
+.card.flat{background:var(--tint);border-color:transparent}
+.card.alarm{border-color:var(--accent);background:var(--accent-tint)}
+.card.frei{border-color:var(--frei);background:var(--frei-tint)}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:5px 0 -4px}
+.note{font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:9px 10px}
+.note b{color:var(--ink)}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:var(--tint-2);color:var(--ink-2);display:inline-flex;gap:5px;align-items:center}
+.chip.rot{background:var(--accent-tint);color:var(--accent)}
+.chip.gruen{background:var(--frei);color:#fff}
+.chip.navy{background:var(--ink);color:#fff}
+.pill{font-family:var(--font-data);font-size:13px;font-weight:700;background:var(--ink);color:#fff;
+  border-radius:999px;padding:5px 10px;flex:none}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--tint);display:grid;place-items:center;flex:none;font-size:16px}
+
+.balken{height:10px;border-radius:999px;background:var(--tint-2);overflow:hidden;display:flex}
+.balken i{display:block;height:100%;border-radius:999px}
+
+.rang{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.rang .platz{font-family:var(--font-display);font-weight:800;font-size:18px;width:20px;text-align:center;color:var(--ink-3)}
+.rang .n{flex:1;min-width:0}
+.rang .t{display:block;font-size:13.5px;font-weight:700}
+.rang .m{display:block;font-size:11px;color:var(--ink-3)}
+.zahlen{display:flex;gap:6px;flex:none}
+.zahl{background:var(--tint);border-radius:9px;padding:4px 6px;text-align:center;min-width:34px}
+.zahl b{display:block;font-family:var(--font-data);font-size:13px;line-height:1.1}
+.zahl span{display:block;font-size:8px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+
+.feld{display:flex;flex-direction:column;gap:5px}
+.feld label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.feld textarea,.feld input{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:10px;width:100%;background:var(--bg);color:var(--ink)}
+.feld textarea{min-height:70px;resize:none}
+.pflicht{color:var(--accent);font-weight:700}
+
+.vote{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px}
+.change{font-family:var(--font-data);font-size:13px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.change .old{text-decoration:line-through;color:var(--ink-3)}
+.change .new{color:var(--frei);font-weight:700}
+.stance{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}
+.stance i{font-style:normal;font-weight:700;color:var(--ink)}
+.zaehlbalken{display:flex;gap:4px;align-items:center}
+.zaehlbalken i{flex:1;height:6px;border-radius:999px;background:var(--tint-2);display:block}
+.zaehlbalken i[data-ja]{background:var(--frei)}
+
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:7px 5px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);min-width:0}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td b{white-space:nowrap}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+.rechnung{font-family:var(--font-data);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Abstimmung</span>
+  <h1>Von einer Aufgabe zurücktreten</h1>
+  <p class="lead">
+    Eine übernommene Aufgabe ist eine Zusage — aber manchmal geht es einfach nicht. Bisher blieb
+    dann nur, sie liegen zu lassen, bis die Mahnung kommt und irgendwann die Gruppenstrafe.
+    Besser ist, es zu sagen: mit Grund, und die anderen entscheiden.
+  </p>
+
+  <h2>Wo es steht</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Bad putzen</div><div class="sub">Bad · 1× pro Woche</div></div>
+          <span style="color:var(--ink-3)">✎</span></div>
+        <div class="inhalt">
+          <div class="card" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1;font-size:14px;font-weight:700">Fällig in 2 Tagen</span>
+              <span class="pill">+12 ★</span>
+            </div>
+            <span class="balken"><i style="width:70%;background:var(--bald)"></i></span>
+            <div style="font-size:12px;color:var(--ink-2)">Zuletzt: Jonas, vor 8 Tagen</div>
+          </div>
+
+          <div class="card frei" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="font-size:19px">🫵</span>
+            <span style="flex:1;font-size:13px">Diese Runde gehört <b>dir</b>. Du hast sie am
+              Montag übernommen.</span>
+          </div>
+
+          <p class="label">Wer war wie oft dran</p>
+          <div class="rang"><span class="platz">1</span><span class="n">
+            <span class="t">Du</span><span class="m">zuletzt am Montag</span></span>
+            <span class="zahlen"><span class="zahl"><b>1</b><span>am Stück</span></span>
+            <span class="zahl"><b>7</b><span>dieses Jahr</span></span></span></div>
+          <div class="rang"><span class="platz">2</span><span class="n">
+            <span class="t">Jonas</span><span class="m">zuletzt vor 8 Tagen</span></span>
+            <span class="zahlen"><span class="zahl"><b>0</b><span>am Stück</span></span>
+            <span class="zahl"><b>9</b><span>dieses Jahr</span></span></span></div>
+
+          <button class="btn primary">Erledigt melden</button>
+          <button class="btn ghost">Zurücktreten von der Aufgabe</button>
+        </div>
+      </div></div>
+      <p class="bu">Der neue Knopf steht direkt unter <b>Erledigt melden</b> — leise, nicht
+        gleichwertig. Er erscheint nur, wenn die Aufgabe wirklich dir gehört.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Zurücktreten</div><div class="sub">Bad putzen</div></div></div>
+        <div class="inhalt">
+          <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="flex:1;font-size:14px;font-weight:600">Bad putzen</span>
+            <span class="pill">+12 ★</span>
+          </div>
+
+          <div class="feld">
+            <label>Warum geht es nicht <span class="pflicht">·  nötig</span></label>
+            <textarea>Liege flach mit Grippe, komme diese Woche nicht dazu.</textarea>
+          </div>
+
+          <div class="note"><b>Ohne Grund geht es nicht.</b> Die anderen entscheiden darüber —
+            und dafür müssen sie wissen, worum es geht.</div>
+
+          <div class="note">Es reicht, wenn <b>eine Mehrheit</b> zustimmt: bei euch dreien also
+            <b>eine weitere Stimme</b>. Bis dahin gehört die Aufgabe weiter dir.</div>
+
+          <button class="btn dark">Zur Abstimmung geben</button>
+          <button class="btn text">Doch nicht</button>
+        </div>
+      </div></div>
+      <p class="bu">Ein Grund ist <b>Pflicht</b> — anders als bei den meisten anderen Feldern in
+        der App. Wer zurücktritt, gibt Arbeit ab; das darf man begründen müssen.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Prüfen</div><div class="sub">Wartet auf deine Entscheidung</div></div></div>
+        <div class="inhalt">
+          <div class="vote">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:14.5px;font-weight:700;display:block">Anna tritt zurück</span>
+                <span style="font-size:11.5px;color:var(--ink-3);display:block">Bad putzen — die Runde
+                  wird wieder frei</span>
+              </span>
+              <span class="chip rot">Offen</span>
+            </div>
+            <div class="change"><span class="old">gehört Anna</span>→<span class="new">für alle offen</span>
+              <span style="color:var(--ink-2)">· fällig bleibt 26.08.</span></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Vorgeschlagen von Anna · vor 5 Min.</div>
+            <div style="font-size:12.5px;color:var(--ink-2)">Anna: „Liege flach mit Grippe, komme
+              diese Woche nicht dazu.“</div>
+            <div class="stance"><span>Anna: <i>zugestimmt</i></span><span>Du: <i>offen</i></span>
+              <span>Jonas: <i>offen</i></span></div>
+            <div class="zaehlbalken"><i data-ja></i><i></i><i></i></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">1 von 3 · <b>eine Stimme fehlt noch</b>,
+              dann ist die Mehrheit da.</div>
+            <div class="btnrow"><button class="btn dark">Zustimmen</button>
+              <button class="btn ghost">Ablehnen</button></div>
+          </div>
+
+          <div class="note">Ein Rücktritt ist die einzige Abstimmung, die <b>keine
+            Einstimmigkeit</b> braucht. Alles andere bleibt, wie es ist.</div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span data-an><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Wie jede andere Abstimmung bei <b>Prüfen</b> — nur mit einem Zähler statt
+        „alle müssen zustimmen“.</p>
+    </div>
+  </div>
+
+  <h2>Was danach passiert</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Bad putzen</div><div class="sub">Bad · 1× pro Woche</div></div></div>
+        <div class="inhalt">
+          <div class="card" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1;font-size:14px;font-weight:700">Fällig in 2 Tagen</span>
+              <span class="pill">+12 ★</span>
+            </div>
+            <span class="balken"><i style="width:70%;background:var(--bald)"></i></span>
+          </div>
+
+          <div class="card frei" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="font-size:19px">🙌</span>
+            <span style="flex:1;font-size:13px"><b>Wieder für alle offen.</b> Anna ist
+              zurückgetreten — wer sie macht, meldet sie.</span>
+          </div>
+
+          <p class="label">Wer war wie oft dran</p>
+          <div class="rang"><span class="platz">1</span><span class="n">
+            <span class="t">Du</span><span class="m">zuletzt vor 8 Tagen</span></span>
+            <span class="zahlen"><span class="zahl"><b>0</b><span>am Stück</span></span>
+            <span class="zahl"><b>9</b><span>dieses Jahr</span></span></span></div>
+          <div class="rang"><span class="platz">2</span><span class="n">
+            <span class="t">Anna</span><span class="m">Rücktritt am Mittwoch</span></span>
+            <span class="zahlen"><span class="zahl"><b>1</b><span>am Stück</span></span>
+            <span class="zahl"><b>7</b><span>dieses Jahr</span></span></span></div>
+
+          <button class="btn primary">Erledigt melden</button>
+          <div class="note"><b>Die Zähler bleiben, wie sie waren.</b> Ein Rücktritt ist keine
+            Erledigung — aber auch kein Minuspunkt.</div>
+        </div>
+      </div></div>
+      <p class="bu"><b>Angenommen.</b> Die Zuteilung fällt weg, die Frist bleibt stehen. Jeder darf
+        die Aufgabe jetzt melden — auch Anna, wenn es ihr doch besser geht.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Bad putzen</div><div class="sub">Bad · 1× pro Woche</div></div></div>
+        <div class="inhalt">
+          <div class="card alarm" style="flex-direction:row;align-items:center;gap:10px">
+            <span style="font-size:19px">✋</span>
+            <span style="flex:1;font-size:13px"><b>Rücktritt abgelehnt.</b> Die Aufgabe gehört
+              weiter dir.</span>
+          </div>
+
+          <div class="card" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1;font-size:14px;font-weight:700">Fällig in 2 Tagen</span>
+              <span class="pill">+12 ★</span>
+            </div>
+            <span class="balken"><i style="width:70%;background:var(--bald)"></i></span>
+            <div style="font-size:12px;color:var(--ink-2)">Jonas: „Wir sind auch alle im Stress —
+              schaffst du das nicht am Wochenende?“</div>
+          </div>
+
+          <button class="btn primary">Erledigt melden</button>
+          <button class="btn ghost">Nochmal zurücktreten</button>
+          <div class="note">Ein neuer Anlauf ist möglich — etwa mit einem anderen Grund, wenn sich
+            die Lage geändert hat.</div>
+        </div>
+      </div></div>
+      <p class="bu"><b>Abgelehnt.</b> Alles bleibt beim Alten. Wer ablehnt, kann eine Begründung
+        mitgeben — die steht dann an der Aufgabe.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Start</div><div class="sub">Mittwoch, 26. August</div></div></div>
+        <div class="inhalt">
+          <div class="card alarm" style="gap:8px">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="color:var(--accent);font-size:19px">🛡</span>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:700">1 Sache wartet auf dich</div>
+                <div style="font-size:12px;color:var(--ink-2)">Ohne dein OK gibt es keine Cleanies.</div>
+              </div>
+            </div>
+            <button class="btn primary">Jetzt prüfen</button>
+          </div>
+
+          <p class="label">Wartet auf die anderen</p>
+          <div class="card" style="gap:9px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:13px;display:block">Bad putzen</span>
+                <span style="font-size:11px;color:var(--ink-3)">Rücktritt beantragt · vor 5 Min.</span>
+                <span style="font-size:11px;color:var(--ink-2)">„Liege flach mit Grippe …“</span>
+              </span>
+              <span class="chip navy">1 / 3</span>
+              <span style="color:var(--ink-3)">›</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:-6px">
+            Offen, bis die Mehrheit steht. Solange kannst du nachbessern oder zurückziehen.</div>
+        </div>
+      </div></div>
+      <p class="bu"><b>Beim Absender.</b> Der Rücktritt steht im Wartekasten wie jede andere offene
+        Sache — samt Zähler, wie viele schon zugestimmt haben.</p>
+    </div>
+  </div>
+
+  <h2>Die Regeln</h2>
+  <table>
+    <tr><th style="width:30%">Sache</th><th>Wie es läuft</th></tr>
+    <tr><td><b>Wer darf</b></td><td>Nur die Person, der die Aufgabe in dieser Runde zugeteilt ist. Sonst erscheint der Knopf gar nicht.</td></tr>
+    <tr><td><b>Wann</b></td><td>Solange die Aufgabe noch offen ist. Ist sie schon erledigt gemeldet, gibt es nichts mehr zurückzutreten — dann zieht man die Meldung zurück.</td></tr>
+    <tr><td><b>Grund</b></td><td>Pflicht, mindestens ein paar Worte. Er steht auf der Abstimmungskarte und bleibt danach an der Aufgabe.</td></tr>
+    <tr><td><b>Mehrheit</b></td><td>Mehr als die Hälfte aller im Haushalt. Wer zurücktritt, zählt als Ja — der eigene Antrag ist die eigene Stimme.</td></tr>
+    <tr><td><b>Angenommen</b></td><td>Die Zuteilung fällt weg, die Runde ist wieder für alle offen. <b>Die Frist bleibt stehen</b> — der Termin ändert sich nicht.</td></tr>
+    <tr><td><b>Abgelehnt</b></td><td>Alles bleibt, wie es war. Ein neuer Anlauf ist möglich.</td></tr>
+    <tr><td><b>Zähler</b></td><td>„Am Stück“ und „dieses Jahr“ ändern sich nicht. Ein Rücktritt ist keine Erledigung — und kein Minuspunkt.</td></tr>
+    <tr><td><b>Mahnung und Strafe</b></td><td>Laufen normal weiter. Die Aufgabe ist nicht erledigt, nur niemandem mehr zugeteilt.</td></tr>
+  </table>
+
+  <h2>Wie „Mehrheit“ gerechnet wird</h2>
+  <p class="lead">Mehr als die Hälfte <b>aller</b> im Haushalt, und der Antrag selbst zählt als
+    Ja-Stimme. Damit hängt niemand an einer einzigen Person, die gerade nicht ins Handy schaut.</p>
+  <table>
+    <tr><th>Haushalt</th><th>Nötig</th><th>Heißt</th></tr>
+    <tr><td class="rechnung">2 Personen</td><td class="rechnung">2</td><td>Die andere Person muss zustimmen.</td></tr>
+    <tr><td class="rechnung">3 Personen</td><td class="rechnung">2</td><td>Eine weitere Stimme reicht.</td></tr>
+    <tr><td class="rechnung">4 Personen</td><td class="rechnung">3</td><td>Zwei weitere Stimmen.</td></tr>
+    <tr><td class="rechnung">5 Personen</td><td class="rechnung">3</td><td>Zwei weitere Stimmen.</td></tr>
+  </table>
+  <p class="lead" style="margin-top:14px">Ein Nein beendet den Antrag <b>nicht</b> sofort — anders
+    als bei allen anderen Abstimmungen. Gezählt wird, bis die Mehrheit steht oder rechnerisch nicht
+    mehr zu erreichen ist.</p>
+
+  <h2>Drei Entscheidungen, die ich getroffen habe</h2>
+  <p class="lead">Sie standen nicht in deiner Beschreibung. Sag Bescheid, wenn eine davon anders
+    sein soll — dann ändere ich sie vor dem Einbau.</p>
+
+  <div class="frage">
+    <b>Die Runde wird für alle offen, statt an den Nächsten in der Rangliste zu gehen.</b>
+    Die Rangliste war für diese Runde schon abgearbeitet; sie noch einmal aufzurollen wäre
+    verwirrend, und der Zweitplatzierte hätte sich ja bewerben können. Wer einspringt, meldet
+    einfach — wie bei einer Aufgabe, auf die sich niemand beworben hat.
+  </div>
+
+  <div class="frage">
+    <b>Die Frist bleibt stehen.</b>
+    Der Haushalt braucht das saubere Bad genauso dringend wie vorher. Wäre der Rücktritt auch eine
+    Fristverlängerung, wäre er der bequemere Weg — und die Mahnung ließe sich beliebig wegschieben.
+  </div>
+
+  <div class="frage">
+    <b>Ein Nein beendet nichts.</b>
+    Bei allen anderen Abstimmungen reicht ein Nein, um den Vorschlag zu stoppen. Hier nicht: eine
+    einzelne Ablehnung soll niemanden zwingen, krank zu putzen. Gezählt wird bis zur Mehrheit.
+  </div>
+
+</div>
+</body>
+</html>
