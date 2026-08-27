@@ -61,4 +61,7 @@ genau so, wie er es soll.
 | `ui-urlaub.mjs` | Urlaubsmodus auf dem Schirm |
 | `ui-gutschrift.mjs` | Der Haken „Cleanies an Empfänger senden“ |
 | `ui-ruecktritt.mjs` | Zurücktreten auf dem Schirm, zu dritt |
+| `jubel-api.sh` | Cleanies-Phasen verschieben, eigene GIFs hochladen und löschen |
+| `ui-jubel.mjs` | Der Jubel in der App, die Einstellungen der Verwaltung |
+| `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |

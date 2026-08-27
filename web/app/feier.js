@@ -392,7 +392,10 @@ export function spielen(leinwand, { punkte = 0, grenzen = STANDARD_GRENZEN, reze
   let vorher = start;
 
   const bild = (jetzt) => {
-    const dt = Math.min(48, jetzt - vorher);
+    // Der erste Zeitstempel eines Bildes kann vor dem Start liegen — er zeigt
+    // den Anfang des Frames, nicht den Moment des Aufrufs. Ohne die Null unten
+    // liefe die Zeit dann rückwärts, und der Ring schrumpfte ins Negative.
+    const dt = Math.max(0, Math.min(48, jetzt - vorher));
     vorher = jetzt;
     const zeit = jetzt - start;
 
@@ -416,7 +419,7 @@ export function spielen(leinwand, { punkte = 0, grenzen = STANDARD_GRENZEN, reze
       const a = Math.max(0, 1 - ring.alter / ring.leben);
       if (a <= 0) continue;
       c.globalAlpha = a * 0.7; c.strokeStyle = ring.farbe; c.lineWidth = ring.dicke;
-      c.beginPath(); c.arc(ring.x, ring.y, ring.r, 0, 7); c.stroke();
+      c.beginPath(); c.arc(ring.x, ring.y, Math.max(0, ring.r), 0, 7); c.stroke();
     }
 
     for (const t of B.teile) {

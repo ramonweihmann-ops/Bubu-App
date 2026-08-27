@@ -76,6 +76,9 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "transfers" && teile[2] === "decide") return json(await uebertragungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
+    if (pfad === "phasen") return json(await phasenAendern(env, ich, koerper));
+    if (pfad === "gifs") return json(await gifAnlegen(env, ich, koerper));
+    if (teile[0] === "gifs" && teile[2] === "weg") return json(await gifWeg(env, ich, teile[1]));
 
     if (teile[0] === "plan" && teile[1] && !teile[2]) return json(await aufgabeDetail(env, ich, teile[1]));
     if (teile[0] === "plan" && teile[2] === "bewerben") return json(await bewerben(env, ich, teile[1]));
@@ -217,6 +220,59 @@ async function haushaltEinrichten(env, ich, daten) {
 }
 
 /** Art und Größe später ändern — das darf nur, wer verwaltet. */
+/** Die zwei Grenzen des Jubels. Nur die Verwaltung, und ohne Abstimmung: es
+ *  ist eine Anzeigesache, keine Cleanies-Sache. Die obere muss über der unteren
+ *  liegen, sonst gäbe es die mittlere Stufe nicht mehr. */
+async function phasenAendern(env, ich, { leise, mittel }) {
+  await nurVerwalter(env, ich);
+  const a = grenze(Math.floor(Number(leise)), 1, 998);
+  const b = grenze(Math.floor(Number(mittel)), 2, 999);
+  if (!(b > a)) throw new Fehler("Die zweite Grenze muss über der ersten liegen");
+
+  await env.DB.prepare("update couples set phase_leise = ?1, phase_mittel = ?2 where id = ?3")
+    .bind(a, b, ich.couple_id).run();
+  return { ok: true, phasen: { leise: a, mittel: b } };
+}
+
+const PHASEN_IDS = ["leise", "mittel", "gross"];
+/** Ein GIF wiegt schnell mehr als die ganze App. Es liegt in derselben
+ *  Datenbank wie alles andere — kostenlos, aber nicht unbegrenzt. */
+const GIF_GRENZE = 400 * 1024;
+
+async function gifAnlegen(env, ich, { phase, name = "", daten = "" }) {
+  await nurVerwalter(env, ich);
+  if (!PHASEN_IDS.includes(phase)) throw new Fehler("Unbekannte Phase");
+
+  const wert = String(daten);
+  if (!/^data:image\/(gif|webp|png|apng);base64,/.test(wert)) {
+    throw new Fehler("Das muss ein GIF, WebP oder PNG sein");
+  }
+  // Base64 trägt vier Zeichen je drei Bytes — so kommt man auf die echte Größe.
+  const roh = Math.floor((wert.length - wert.indexOf(",") - 1) * 3 / 4);
+  if (roh > GIF_GRENZE) {
+    throw new Fehler(`Zu groß: ${Math.round(roh / 1024)} KB, erlaubt sind ${GIF_GRENZE / 1024} KB`);
+  }
+
+  const wieviele = await env.DB.prepare("select count(*) as n from jubel_gifs where couple_id = ?1")
+    .bind(ich.couple_id).first();
+  if (wieviele.n >= 30) throw new Fehler("Dreißig eigene GIFs sind genug — lösch erst eines");
+
+  const gif = id();
+  await env.DB.prepare(
+    `insert into jubel_gifs (id, couple_id, phase, name, daten, groesse, created_by)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(gif, ich.couple_id, phase, String(name).trim().slice(0, 60) || "GIF", wert, roh, ich.id).run();
+  return { ok: true, id: gif, groesse: roh };
+}
+
+async function gifWeg(env, ich, gifId) {
+  await nurVerwalter(env, ich);
+  const weg = await env.DB.prepare("delete from jubel_gifs where id = ?1 and couple_id = ?2")
+    .bind(gifId, ich.couple_id).run();
+  if (!weg.meta.changes) throw new Fehler("Dieses GIF gibt es nicht", 404);
+  return { ok: true };
+}
+
 async function haushaltAendern(env, ich, { art, erwachsene, kinder, personen, strafe }) {
   await nurVerwalter(env, ich);
 
@@ -500,7 +556,7 @@ async function zustand(env, ich) {
   await abstimmungenNachziehen(env, paar);
   await planNachziehen(env, paar);
 
-  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume] =
+  const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume, gifs] =
     await Promise.all([
       env.DB.prepare(`select u.id, u.name, u.avatar_url, u.bild, m.joined_at, m.rolle, m.erwachsen
                         from members m join users u on u.id = m.user_id
@@ -537,7 +593,9 @@ async function zustand(env, ich) {
       env.DB.prepare(`select id, art, prozent, kategorie, beginn, ende from aktionen
                        where couple_id = ?1 and ende > datetime('now') order by beginn`).bind(paar).all(),
       env.DB.prepare(`select id, name, aktiv from raeume where couple_id = ?1
-                       order by sortierung, name`).bind(paar).all()
+                       order by sortierung, name`).bind(paar).all(),
+      env.DB.prepare(`select id, phase, name, daten, groesse from jubel_gifs
+                       where couple_id = ?1 order by created_at`).bind(paar).all()
     ]);
 
   const jetzt = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -566,12 +624,15 @@ async function zustand(env, ich) {
     haushalt: {
       art: haus.art, groesse: haus.groesse, erwachsene: haus.erwachsene, kinder: haus.kinder,
       belegt: mit.length, ichVerwalte: mein.rolle === "verwalter",
-      strafe: !!haus.strafe_an
+      strafe: !!haus.strafe_an,
+      // Die zwei Grenzen des Jubels. Die dritte Stufe ist nach oben offen.
+      phasen: { leise: haus.phase_leise, mittel: haus.phase_mittel }
     },
     ich: mein,
     mitglieder: mit,
     andere,
     raeume: raeume.results,
+    gifs: gifs.results,
     quests: quests.results.map((q) => {
       const { wert, aktion } = questWert(q, laufend);
       return { ...q, punkte_jetzt: wert, bonus: aktion ? aktion.prozent : 0 };

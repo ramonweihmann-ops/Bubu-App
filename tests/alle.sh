@@ -50,10 +50,11 @@ lauf "storno-api.sh" bash storno-api.sh
 lauf "urlaub-api.sh" bash urlaub-api.sh
 lauf "gutschrift-api.sh" bash gutschrift-api.sh
 lauf "ruecktritt-api.sh" bash ruecktritt-api.sh
+lauf "jubel-api.sh" bash jubel-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-plan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt cleanie-shot; do
+for t in ui ui-plan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel cleanie-shot mockup-anim; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

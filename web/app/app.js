@@ -5,9 +5,10 @@
 
 const app = document.getElementById("app");
 const scrim = document.getElementById("scrim");
+import { REZEPTE, spielen, stoppen, phaseFuer, STANDARD_GRENZEN } from "./feier.js";
+
 const celebrate = document.getElementById("celebrate");
 const toastEl = document.getElementById("toast");
-const confettiEl = document.getElementById("confetti");
 
 let S = null;                  // Zustand vom Server
 let ansicht = "start";
@@ -151,13 +152,43 @@ function toast(text, fehler = false) {
   toastTimer = setTimeout(() => toastEl.removeAttribute("data-open"), 3200);
 }
 
-function konfetti() {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const farben = ["#ec0f06", "#ffffff", "#f0913f", "#a9a6a1"];
-  confettiEl.innerHTML = Array.from({ length: 34 }, (_, i) =>
-    `<i style="left:${Math.random() * 100}%;background:${farben[i % farben.length]};animation-delay:${(Math.random() * .6).toFixed(2)}s"></i>`
-  ).join("");
-  setTimeout(() => { confettiEl.innerHTML = ""; }, 2600);
+/** Die Grenzen des Haushalts — solange der Zustand noch nicht da ist, die
+ *  eingebauten. */
+const jubelGrenzen = () => S?.haushalt?.phasen || STANDARD_GRENZEN;
+const jubelGifs = (phase) => (S?.gifs || []).filter((g) => g.phase === phase);
+
+let letzterJubel = null;
+
+/**
+ * Der Jubel nach einer bestätigten Meldung. Wie laut, entscheiden die Cleanies:
+ * leise, mittel, groß — das Feuerwerk erst ganz oben, sonst nutzt es sich ab.
+ *
+ * Eigene GIFs des Haushalts stehen gleichberechtigt neben den eingebauten. Sie
+ * ersetzen sie nicht: sonst wäre nach dem ersten Hochladen wieder immer
+ * dasselbe zu sehen.
+ */
+function jubel(punkte) {
+  const phase = phaseFuer(punkte, jubelGrenzen());
+  const gifs = jubelGifs(phase);
+  const eingebaut = REZEPTE[phase] || [];
+  const alle = eingebaut.length + gifs.length;
+  const gifDran = gifs.length && Math.random() < gifs.length / alle;
+
+  const bild = celebrate.querySelector(".jubelgif");
+  if (bild) bild.remove();
+
+  if (gifDran) {
+    const g = gifs[Math.floor(Math.random() * gifs.length)];
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      celebrate.insertAdjacentHTML("afterbegin",
+        `<img class="jubelgif" src="${g.daten}" alt="">`);
+      setTimeout(() => celebrate.querySelector(".jubelgif")?.remove(), 3200);
+    }
+    letzterJubel = null;
+    return;
+  }
+  letzterJubel = spielen(document.getElementById("jubel"),
+    { punkte, grenzen: jubelGrenzen(), letzte: letzterJubel });
 }
 
 function feiern({ punkte = 0, titel = "", text = "", positiv = true }) {
@@ -165,6 +196,7 @@ function feiern({ punkte = 0, titel = "", text = "", positiv = true }) {
   const pose = posen[Math.floor(Math.random() * posen.length)];
 
   celebrate.innerHTML = `
+    <canvas id="jubel" class="jubelflaeche" aria-hidden="true"></canvas>
     <img src="/logo.webp" alt="" class="${positiv ? pose : ""}" ${positiv ? "" : 'style="opacity:.75"'}>
     ${positiv && punkte ? '<div class="big">+0</div>' : ""}
     <div class="cap" style="font-size:19px;font-weight:700;opacity:1">${esc(titel)}</div>
@@ -173,7 +205,7 @@ function feiern({ punkte = 0, titel = "", text = "", positiv = true }) {
   celebrate.setAttribute("data-open", "");
 
   if (positiv) {
-    konfetti();
+    jubel(punkte);
     if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
   } else if (navigator.vibrate) {
     navigator.vibrate(40);
@@ -192,7 +224,11 @@ function feiern({ punkte = 0, titel = "", text = "", positiv = true }) {
 
 celebrate.addEventListener("click", (ev) => {
   if (!ev.target.closest("[data-schliessen]") && ev.target !== celebrate) return;
+  stoppen(document.getElementById("jubel"));
   celebrate.removeAttribute("data-open");
+  // Leer räumen, nicht nur verstecken: ein GIF im versteckten Fenster wird
+  // sonst weiter dekodiert, und die Leinwand bliebe für immer stehen.
+  celebrate.innerHTML = "";
   setTimeout(naechstesEreignis, 250);
 });
 
@@ -585,6 +621,27 @@ const ueberfaellig = () => plan().filter((a) => a.offen < 0 && !a.pruefung);
 /** Wo ich selbst gefragt bin: entscheiden, erledigen oder eine Meldung prüfen. */
 const meinePlanSachen = () => plan().filter((a) =>
   a.dran === S.ich.id || (a.zugewiesen === S.ich.id && a.offen <= 0 && !a.pruefung));
+
+const PHASENNAME = { leise: "Leise", mittel: "Mittel", gross: "Groß" };
+
+/** Eine Zeile der Phaseneinstellung. Die oberste hat keine Grenze — sie fängt
+ *  da an, wo die mittlere aufhört, und geht nach oben offen weiter. */
+function phasenZeile(id) {
+  const p = S.haushalt.phasen || { leise: 3, mittel: 6 };
+  const von = id === "leise" ? 1 : id === "mittel" ? p.leise + 1 : p.mittel + 1;
+  return `
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="flex:1;min-width:0">
+        <span style="font-size:14px;font-weight:600;display:block">${PHASENNAME[id]}</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">${
+          id === "gross" ? `ab ${von} · nach oben offen` : `${von} bis …`}</span>
+      </span>
+      ${id === "gross"
+        ? `<span style="font-family:var(--font-data);font-size:15px;color:var(--ink-3);width:64px;text-align:center">∞</span>`
+        : `<input id="phase-${id}" class="phasenfeld" type="number" min="1" max="999"
+             inputmode="numeric" value="${p[id]}">`}
+    </div>`;
+}
 
 /* ---------- Urlaub ---------- */
 
@@ -1987,6 +2044,38 @@ function schirmEinstellungen() {
         <span style="color:var(--ink-3)">›</span>
       </button>
 
+      ${S.haushalt.ichVerwalte ? `
+      <p class="section-label">Jubel</p>
+      <div class="card" style="gap:11px">
+        <div style="font-size:12.5px;color:var(--ink-2)">Wie laut gefeiert wird, hängt an den
+          Cleanies der Quest. Das Feuerwerk gibt es nur in der obersten Stufe — sonst nutzt es
+          sich ab.</div>
+        ${["leise", "mittel", "gross"].map((id) => phasenZeile(id)).join("")}
+        <button class="btn dark block" data-senden="phasen">Grenzen speichern</button>
+      </div>
+
+      <div class="card" style="gap:9px">
+        <div style="font-size:14px;font-weight:600">Eigene GIFs</div>
+        <div style="font-size:12px;color:var(--ink-3);margin-top:-6px">Sie kommen zu den
+          dreißig eingebauten dazu. Bis 400 KB je Datei.</div>
+        ${(S.gifs || []).length ? (S.gifs || []).map((g) => `
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="${g.daten}" alt="" class="gifkachel">
+            <span style="flex:1;min-width:0">
+              <span style="font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</span>
+              <span style="font-size:11.5px;color:var(--ink-3)">${PHASENNAME[g.phase]} · ${Math.round(g.groesse / 1024)} KB</span>
+            </span>
+            <button class="stiftbtn" data-gif-weg="${g.id}" aria-label="${esc(g.name)} löschen">✕</button>
+          </div>`).join("")
+        : `<div style="font-size:12.5px;color:var(--ink-3)">Noch keine — die eingebauten reichen auch.</div>`}
+        <div class="filters" id="gifphase">
+          ${["leise", "mittel", "gross"].map((id, i) =>
+            `<button data-gifphase="${id}" aria-pressed="${i === 0}">${PHASENNAME[id]}</button>`).join("")}
+        </div>
+        <button class="btn ghost block" data-gif style="font-size:14px">GIF hinzufügen</button>
+        <input type="file" id="giffeld" accept="image/gif,image/webp,image/png" hidden>
+      </div>` : ""}
+
       <p class="section-label">Urlaub</p>
       <button class="rowlink" data-go="urlaub"
         style="${meinUrlaub() || hausUrlaub() ? "border-color:var(--urlaub)" : ""}">
@@ -2631,7 +2720,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2758,6 +2847,25 @@ document.addEventListener("click", async (ev) => {
     if (name.length >= 2) eRaeume().add(name);
     return zeichne();
   }
+  if (el.dataset.gifphase) {
+    for (const k of document.querySelectorAll("[data-gifphase]")) {
+      k.setAttribute("aria-pressed", String(k === el));
+    }
+    return;
+  }
+
+  if (el.hasAttribute("data-gif")) {
+    document.getElementById("giffeld")?.click();
+    return;
+  }
+
+  if (el.dataset.gifWeg) {
+    await api(`gifs/${el.dataset.gifWeg}/weg`, {});
+    await laden();
+    toast("GIF gelöscht.");
+    return;
+  }
+
   if (el.hasAttribute("data-foto")) {
     document.getElementById("fotofeld")?.click();
     return;
@@ -2970,6 +3078,15 @@ document.addEventListener("click", async (ev) => {
       await api(`${el.dataset.bereich}/${el.dataset.id}/aendern`, körper);
       sheetZu(); await laden();
       toast(`${andereName()} ${beugung("sieht", "sehen")} deine Ergänzung.`);
+      return;
+    }
+
+    if (el.dataset.senden === "phasen") {
+      const ergebnis = await api("phasen", {
+        leise: Number(wert("phase-leise")), mittel: Number(wert("phase-mittel"))
+      });
+      await laden();
+      toast(`Leise bis ${ergebnis.phasen.leise}, mittel bis ${ergebnis.phasen.mittel}, groß ab ${ergebnis.phasen.mittel + 1}.`);
       return;
     }
 
@@ -3298,7 +3415,37 @@ async function fotoVerkleinern(datei, kante = 256) {
   return leinwand.toDataURL("image/jpeg", 0.82);
 }
 
+/** Ein GIF wandert unverändert in die Datenbank — verkleinern ginge nur, indem
+ *  man die Bewegung wegwirft. Deshalb hier nur lesen und die Größe prüfen. */
+function dateiLesen(datei) {
+  return new Promise((ok, nein) => {
+    const leser = new FileReader();
+    leser.onload = () => ok(leser.result);
+    leser.onerror = () => nein(new Error("nicht lesbar"));
+    leser.readAsDataURL(datei);
+  });
+}
+
 document.addEventListener("change", async (ev) => {
+  const giffeld = ev.target.closest("#giffeld");
+  if (giffeld && giffeld.files?.length) {
+    const datei = giffeld.files[0];
+    try {
+      if (datei.size > 400 * 1024) {
+        throw new Error(`Zu groß: ${Math.round(datei.size / 1024)} KB, erlaubt sind 400 KB`);
+      }
+      const phase = document.querySelector('[data-gifphase][aria-pressed="true"]')?.dataset.gifphase || "gross";
+      await api("gifs", { phase, name: datei.name, daten: await dateiLesen(datei) });
+      await laden();
+      toast("GIF liegt bereit.");
+    } catch (f) {
+      toast(f.message || "Diese Datei ließ sich nicht lesen", true);
+    } finally {
+      giffeld.value = "";
+    }
+    return;
+  }
+
   const feld = ev.target.closest("#fotofeld");
   if (!feld || !feld.files?.length) return;
   try {
@@ -3433,7 +3580,9 @@ function frageSchliessen() {
 
 window.addEventListener("popstate", () => {
   if (celebrate.hasAttribute("data-open")) {
+    stoppen(document.getElementById("jubel"));
     celebrate.removeAttribute("data-open");
+    celebrate.innerHTML = "";
     waechterSetzen();
     return;
   }

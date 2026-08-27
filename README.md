@@ -24,8 +24,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Zurücktreten":** [`web/mockup-ruecktritt/`](./web/mockup-ruecktritt) — live unter
   `haus-quest.com/mockup-ruecktritt/`. Der Entwurf, aus dem der Rücktritt entstanden ist.
 - **Mockup „Jubel nach Cleanies-Phasen":** [`web/mockup-animationen/`](./web/mockup-animationen) —
-  live unter `haus-quest.com/mockup-animationen/`. Alle dreißig Animationen laufen dort echt;
-  noch nicht in der App verdrahtet.
+  live unter `haus-quest.com/mockup-animationen/`. Alle dreißig Animationen laufen dort echt,
+  aus derselben Datei wie in der App.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -289,6 +289,31 @@ Der Haken wird **nie gemerkt**: jeder Antrag fängt wieder ohne an. Sich selbst 
 geht nicht, und wer nicht zum Haushalt gehört, auch nicht. Bleibt die Belohnung aus, greift
 dieselbe Regel wie sonst — wer zugesagt hat, verliert den Betrag wieder.
 
+## Jubel
+
+Nach jeder **bestätigten** Meldung wird gefeiert — wie laut, hängt an den Cleanies der Quest,
+nicht am Kontostand. Drei Stufen, und das Feuerwerk gibt es nur in der obersten: sonst nutzt es
+sich ab, und die kleine Quest fühlt sich an wie die große.
+
+| Stufe | Standard | Was passiert |
+| --- | --- | --- |
+| **Leise** | 1 – 3 | Seifenblasen, Funkeln, Herzchen, eine sanfte Welle. Kurz und klein. |
+| **Mittel** | 4 – 6 | Konfettiregen, Sternschnuppe, Luftschlangen, Sprudel. Mehr Bewegung, kein Knall. |
+| **Groß** | ab 7 | Feuerwerk, Supernova, Doppelkanone, Raketen, großes Finale. Nach oben offen. |
+
+Zehn Rezepte je Stufe, zufällig gezogen — aber nie dasselbe wie beim letzten Mal. Sie sind
+Code, kein Download: eine kleine Bühne in [`web/app/feier.js`](./web/app/feier.js) kennt ein
+paar Gesten (streuen, knallen, regnen, blitzen, Fontäne, Kanone, Welle), und ein Rezept ist
+drei Zeilen. Damit laufen sie offline und kosten nichts.
+
+Unter **Einstellungen → Jubel** verschiebt die Verwaltung die beiden Grenzen und legt eigene
+**GIFs** dazu, je Stufe, bis 400 KB. Sie kommen zu den eingebauten dazu und ersetzen sie nicht
+— sonst wäre nach dem ersten Hochladen wieder immer dasselbe zu sehen. Das braucht keine
+Abstimmung: es ist eine Anzeigesache, keine Cleanies-Sache.
+
+Wer am Gerät **„Bewegung reduzieren"** eingestellt hat, bekommt gar keine Animation. Das ist
+eine Einstellung des Handys und hat Vorrang.
+
 ## Auswertung
 
 Punkte je Tag der letzten zwei Wochen als Balken — du und alle anderen zusammen, dazu
@@ -331,6 +356,7 @@ hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
 ```
 web/            Startseite mit Installationsknopf, Symbole, Service Worker
 web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
+                feier.js: die dreißig Jubel-Animationen
 worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
                 api.js (Regeln), plan.js (Quests mit Rhythmus),
                 rueckmeldung.js (Rückfragen, Empfang, Strafe, Zurückziehen),
