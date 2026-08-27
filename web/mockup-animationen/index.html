@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Jubel nach Cleanies-Phasen</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --leise:#6ba4ff; --mittel:#c47a00; --gross:#ec0f06;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1060px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:38px 0 10px}
+h3{font-family:var(--font-display);font-weight:800;font-size:15px;margin:0 0 3px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:66ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.buehne{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:800px){.buehne{grid-template-columns:1fr}}
+
+.phone{width:340px;max-width:100%;height:680px;background:#152c4f;border:9px solid var(--ink);
+  border-radius:36px;overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  color:#fff;text-align:center;padding:26px;position:sticky;top:20px}
+.phone canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.phone .fuchs{width:min(210px,60%);position:relative;z-index:1}
+.phone .big{font-family:var(--font-display);font-weight:800;font-size:54px;letter-spacing:-.04em;
+  margin-top:6px;position:relative;z-index:1;display:flex;align-items:center;gap:6px}
+.phone .big img{width:.62em;height:.62em;filter:brightness(1.9) saturate(.6)}
+.phone .cap{font-size:15px;opacity:.85;position:relative;z-index:1}
+.phone .cap.gross{font-size:19px;font-weight:700;opacity:1}
+.phone .weiter{margin-top:20px;font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:12px 26px;
+  background:transparent;color:#fff;border:1px solid rgba(255,255,255,.45);position:relative;z-index:1}
+.phone .stufe{position:absolute;top:16px;left:0;right:0;font-family:var(--font-data);font-size:10px;
+  letter-spacing:.16em;text-transform:uppercase;opacity:.6;z-index:1}
+
+.gruppe{border:1px solid var(--line);border-radius:18px;background:var(--bg);padding:14px;margin-bottom:14px}
+.gruppe .kopf{display:flex;align-items:baseline;gap:9px;margin-bottom:3px;flex-wrap:wrap}
+.gruppe .spanne{font-family:var(--font-data);font-size:12px;color:#fff;border-radius:999px;padding:2px 9px}
+.gruppe[data-stufe="leise"] .spanne{background:var(--leise)}
+.gruppe[data-stufe="mittel"] .spanne{background:var(--mittel)}
+.gruppe[data-stufe="gross"] .spanne{background:var(--gross)}
+.gruppe .was{font-size:12.5px;color:var(--ink-2);margin:0 0 11px}
+.knoepfe{display:flex;flex-wrap:wrap;gap:7px}
+.knoepfe button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:11px;
+  padding:8px 12px;background:var(--bg);color:var(--ink);cursor:pointer}
+.knoepfe button:hover{border-color:var(--ink-3)}
+.knoepfe button[data-an]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.probe{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.probe button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:12px;
+  padding:10px 14px;background:var(--bg);color:var(--ink);cursor:pointer}
+.probe button.stark{background:var(--accent);border-color:var(--accent);color:#fff}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td b{white-space:nowrap}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+
+.einst{border:1px solid var(--line);border-radius:18px;background:var(--bg);padding:14px;max-width:360px}
+.einst .zeile{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.einst .zeile:last-child{border-bottom:none}
+.einst .n{flex:1;min-width:0}
+.einst .t{display:block;font-size:14px;font-weight:600}
+.einst .m{display:block;font-size:11.5px;color:var(--ink-3)}
+.einst .von{font-family:var(--font-data);font-size:13px;background:var(--tint);border:1px solid var(--line);
+  border-radius:9px;padding:5px 8px;width:64px;text-align:center}
+.einst .btnzeile{display:flex;gap:8px;margin-top:12px}
+.einst .btnzeile button{flex:1;font:inherit;font-size:14px;font-weight:700;border-radius:12px;padding:11px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.einst .btnzeile button.stark{background:var(--ink);border-color:var(--ink);color:#fff}
+.gifzeile{display:flex;align-items:center;gap:10px;padding:9px 0}
+.gifkachel{width:52px;height:52px;border-radius:12px;background:var(--tint-2);display:grid;place-items:center;
+  font-size:20px;flex:none;border:1px dashed var(--line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zum Ausprobieren</span>
+  <h1>Jubel nach Cleanies-Phasen</h1>
+  <p class="lead">
+    Alle dreißig Animationen laufen hier <b>echt</b> — es ist dieselbe Datei, die später in der
+    App steckt. Links das Handy, rechts die Rezepte: antippen und zusehen. Unten steht, wie die
+    Verwaltung die Phasen verschiebt und eigene GIFs dazulegt.
+  </p>
+
+  <div class="buehne">
+    <div class="phone" id="phone">
+      <canvas id="leinwand"></canvas>
+      <div class="stufe" id="stufe">Leise · 3 Cleanies</div>
+      <img class="fuchs" src="/logo.webp" alt="">
+      <div class="big" id="zahl">+3<img src="/cleanie.webp" alt=""></div>
+      <div class="cap gross">Bestätigt</div>
+      <div class="cap" id="name">Seifenblasen</div>
+      <button class="weiter">Weiter</button>
+    </div>
+
+    <div>
+      <p class="marke">Wie es sich anfühlt</p>
+      <div class="probe">
+        <button data-melden="2">Quest über 2 Cleanies</button>
+        <button data-melden="5">über 5</button>
+        <button class="stark" data-melden="9">über 9</button>
+        <button data-melden="99">über 99</button>
+      </div>
+
+      <div class="gruppe" data-stufe="leise">
+        <div class="kopf"><h3>Leise</h3><span class="spanne">1 – 3</span></div>
+        <p class="was">Ein Nicken, kein Applaus. Kurz, klein, ohne Knall — sonst nutzt sich die
+          große Stufe ab.</p>
+        <div class="knoepfe" data-liste="leise"></div>
+      </div>
+
+      <div class="gruppe" data-stufe="mittel">
+        <div class="kopf"><h3>Mittel</h3><span class="spanne">4 – 6</span></div>
+        <p class="was">Das war schon Arbeit. Mehr Bewegung, mehr Farbe — aber weiter kein
+          Feuerwerk.</p>
+        <div class="knoepfe" data-liste="mittel"></div>
+      </div>
+
+      <div class="gruppe" data-stufe="gross">
+        <div class="kopf"><h3>Groß</h3><span class="spanne">ab 7</span></div>
+        <p class="was">Hier kommt das Feuerwerk. Nach oben offen, damit auch eine 99er-Quest
+          irgendwo landet.</p>
+        <div class="knoepfe" data-liste="gross"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Was die Verwaltung einstellen kann</h2>
+  <p class="lead">In den Einstellungen, sichtbar nur für die Verwaltung des Haushalts. Die
+    Grenzen sind die einzigen Zahlen; alles andere folgt daraus.</p>
+
+  <div class="einst">
+    <p class="marke" style="margin:0 0 8px">Cleanies-Phasen</p>
+    <div class="zeile">
+      <span class="n"><span class="t">Leise</span><span class="m">1 bis …</span></span>
+      <input class="von" value="3">
+    </div>
+    <div class="zeile">
+      <span class="n"><span class="t">Mittel</span><span class="m">4 bis …</span></span>
+      <input class="von" value="6">
+    </div>
+    <div class="zeile">
+      <span class="n"><span class="t">Groß</span><span class="m">ab 7 · nach oben offen</span></span>
+      <span style="font-family:var(--font-data);font-size:13px;color:var(--ink-3)">∞</span>
+    </div>
+
+    <p class="marke" style="margin:14px 0 4px">Eigene GIFs</p>
+    <div class="gifzeile">
+      <span class="gifkachel">🎉</span>
+      <span class="n"><span class="t">party.gif</span><span class="m">Groß · 240 KB</span></span>
+      <span style="color:var(--ink-3)">✕</span>
+    </div>
+    <div class="gifzeile">
+      <span class="gifkachel">＋</span>
+      <span class="n"><span class="t">GIF hinzufügen</span>
+        <span class="m">Bis 400 KB, Phase frei wählbar</span></span>
+    </div>
+
+    <div class="btnzeile">
+      <button>Zurücksetzen</button>
+      <button class="stark">Speichern</button>
+    </div>
+  </div>
+
+  <h2>Die Regeln</h2>
+  <table>
+    <tr><th style="width:30%">Sache</th><th>Wie es läuft</th></tr>
+    <tr><td><b>Wann</b></td><td>Nach jeder <b>bestätigten</b> Meldung — dort, wo heute schon das Konfetti kommt. Bei einer Ablehnung passiert weiter nichts.</td></tr>
+    <tr><td><b>Welche Stufe</b></td><td>Nach den Cleanies der Meldung, nicht nach dem Kontostand. Zwei Quests à 3 bleiben zweimal leise.</td></tr>
+    <tr><td><b>Welche Animation</b></td><td>Zufällig aus der Stufe — aber nie dieselbe wie beim letzten Mal.</td></tr>
+    <tr><td><b>Eigene GIFs</b></td><td>Liegen gleichberechtigt neben den eingebauten: ein GIF in der Stufe „Groß“ wird genauso gezogen wie das Feuerwerk.</td></tr>
+    <tr><td><b>Grenzen ändern</b></td><td>Nur die Verwaltung, ohne Abstimmung. Es ist eine Anzeigesache, keine Cleanies-Sache.</td></tr>
+    <tr><td><b>Bewegung reduzieren</b></td><td>Wer das am Gerät eingestellt hat, bekommt gar keine Animation — das ist eine Einstellung des Handys und hat Vorrang.</td></tr>
+    <tr><td><b>Offline</b></td><td>Die dreißig eingebauten sind Code, kein Download. Sie laufen auch ohne Netz.</td></tr>
+  </table>
+
+  <h2>Drei Entscheidungen, die ich getroffen habe</h2>
+  <p class="lead">Sag Bescheid, wenn eine davon anders sein soll — dann ändere ich sie vor dem
+    Einbau.</p>
+
+  <div class="frage">
+    <b>Die oberste Stufe ist nach oben offen.</b>
+    Du hattest „7–10“ genannt, aber es gibt Quests mit 12 und mit 99. „Ab 7“ heißt, dass nichts
+    durchfällt. Die beiden Grenzen bleiben in den Einstellungen verstellbar.
+  </div>
+
+  <div class="frage">
+    <b>GIFs sind auf 400 KB begrenzt.</b>
+    Sie liegen in derselben Datenbank wie alles andere — kostenlos, aber nicht unbegrenzt. 400 KB
+    reichen für ein kurzes GIF und halten die App schnell. Ein zu großes wird abgewiesen, statt
+    still zu scheitern.
+  </div>
+
+  <div class="frage">
+    <b>Ein GIF ersetzt die eingebauten nicht, es kommt dazu.</b>
+    Sonst wäre nach dem ersten Upload immer dasselbe zu sehen — genau das, was du vermeiden
+    wolltest. Wer nur GIFs will, kann später einen Schalter dafür bekommen.
+  </div>
+
+</div>
+
+<script type="module">
+import { REZEPTE, spielen, phaseFuer } from "/app/feier.js";
+
+const leinwand = document.getElementById("leinwand");
+const zahl = document.getElementById("zahl");
+const name = document.getElementById("name");
+const stufeEl = document.getElementById("stufe");
+const NAMEN = { leise: "Leise", mittel: "Mittel", gross: "Groß" };
+let letzte = null;
+
+function zeigen(stufe, rezeptId, punkte) {
+  const r = REZEPTE[stufe].find((x) => x.id === rezeptId) || REZEPTE[stufe][0];
+  zahl.innerHTML = `+${punkte}<img src="/cleanie.webp" alt="">`;
+  name.textContent = r.name;
+  stufeEl.textContent = `${NAMEN[stufe]} · ${punkte} Cleanies`;
+  for (const k of document.querySelectorAll(".knoepfe button")) {
+    k.toggleAttribute("data-an", k.dataset.rezept === r.id);
+  }
+  letzte = spielen(leinwand, { phase: stufe, rezept: r.id, letzte });
+}
+
+// Die Knopfreihen bauen sich aus den Rezepten selbst — kommt eines dazu,
+// steht es hier ohne Zutun.
+for (const [stufe, liste] of Object.entries(REZEPTE)) {
+  const wo = document.querySelector(`[data-liste="${stufe}"]`);
+  wo.innerHTML = liste.map((r) => `<button data-rezept="${r.id}" data-stufe="${stufe}">${r.name}</button>`).join("");
+}
+
+document.addEventListener("click", (ev) => {
+  const k = ev.target.closest("[data-rezept]");
+  if (k) {
+    const punkte = { leise: 3, mittel: 5, gross: 9 }[k.dataset.stufe];
+    zeigen(k.dataset.stufe, k.dataset.rezept, punkte);
+    return;
+  }
+  const m = ev.target.closest("[data-melden]");
+  if (m) {
+    const punkte = Number(m.dataset.melden);
+    const stufe = phaseFuer(punkte);
+    letzte = spielen(leinwand, { punkte, letzte });
+    const r = REZEPTE[stufe].find((x) => x.id === letzte);
+    zahl.innerHTML = `+${punkte}<img src="/cleanie.webp" alt="">`;
+    name.textContent = r ? r.name : "";
+    stufeEl.textContent = `${NAMEN[stufe]} · ${punkte} Cleanies`;
+    for (const k2 of document.querySelectorAll(".knoepfe button")) {
+      k2.toggleAttribute("data-an", k2.dataset.rezept === letzte);
+    }
+  }
+});
+
+zeigen("leise", "seifenblasen", 3);
+</script>
+</body>
+</html>

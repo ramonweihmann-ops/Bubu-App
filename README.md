@@ -23,6 +23,9 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   `haus-quest.com/mockup-urlaub/`. Der Entwurf, aus dem der Urlaubsmodus entstanden ist.
 - **Mockup „Zurücktreten":** [`web/mockup-ruecktritt/`](./web/mockup-ruecktritt) — live unter
   `haus-quest.com/mockup-ruecktritt/`. Der Entwurf, aus dem der Rücktritt entstanden ist.
+- **Mockup „Jubel nach Cleanies-Phasen":** [`web/mockup-animationen/`](./web/mockup-animationen) —
+  live unter `haus-quest.com/mockup-animationen/`. Alle dreißig Animationen laufen dort echt;
+  noch nicht in der App verdrahtet.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
