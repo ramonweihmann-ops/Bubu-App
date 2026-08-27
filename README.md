@@ -21,6 +21,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   `haus-quest.com/mockup-quests/`. Drei Entwürfe für den Cleanies-Chip; gewählt wurde C.
 - **Mockup „Urlaubsmodus":** [`web/mockup-urlaub/`](./web/mockup-urlaub) — live unter
   `haus-quest.com/mockup-urlaub/`. Der Entwurf, aus dem der Urlaubsmodus entstanden ist.
+- **Mockup „Zurücktreten":** [`web/mockup-ruecktritt/`](./web/mockup-ruecktritt) — live unter
+  `haus-quest.com/mockup-ruecktritt/`. Noch nicht gebaut — wartet auf Zustimmung.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
 - **Geplant:** [`docs/naechste-schritte.md`](./docs/naechste-schritte.md) — Dashboard mit Prognose, Rabatte, doppelte Punkte.
