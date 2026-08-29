@@ -125,6 +125,14 @@ export async function urlaubAnlegen(env, vorschlag, anhang) {
       `update bewerbungen set runde = date(runde, '+' || ?1 || ' days')
         where couple_id = ?2 and status = 'offen'`
     ).bind(tage, vorschlag.couple_id));
+
+    // Events rücken mit: ein Wochenend-Event nützt niemandem, während alle weg
+    // sind. Abgelaufene bleiben abgelaufen — die weckt der Urlaub nicht auf.
+    anweisungen.push(env.DB.prepare(
+      `update events
+          set von = date(von, '+' || ?1 || ' days'), bis = date(bis, '+' || ?1 || ' days')
+        where couple_id = ?2 and aktiv = 1 and bis >= date('now')`
+    ).bind(tage, vorschlag.couple_id));
   }
 
   return { anweisungen, tage, von, bis, haushalt };

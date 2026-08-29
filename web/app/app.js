@@ -740,7 +740,7 @@ function aktionsBanner(nur = null) {
   return liste.map((a) => `
     <div class="card alert" style="gap:6px">
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="color:var(--accent);flex:none">${icon("i-heart", 20)}</span>
+        <span style="color:var(--accent);flex:none">${icon("i-waage", 20)}</span>
         <span style="flex:1;font-size:14.5px;font-weight:700">
           ${a.art === "quest_bonus"
             ? `+${a.prozent} % Cleanies${a.kategorie ? ` auf ${esc(a.kategorie)}` : " auf alles"}`
@@ -749,6 +749,133 @@ function aktionsBanner(nur = null) {
       </div>
     </div>`).join("");
 }
+
+/* ------------------------------------------------------------------ Events */
+
+/* Ein Event ist eine Regel auf Zeit, die der Haushalt selbst schreibt. Was
+ * dahintersteht, ist eine ganz normale Belohnung oder Quest — nur mit einer
+ * Uhr davor. Deshalb steht hier nur, wie sie aussieht und wie man sie anlegt;
+ * das Einlösen läuft über die Wege, die es längst gibt. */
+
+const EVENT_RHYTHMEN = ["jede Woche", "alle 2 Wochen", "1× im Monat", "1× im Quartal"];
+const EVENT_LAENGEN = [1, 2, 3, 7, 14, 30];
+const EVENT_TAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+const events = () => S.events || [];
+const laufendeEvents = () => events().filter((e) => e.laeuft);
+const kommendeEvents = () => events().filter((e) => !e.laeuft);
+const eventVon = (id) => events().find((e) => e.id === id) || null;
+/** Das Event hinter einer Belohnung oder Quest, falls eines dahintersteht. */
+const eventZu = (eintrag) => eintrag.event_id ? eventVon(eintrag.event_id) : null;
+
+const laengeWort = (n) => n === 1 ? "1 Tag" : n === 7 ? "1 Woche" : n === 14 ? "2 Wochen"
+  : n === 30 ? "1 Monat" : `${n} Tage`;
+
+/** Wie lange das Fenster noch offen steht — oder wann es aufgeht. */
+function eventZeit(e) {
+  if (!e.laeuft) {
+    const hin = tageZwischen(heute(), e.von) - 1;
+    return hin <= 0 ? "ab heute" : hin === 1 ? "ab morgen" : `ab ${datumKurz(e.von)}`;
+  }
+  const tage = tageZwischen(heute(), e.bis);
+  return tage <= 1 ? "läuft heute aus" : `noch ${tage} ${tage === 1 ? "Tag" : "Tage"}`;
+}
+
+/** Die Zeile unter dem Namen: Preis, Kreis, Deckel, Rhythmus. */
+function eventUnterzeile(e) {
+  const teile = [`${e.richtung === "verdienen" ? "+" : ""}${cl(e.cleanies)}`];
+  if (e.fuer.length) teile.push(`nur ${e.fuer.map((w) => esc(vorname(nameVon(w)))).join(", ")}`);
+  if (e.pro_person) {
+    teile.push(e.dabei && e.laeuft ? `noch ${e.rest_ich}× für dich` : `${e.pro_person}× pro Person`);
+  }
+  if (e.gesamt) teile.push(`${e.genutzt} von ${e.gesamt} insgesamt`);
+  if (e.rhythmus) teile.push(`↻ ${esc(e.rhythmus)}`);
+  return teile.join(" · ");
+}
+
+/** Die Nebenbedingungen einer Konfiguration als schlichter Text — für die
+ *  Abstimmungskarte, auf der der Preis schon steht. */
+function eventSatzKurz(k) {
+  const teile = [];
+  if (k.fuer?.length) teile.push(`nur ${k.fuer.map((i) => vorname(nameVon(i))).join(", ")}`);
+  teile.push(k.proPerson === 1 ? "einmal pro Person"
+    : k.proPerson ? `höchstens ${k.proPerson}× pro Person` : "ohne Grenze pro Person");
+  if (k.gesamt) teile.push(`${k.gesamt}× insgesamt`);
+  teile.push(k.rhythmus ? `${k.rhythmus}, je ${laengeWort(k.laenge)}`
+    : k.von ? `${datumKurz(k.von)}–${datumKurz(k.bis)}`
+    : laengeWort(k.laenge));
+  return teile.join(" · ");
+}
+
+/** Kann ich hier gerade noch etwas holen? */
+const eventOffenFuerMich = (e) =>
+  e.laeuft && e.dabei && (e.offen_fuer_mich === null || e.offen_fuer_mich > 0);
+
+/** Die Karte auf der Startseite: was es ist, wie lange noch, und ein Knopf,
+ *  der etwas tut. Steht dort, wo auch das Aktionsbanner sitzt. */
+function eventKarte(e) {
+  const raus = e.richtung === "ausgeben";
+  const kann = eventOffenFuerMich(e);
+  const zuTeuer = raus && e.cleanies > S.ich.punkte;
+
+  return `
+    <div class="card event" style="gap:8px">
+      <div class="eventkopf">
+        ${icon("i-waage", 20)}
+        <span class="t">${esc(e.titel)}</span>
+        <span class="chip zeit">${eventZeit(e)}</span>
+        <button class="stiftbtn" data-eventmenue="${e.id}"
+          aria-label="${esc(e.titel)} ändern oder beenden">${icon("i-stift", 16)}</button>
+      </div>
+      <div style="font-size:12.5px;color:var(--ink-2)">${eventUnterzeile(e)}</div>
+      ${e.beschreibung ? `<div style="font-size:12px;color:var(--ink-2)">${esc(e.beschreibung)}</div>` : ""}
+      ${!e.dabei
+        ? '<div style="font-size:11.5px;color:var(--ink-3)">Dieses Event ist für andere gedacht.</div>'
+        : !kann
+        ? '<div style="font-size:11.5px;color:var(--ink-3)">Für diesen Zeitraum ausgeschöpft.</div>'
+        : `<button class="btn ${zuTeuer ? "ghost" : "primary"} block"
+             data-eventtun="${e.id}" ${zuTeuer ? "disabled" : ""}>${
+             zuTeuer ? `Dir fehlen noch ${e.cleanies - S.ich.punkte} Cleanies`
+                     : raus ? "Einlösen" : "Erledigt melden"}</button>`}
+    </div>`;
+}
+
+/** Der Kasten in „Erledigt melden“ und „Antrag stellen“, wenn der Eintrag zu
+ *  einem Event gehört: was gilt, wie lange noch, wie oft noch. */
+function eventHinweis(eintrag) {
+  const e = eventZu(eintrag);
+  if (!e) return "";
+  const rest = e.offen_fuer_mich === null ? "" :
+    ` Für dich bleibt ${e.offen_fuer_mich === 1 ? "noch einmal" : `noch ${e.offen_fuer_mich}×`}.`;
+  return `<div class="note">${icon("i-kalender", 16)}<span><b>Event — ${eventZeit(e)}.</b>${
+    e.beschreibung ? ` ${esc(e.beschreibung)}` : ""}${rest}</span></div>`;
+}
+
+/** Eine Zeile in der Liste unter „Wir“ — auch für alles, was noch nicht läuft. */
+const eventZeile = (e) => `
+  <button class="rowlink" data-eventmenue="${e.id}">
+    <span class="avatar sm" style="background:var(--tint);color:var(--ruhig)">
+      ${icon(e.rhythmus ? "i-kalender" : "i-waage", 18)}</span>
+    <span class="grow"><span class="t">${esc(e.titel)}</span>
+      <span class="m">${eventUnterzeile(e)} · ${eventZeit(e)}</span></span>
+    <span style="color:var(--ink-3)">›</span>
+  </button>`;
+
+/** Der Block „Aktionen“: zwei Regeln auf Zeit, gleiche Ecke, gleiche Logik. */
+const aktionenBlock = () => `
+  <p class="section-label">Aktionen</p>
+  <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
+    <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-waage", 18)}</span>
+    <span class="grow"><span class="t">Aktion starten</span>
+      <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
+    <span style="color:var(--ink-3)">›</span>
+  </button>
+  <button class="rowlink" data-sheet="event" style="border-color:var(--accent)">
+    <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-kalender", 18)}</span>
+    <span class="grow"><span class="t">Event konfigurieren</span>
+      <span class="m">Cleanies gegen etwas eintauschen — was, sagt ihr</span></span>
+    <span style="color:var(--ink-3)">›</span>
+  </button>`;
 
 /* ------------------------------------------------------------------ Start */
 
@@ -771,6 +898,8 @@ function schirmStart() {
       ${urlaubBanner()}
 
       ${aktionsBanner()}
+
+      ${laufendeEvents().map(eventKarte).join("")}
 
       ${offen.length ? `
       <div class="card alert">
@@ -873,15 +1002,7 @@ function schirmStart() {
         Solange kannst du nachbessern oder zurückziehen.</div>` : ""}
 
       ${abst.length ? `
-      ${aktionsBanner()}
-
-      <p class="section-label">Aktionen</p>
-      <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
-        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
-        <span class="grow"><span class="t">Aktion starten</span>
-          <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>
+      ${aktionenBlock()}
 
       <p class="section-label">Offene Abstimmungen</p>
       ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
@@ -981,23 +1102,29 @@ function questListe() {
 
   if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
 
-  return liste.map((q) => `
+  return liste.map((q) => {
+    // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
+    const e = eventZu(q);
+    return `
     <div class="zeile">
       <button class="rowlink" ${q.wiederkehrend ? `data-plan="${q.id}"` : `data-sheet="melden" data-id="${q.id}"`}
         ${gemeldet.has(q.id) && !q.wiederkehrend ? "disabled" : ""}>
         <span class="grow">
           <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
-            q.genutzt ? ` · ${q.genutzt}×` : ""}${
+            e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}×` : ""}${
             gemeldet.has(q.id) ? ` · wartet auf ${esc(andereName())}` : ""}</span>
         </span>
         ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
           : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
           : `<span class="pts-pill">${cl(q.points)}</span>`}
       </button>
-      <button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
-        aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>
-    </div>`).join("");
+      ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
+          aria-label="${esc(q.name)} — Event ansehen">${icon("i-kalender", 18)}</button>`
+        : `<button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
+          aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>`}
+    </div>`;
+  }).join("");
 }
 
 function schirmQuests() {
@@ -1140,25 +1267,29 @@ function schirmPruefen() {
 
 /* ------------------------------------------------------------------ Belohnungen */
 
-function belohnungsListe() {
-  const liste = sortiereUndSuche(S.belohnungen, "belohnungen", (b) => b.kosten_jetzt ?? b.cost);
+function belohnungsListe(quelle = S.belohnungen) {
+  const liste = sortiereUndSuche(quelle, "belohnungen", (b) => b.kosten_jetzt ?? b.cost);
   if (!liste.length) return '<div class="leer-hinweis" style="grid-column:1/-1">Nichts gefunden.</div>';
 
   return liste.map((b) => {
     const kosten = b.kosten_jetzt ?? b.cost;
     const zuTeuer = kosten > S.ich.punkte;
+    // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
+    const e = eventZu(b);
     return `
       <div class="reward-wrap">
         <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
-          <span class="ico">${icon(b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
+          <span class="ico">${icon(e ? "i-waage" : b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
           <span class="n">${esc(b.name)}</span>
           <span class="c">${zuTeuer
             ? `${S.ich.punkte} von ${kosten} Cleanies`
             : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Cleanies`
-            : `${b.cost} Cleanies`}${b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
+            : `${b.cost} Cleanies`}${e ? ` · ${eventZeit(e)}` : b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
         </button>
-        <button class="stiftbtn" data-sheet="menue" data-art="belohnung" data-id="${b.id}"
-          aria-label="${esc(b.name)} ändern oder löschen">${icon("i-stift", 16)}</button>
+        ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
+            aria-label="${esc(b.name)} — Event ansehen">${icon("i-kalender", 16)}</button>`
+          : `<button class="stiftbtn" data-sheet="menue" data-art="belohnung" data-id="${b.id}"
+            aria-label="${esc(b.name)} ändern oder löschen">${icon("i-stift", 16)}</button>`}
       </div>`;
   }).join("");
 }
@@ -1181,8 +1312,14 @@ function schirmBelohnungen() {
           <span style="font-weight:400;color:var(--ink-2);font-size:12px">Damit sie oder er sich etwas leisten kann</span></span>
       </button>
 
-      <p class="section-label">Einlösbar</p>
-      <div class="rewards" id="liste">${belohnungsListe()}</div>
+      ${S.belohnungen.some((b) => b.event_id) ? `
+      <p class="section-label">Nur jetzt</p>
+      <div class="rewards">${belohnungsListe(S.belohnungen.filter((b) => b.event_id))}</div>
+      <p style="font-size:11.5px;color:var(--ink-3);margin:2px 0 0">
+        Events stehen über der festen Liste und verschwinden von selbst.</p>` : ""}
+
+      <p class="section-label">${S.belohnungen.some((b) => b.event_id) ? "Immer" : "Einlösbar"}</p>
+      <div class="rewards" id="liste">${belohnungsListe(S.belohnungen.filter((b) => !b.event_id))}</div>
       <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
         Jede Einlösung geht als Antrag an ${esc(andereName())}.
         Erst mit Zustimmung werden die Cleanies abgebucht.
@@ -1213,6 +1350,11 @@ function abstimmungWorum(a) {
     case "delete_quest": return "Bestehende Quest — soll gelöscht werden";
     case "delete_reward": return "Bestehende Belohnung — soll gelöscht werden";
     case "neue_aktion": return "Befristete Aktion für alle";
+    case "neues_event": return a.event?.richtung === "verdienen"
+      ? "Neues Event — Cleanies verdienen, auf Zeit"
+      : "Neues Event — Cleanies eintauschen, auf Zeit";
+    case "event_aendern": return "Bestehendes Event — die Regel soll sich ändern";
+    case "event_aus": return "Bestehendes Event — soll beendet werden";
     case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
@@ -1246,6 +1388,20 @@ function abstimmungWandel(a) {
             <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
+  if (a.art === "event_aus") {
+    return `<span class="old">läuft</span>→<span class="new">beendet</span>
+            <span style="color:var(--ink-2);font-weight:400">· offene Anträge bleiben gültig</span>`;
+  }
+  if (a.art === "neues_event" || a.art === "event_aendern") {
+    const k = a.event;
+    if (!k) return `<span class="new">${cl(a.neu)}</span>`;
+    const preis = k.richtung === "verdienen"
+      ? `<span class="new">+${cl(k.cleanies)}</span>`
+      : `<span class="new">${cl(k.cleanies)}</span>→<span>${esc(k.titel)}</span>`;
+    return `${a.art === "event_aendern" && a.alt !== null && a.alt !== k.cleanies
+              ? `<span class="old">${cl(a.alt)}</span>` : ""}${preis}
+            <span style="color:var(--ink-2);font-weight:400">· ${esc(eventSatzKurz(k))}</span>`;
+  }
   if (a.art === "neue_aktion") {
     return `<span class="new">${a.titel.startsWith("Rabatt") ? `${a.neu} % Rabatt` : `+${a.neu} % Cleanies`}</span>
             <span style="color:var(--ink-2);font-weight:400">${a.raum ? `· ${esc(a.raum)}` : "· alles"}
@@ -1283,6 +1439,8 @@ function abstimmungKarte(a) {
           ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
       </div>
       <div class="change">${abstimmungWandel(a)}</div>
+      ${a.event?.beschreibung ? `<div style="font-size:12.5px;color:var(--ink-2)">
+        „${esc(a.event.beschreibung)}“</div>` : ""}
       <div style="font-size:11.5px;color:var(--ink-3)">
         Vorgeschlagen von ${esc(nameVon(a.von))} · ${zeitpunkt(a.created_at)}</div>
       ${a.grund ? `<div class="why">${esc(nameVon(a.von))}: „${esc(a.grund)}“</div>`
@@ -1326,13 +1484,15 @@ function schirmWir() {
     <div class="body">
       ${aktionsBanner()}
 
-      <p class="section-label">Aktionen</p>
-      <button class="rowlink" data-sheet="aktion" style="border-color:var(--accent)">
-        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-heart", 18)}</span>
-        <span class="grow"><span class="t">Aktion starten</span>
-          <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>
+      ${aktionenBlock()}
+
+      ${laufendeEvents().length ? `
+      <p class="section-label">Läuft gerade</p>
+      ${laufendeEvents().map(eventKarte).join("")}` : ""}
+
+      ${kommendeEvents().length ? `
+      <p class="section-label">${kommendeEvents().some((e) => e.rhythmus) ? "Wiederkehrend" : "Angemeldet"}</p>
+      ${kommendeEvents().map(eventZeile).join("")}` : ""}
 
       <p class="section-label">Offene Abstimmungen</p>
       ${offen.length ? offen.map(abstimmungKarte).join("") : `
@@ -2263,6 +2423,9 @@ function sheetZu() {
   scrim.innerHTML = "";
 }
 scrim.addEventListener("click", (ev) => { if (ev.target === scrim) sheetZu(); });
+// Der Satz unter dem Event-Blatt schreibt beim Tippen mit — sonst stimmte er
+// erst nach dem nächsten Knopfdruck.
+scrim.addEventListener("input", () => { if (scrim.querySelector("#evsatz")) eventBlattFrischen(); });
 
 function sheetMelden(quest) {
   const punkte = quest.punkte_jetzt ?? quest.points;
@@ -2273,8 +2436,9 @@ function sheetMelden(quest) {
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
       <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${cl(punkte)}</span>
     </div>
-    ${quest.bonus ? `<div class="note">${icon("i-heart", 16)}<span>+${quest.bonus} % Aktion läuft —
+    ${quest.bonus ? `<div class="note">${icon("i-waage", 16)}<span>+${quest.bonus} % Aktion läuft —
       der Wert friert beim Melden ein und bleibt, auch wenn erst später bestätigt wird.</span></div>` : ""}
+    ${eventHinweis(quest)}
     <div class="field">
       <label>Wie oft</label>
       <div class="stepper">
@@ -2304,8 +2468,9 @@ function sheetAntrag(belohnung) {
       <span style="flex:1;font-size:14px;font-weight:600">${esc(belohnung.name)}</span>
       <span class="pts-pill">${belohnung.rabatt ? `<s style="opacity:.55">−${belohnung.cost}</s> ` : ""}−${cl(kosten)}</span>
     </div>
-    ${belohnung.rabatt ? `<div class="note">${icon("i-heart", 16)}<span>Rabatt von ${belohnung.rabatt} % läuft —
+    ${belohnung.rabatt ? `<div class="note">${icon("i-waage", 16)}<span>Rabatt von ${belohnung.rabatt} % läuft —
       der Preis friert beim Absenden ein, auch wenn erst später entschieden wird.</span></div>` : ""}
+    ${eventHinweis(belohnung)}
     <div class="field"><label>Wunschtermin</label><input id="termin" placeholder="z. B. heute Abend"></div>
     <div class="field"><label>Nachricht</label><textarea id="nachricht" placeholder="optional"></textarea></div>
 
@@ -2520,6 +2685,265 @@ function sheetAktion() {
     <button class="btn primary block" data-senden="aktion">Zur Abstimmung geben</button>`);
 }
 
+/* ---------- Event konfigurieren ---------- */
+
+/** Was gerade im Blatt steht — einmal für die Zusammenfassung, einmal fürs
+ *  Absenden. Zwei Wege, dasselbe zu lesen, wären zwei Gelegenheiten für
+ *  Abweichungen. */
+function eventKonfigLesen() {
+  const w = (sel) => scrim.querySelector(sel);
+  const an = (sel) => scrim.querySelector(`${sel}[aria-pressed="true"]`);
+  const dauerevent = w("[data-dauerevent]")?.getAttribute("aria-pressed") === "true";
+  const rhythmus = an("[data-evrhythmus]")?.dataset.evrhythmus || EVENT_RHYTHMEN[0];
+  const wochenweise = rhythmus === "jede Woche" || rhythmus === "alle 2 Wochen";
+  const mehrfach = an('[data-oftwahl="mehrfach"]') !== null;
+
+  return {
+    richtung: an("[data-evrichtung]")?.dataset.evrichtung || "ausgeben",
+    titel: w("#evtitel")?.value.trim() || "",
+    beschreibung: w("#evtext")?.value.trim() || "",
+    cleanies: Number(w("#menge")?.textContent || 0),
+    proPerson: mehrfach ? Number(w("#proper")?.textContent || 0) : 1,
+    gesamt: Number(w("#evgesamt")?.value || 0) || null,
+    fuer: [...scrim.querySelectorAll('[data-evwer][aria-pressed="true"]')].map((b) => b.dataset.evwer),
+    rhythmus: dauerevent ? rhythmus : null,
+    starttag: !dauerevent ? null
+      : wochenweise ? Number(an("[data-evstarttag]")?.dataset.evstarttag || 6)
+      : Math.min(28, Math.max(1, Number(w("#evmonatstag")?.value || 1))),
+    laenge: Number(an("[data-evlaenge]")?.dataset.evlaenge || 1),
+    zeitart: dauerevent ? "dauer" : (an("[data-zeitart]")?.dataset.zeitart || "dauer"),
+    von: w("#evvon")?.value || "",
+    bis: w("#evbis")?.value || ""
+  };
+}
+
+/** Das fertige Event in einem Satz. Wer abstimmt, soll es nicht aus sechs
+ *  Feldern zusammensuchen müssen. */
+function eventSatzText(k) {
+  const name = k.titel ? `<b>${esc(k.titel)}</b>` : "Das Event";
+  const preis = k.richtung === "verdienen"
+    ? `bringt <b>${cl(k.cleanies)}</b>` : `für <b>${cl(k.cleanies)}</b>`;
+  const wer = k.fuer.length
+    ? ` für ${k.fuer.map((i) => esc(vorname(nameVon(i)))).join(" und ")}`
+    : "";
+  const oft = k.proPerson === 1 ? ", einmal pro Person"
+    : k.proPerson ? `, höchstens ${k.proPerson}× pro Person` : "";
+  const deckel = k.gesamt ? ` und ${k.gesamt}× insgesamt` : "";
+  const wann = k.rhythmus
+    ? `, <b>${esc(k.rhythmus)}</b> für je ${laengeWort(k.laenge)}`
+    : k.zeitart === "zeitraum"
+      ? `, vom <b>${datumKurz(k.von)}</b> bis <b>${datumKurz(k.bis)}</b>`
+      : `, <b>${laengeWort(k.laenge)}</b> lang`;
+  return `${name} ${preis}${wer}${oft}${deckel}${wann}.`;
+}
+
+/** Zeigt und versteckt, was gerade zusammenpasst, und schreibt den Satz neu. */
+function eventBlattFrischen() {
+  const zeig = (sel, ja) => { const el = scrim.querySelector(sel); if (el) el.hidden = !ja; };
+  const k = eventKonfigLesen();
+  const dauer = !!k.rhythmus;
+  const wochenweise = dauer && (k.rhythmus === "jede Woche" || k.rhythmus === "alle 2 Wochen");
+
+  zeig("#rhythmusblock", dauer);
+  zeig("#wochentage", wochenweise);
+  zeig("#monatstag", dauer && !wochenweise);
+  zeig("#zeitartwahl", !dauer);
+  zeig("#zeitraumfeld", !dauer && k.zeitart === "zeitraum");
+  zeig("#laengefeld", dauer || k.zeitart === "dauer");
+  zeig("#oftfeld", k.proPerson !== 1);
+
+  const label = scrim.querySelector("#laengelabel");
+  if (label) label.textContent = dauer ? "Und läuft dann" : "Wie lange";
+  const richtung = scrim.querySelector("#richtungstext");
+  if (richtung) {
+    richtung.textContent = k.richtung === "verdienen"
+      ? "Wer mitmacht, bekommt Cleanies für etwas, das sonst keine Quest ist."
+      : "Wer mitmacht, gibt Cleanies aus und bekommt etwas dafür.";
+  }
+  const satz = scrim.querySelector("#evsatz");
+  if (satz) satz.innerHTML = eventSatzText(k);
+}
+
+/**
+ * Das Blatt zum Konfigurieren — für ein neues Event oder für ein bestehendes.
+ * Beim Ändern bleibt die Richtung, wie sie war: sie entscheidet, ob eine
+ * Belohnung oder eine Quest dahintersteht, und die wandert nicht mitten im
+ * Betrieb.
+ */
+function sheetEvent(vorlage = null) {
+  const e = vorlage;
+  const richtung = e ? e.richtung : "ausgeben";
+  const mehrfach = e ? e.pro_person !== 1 : false;
+  const rhythmus = e?.rhythmus || EVENT_RHYTHMEN[0];
+  const wochenweise = rhythmus === "jede Woche" || rhythmus === "alle 2 Wochen";
+  const laenge = e?.laenge && EVENT_LAENGEN.includes(e.laenge) ? e.laenge : 2;
+  const gewaehlt = new Set(e?.fuer || []);
+
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${e ? "Event ändern" : "Event konfigurieren"}</h3>
+
+    ${e ? `<div class="note">${icon("i-info", 16)}<span>Die Richtung bleibt, wie sie ist.
+      Ein laufendes Fenster wird nicht abgeschnitten — eine neue Zeitplanung greift ab dem
+      nächsten.</span></div>`
+        : `<div class="btnrow" id="eventart">
+      <button class="btn dark" data-evrichtung="ausgeben" aria-pressed="true">Cleanies ausgeben</button>
+      <button class="btn ghost" data-evrichtung="verdienen" aria-pressed="false">verdienen</button>
+    </div>`}
+    <div id="richtungstext" style="font-size:11.5px;color:var(--ink-3);margin-top:-4px"></div>
+    ${e ? `<span hidden data-evrichtung="${richtung}" aria-pressed="true"></span>` : ""}
+
+    <div class="field"><label>Wofür</label>
+      <input id="evtitel" maxlength="80" placeholder="z. B. 1 Stunde Zockzeit am Tablet"
+        value="${esc(e?.titel || "")}">
+      <span style="font-size:11px;color:var(--ink-3)">Frei beschreibbar. Kein Menü, keine Kategorien.</span>
+    </div>
+
+    <div class="field"><label>Was gilt</label>
+      <textarea id="evtext" maxlength="400" placeholder="optional">${esc(e?.beschreibung || "")}</textarea></div>
+
+    <div class="field">
+      <label>Wie viele Cleanies</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">${e?.cleanies || 20}</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Wie oft</label>
+      <div class="btnrow">
+        <button class="btn ${mehrfach ? "ghost" : "dark"}" data-oftwahl="einmal"
+          aria-pressed="${!mehrfach}">Einmal pro Person</button>
+        <button class="btn ${mehrfach ? "dark" : "ghost"}" data-oftwahl="mehrfach"
+          aria-pressed="${mehrfach}">Mehrfach</button>
+      </div>
+      <div class="stepper" id="oftfeld" style="margin-top:6px" ${mehrfach ? "" : "hidden"}>
+        <button data-proper="-1" aria-label="weniger">−</button>
+        <span class="val" id="proper">${mehrfach && e?.pro_person ? e.pro_person : 3}</span>
+        <button data-proper="1" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-family:var(--font-data);font-size:13px;color:var(--ink-2)">
+          × pro Person</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <span style="flex:1;font-size:12.5px;color:var(--ink-2)">Insgesamt höchstens</span>
+        <input id="evgesamt" class="phasenfeld" type="number" min="1" max="999" inputmode="numeric"
+          placeholder="∞" value="${e?.gesamt || ""}">
+      </div>
+      <span style="font-size:11px;color:var(--ink-3)">Leer heißt ohne Deckel — dann bremst nur das Konto.</span>
+    </div>
+
+    <div class="field">
+      <label>Für wen</label>
+      <div class="filters">
+        ${S.mitglieder.map((m) => `<button data-evwer="${m.id}"
+          aria-pressed="${gewaehlt.has(m.id)}">${esc(vorname(m.name))}</button>`).join("")}
+      </div>
+      <span style="font-size:11px;color:var(--ink-3)">Niemand ausgewählt heißt: für alle.</span>
+    </div>
+
+    <button class="schalter" data-dauerevent aria-pressed="${e?.rhythmus ? "true" : "false"}">
+      <span class="box">${icon("i-check", 14)}</span>
+      <span class="t">Dauerevent — kommt von allein wieder</span>
+    </button>
+
+    <div id="rhythmusblock" hidden style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label>Wie oft kommt es</label>
+        <div class="rhythmuswahl zwei">
+          ${EVENT_RHYTHMEN.map((r) => `<button data-evrhythmus="${esc(r)}"
+            aria-pressed="${r === rhythmus}">${esc(r)}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field" id="wochentage" hidden><label>Beginnt am</label>
+        <div class="rhythmuswahl sieben">
+          ${EVENT_TAGE.map((t, i) => `<button data-evstarttag="${i + 1}"
+            aria-pressed="${wochenweise && e?.starttag ? e.starttag === i + 1 : i === 5}">${t}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field" id="monatstag" hidden><label>Beginnt am Tag</label>
+        <input id="evmonatstag" class="phasenfeld" type="number" min="1" max="28" inputmode="numeric"
+          value="${!wochenweise && e?.starttag ? e.starttag : 1}">
+        <span style="font-size:11px;color:var(--ink-3)">1 bis 28 — damit kein Fenster im Februar verschwindet.</span>
+      </div>
+    </div>
+
+    <div class="field" id="zeitartwahl">
+      <label>Wann</label>
+      <div class="btnrow">
+        <button class="btn dark" data-zeitart="dauer" aria-pressed="true">Dauer</button>
+        <button class="btn ghost" data-zeitart="zeitraum" aria-pressed="false">Zeitraum</button>
+      </div>
+    </div>
+
+    <div class="field" id="laengefeld">
+      <label id="laengelabel">Wie lange</label>
+      <div class="rhythmuswahl">
+        ${EVENT_LAENGEN.map((n) => `<button data-evlaenge="${n}"
+          aria-pressed="${n === laenge}">${laengeWort(n)}</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="zweifeld" id="zeitraumfeld" hidden>
+      <div class="field"><label>Von</label><input type="date" id="evvon" value="${heute()}"></div>
+      <div class="field"><label>Bis</label><input type="date" id="evbis" value="${heute()}"></div>
+    </div>
+
+    <div class="eventsatz" id="evsatz"></div>
+
+    <div class="field"><label>Warum</label>
+      <textarea id="grund" maxlength="300" placeholder="optional"></textarea></div>
+
+    <div class="note">${icon("i-vote", 16)}<span>Ein Event ist eine Regel für alle:
+      ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen. Jede einzelne Einlösung geht
+      danach trotzdem noch durch „Prüfen“.</span></div>
+
+    <button class="btn primary block" data-senden="event" ${e ? `data-ziel="${e.id}"` : ""}>
+      Zur Abstimmung geben</button>`);
+
+  eventBlattFrischen();
+}
+
+/** Was man mit einem bestehenden Event tun kann. Beides geht nur gemeinsam —
+ *  eine gemeinsame Regel schafft nicht eine Person allein wieder ab. */
+function sheetEventMenue(e) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(e.titel)}</h3>
+    <div class="card flat" style="gap:6px">
+      <div style="font-size:12.5px;color:var(--ink-2)">${eventUnterzeile(e)}</div>
+      <div style="font-size:12.5px;color:var(--ink-2)">${e.laeuft
+        ? `Läuft bis ${datumKurz(e.bis)} — ${eventZeit(e)}.`
+        : `Nächstes Fenster: ${datumKurz(e.von)} bis ${datumKurz(e.bis)}.`}</div>
+      ${e.naechste.length ? `<div style="font-size:11.5px;color:var(--ink-3)">Danach:
+        ${e.naechste.map((d) => datumKurz(d)).join(" · ")}</div>` : ""}
+    </div>
+    ${e.beschreibung ? `<div class="note">${icon("i-info", 16)}<span>${esc(e.beschreibung)}</span></div>` : ""}
+    ${eventOffenFuerMich(e) ? `
+    <button class="btn primary block" data-eventtun="${e.id}">${
+      e.richtung === "ausgeben" ? "Einlösen" : "Erledigt melden"}</button>` : ""}
+    <button class="btn ghost block" data-eventaendern="${e.id}">Ändern</button>
+    <button class="btn ghost block" data-eventende="${e.id}">Beenden</button>
+    <div class="note">${icon("i-vote", 16)}<span>Ändern und Beenden gehen über die Abstimmung —
+      wie das Anlegen. Ein laufendes Fenster wird dabei nicht abgeschnitten.</span></div>`);
+}
+
+function sheetEventEnde(e) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Event beenden</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(e.titel)}</span>
+      <span class="pts-pill">${cl(e.cleanies)}</span>
+    </div>
+    <div class="field"><label>Warum</label>
+      <textarea id="grund" maxlength="300" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>Es verschwindet aus den Listen.
+      Was daraus schon beantragt ist, wird normal zu Ende gebracht — und der Verlauf bleibt.</span></div>
+    <button class="btn primary block" data-senden="eventaus" data-ziel="${e.id}">
+      Zur Abstimmung geben</button>`);
+}
+
 function sheetNeueBelohnung() {
   sheet(`
     <div class="grabber"></div>
@@ -2720,7 +3144,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -2871,6 +3295,42 @@ document.addEventListener("click", async (ev) => {
     return;
   }
 
+  /* ---------- Events ---------- */
+  // Ein Event einlösen ist keine eigene Mechanik: dahinter steht eine ganz
+  // gewöhnliche Belohnung oder Quest, und die kennt ihr Blatt schon.
+  if (el.dataset.eventtun) {
+    const e = eventVon(el.dataset.eventtun);
+    if (!e) return;
+    sheetZu();
+    if (e.richtung === "ausgeben") {
+      const b = S.belohnungen.find((x) => x.id === e.ziel_id);
+      if (b) sheetAntrag(b); else toast("Dieses Event läuft gerade nicht", true);
+    } else {
+      const q = S.quests.find((x) => x.id === e.ziel_id);
+      if (q) sheetMelden(q); else toast("Dieses Event läuft gerade nicht", true);
+    }
+    return;
+  }
+  if (el.dataset.eventmenue) {
+    const e = eventVon(el.dataset.eventmenue);
+    if (e) sheetEventMenue(e);
+    return;
+  }
+  if (el.dataset.eventaendern) {
+    const e = eventVon(el.dataset.eventaendern);
+    if (!e) return;
+    sheetZu();
+    sheetEvent(e);
+    return;
+  }
+  if (el.dataset.eventende) {
+    const e = eventVon(el.dataset.eventende);
+    if (!e) return;
+    sheetZu();
+    sheetEventEnde(e);
+    return;
+  }
+
   if (el.dataset.sheet) {
     const art = el.dataset.sheet;
     if (art === "menue") {
@@ -2931,6 +3391,7 @@ document.addEventListener("click", async (ev) => {
     }
     if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
     if (art === "aktion") { sheetAktion(); return; }
+    if (art === "event") { sheetEvent(); return; }
     if (scrim.hasAttribute("data-open")) return;
     if (art === "melden") {
       const quest = S.quests.find((q) => q.id === el.dataset.id);
@@ -2964,6 +3425,45 @@ document.addEventListener("click", async (ev) => {
     return;
   }
 
+  // Event-Blatt: die drei Reihen aus zwei Knöpfen …
+  for (const feld of ["evrichtung", "oftwahl", "zeitart"]) {
+    if (el.dataset[feld] !== undefined) {
+      scrim.querySelectorAll(`[data-${feld}]`).forEach((b) => {
+        const an = b === el;
+        if (b.classList.contains("btn")) b.className = "btn " + (an ? "dark" : "ghost");
+        b.setAttribute("aria-pressed", String(an));
+      });
+      eventBlattFrischen();
+      return;
+    }
+  }
+  // … die Reihen aus Chips …
+  for (const feld of ["evlaenge", "evrhythmus", "evstarttag"]) {
+    if (el.dataset[feld] !== undefined) {
+      scrim.querySelectorAll(`[data-${feld}]`).forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === el)));
+      eventBlattFrischen();
+      return;
+    }
+  }
+  // … und die Mehrfachauswahl, wer mitmachen darf.
+  if (el.dataset.evwer) {
+    el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    eventBlattFrischen();
+    return;
+  }
+  if (el.hasAttribute("data-dauerevent")) {
+    el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    eventBlattFrischen();
+    return;
+  }
+  if (el.dataset.proper) {
+    const feld = document.getElementById("proper");
+    feld.textContent = Math.max(2, Math.min(999, Number(feld.textContent) + Number(el.dataset.proper)));
+    eventBlattFrischen();
+    return;
+  }
+
   // Stepper
   if (el.dataset.menge) {
     const feld = document.getElementById("menge");
@@ -2975,6 +3475,7 @@ document.addEventListener("click", async (ev) => {
       const proStueck = Number(document.querySelector("[data-senden='melden']")?.dataset.punkte || 0);
       summe.textContent = neu * proStueck;
     }
+    if (document.getElementById("evsatz")) eventBlattFrischen();
     return;
   }
   if (el.dataset.betrag) {
@@ -3271,6 +3772,25 @@ document.addEventListener("click", async (ev) => {
       });
       sheetZu(); ansicht = "wir"; await laden();
       toast("Aktion steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "event") {
+      const k = eventKonfigLesen();
+      if (k.titel.length < 2) throw new Error("Wofür das Event gut ist, muss dastehen");
+      await api("proposals", {
+        art: el.dataset.ziel ? "event_aendern" : "neues_event",
+        zielId: el.dataset.ziel || null,
+        ...k,
+        grund: wert("grund")
+      });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast(el.dataset.ziel ? "Die Änderung steht zur Abstimmung." : "Das Event steht zur Abstimmung.");
+      return;
+    }
+    if (el.dataset.senden === "eventaus") {
+      await api("proposals", { art: "event_aus", zielId: el.dataset.ziel, grund: wert("grund") });
+      sheetZu(); ansicht = "wir"; await laden();
+      toast("Das Ende steht zur Abstimmung.");
       return;
     }
     if (el.dataset.senden === "neue-belohnung") {

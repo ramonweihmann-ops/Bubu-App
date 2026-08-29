@@ -3,6 +3,7 @@
 import { handleAuth } from "./auth.js";
 import { handleApi } from "./api.js";
 import { planNachziehen } from "./plan.js";
+import { eventsNachziehen } from "./events.js";
 
 export default {
   async fetch(request, env) {
@@ -40,6 +41,8 @@ async function alleHaushalteNachziehen(env) {
   for (const haus of haushalte.results) {
     try {
       await planNachziehen(env, haus.id);
+      // Dauerevents rücken hier weiter, auch wenn tagelang niemand die App öffnet.
+      await eventsNachziehen(env, haus.id);
     } catch (fehler) {
       // Ein kaputter Haushalt darf die anderen nicht aufhalten.
       console.log(`Wecker: ${haus.id} übersprungen — ${fehler.message}`);

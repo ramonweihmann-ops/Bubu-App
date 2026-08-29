@@ -17,6 +17,10 @@ import {
   anfrageAendern, anfrageZuruecknehmen
 } from "./rueckmeldung.js";
 import { zeitraum, urlaubAnlegen, urlaubBeenden, urlaubeVon, urlaubsLage } from "./urlaub.js";
+import {
+  konfigPruefen, eventAnlegen, eventAendern, eventAus,
+  eventsNachziehen, eventsVon, eventPruefen
+} from "./events.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -555,6 +559,7 @@ async function zustand(env, ich) {
 
   await abstimmungenNachziehen(env, paar);
   await planNachziehen(env, paar);
+  await eventsNachziehen(env, paar);
 
   const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume, gifs] =
     await Promise.all([
@@ -562,10 +567,10 @@ async function zustand(env, ich) {
                         from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
-      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am,
+      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen,
+      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id,
                              (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
                         from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
       env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at,
@@ -633,15 +638,18 @@ async function zustand(env, ich) {
     andere,
     raeume: raeume.results,
     gifs: gifs.results,
+    // Ein Event hat seinen eigenen Preis — eine laufende Aktion legt sich nicht
+    // noch einmal darauf. Sonst hieße „20 Cleanies" mal 20 und mal 15.
     quests: quests.results.map((q) => {
-      const { wert, aktion } = questWert(q, laufend);
+      const { wert, aktion } = questWert(q, q.event_id ? [] : laufend);
       return { ...q, punkte_jetzt: wert, bonus: aktion ? aktion.prozent : 0 };
     }),
     belohnungen: belohnungen.results.map((b) => {
-      const { wert, aktion } = belohnungWert(b, laufend);
+      const { wert, aktion } = belohnungWert(b, b.event_id ? [] : laufend);
       return { ...b, kosten_jetzt: wert, rabatt: aktion ? aktion.prozent : 0 };
     }),
     aktionen: aktionen.results,
+    events: await eventsVon(env, paar, ich.id),
     urlaube: await urlaubeVon(env, paar),
     plan: await planListe(env, paar, ich.id),
     belohnungenOffen: await offeneBelohnungen(env, paar),
@@ -670,6 +678,9 @@ async function zustand(env, ich) {
       // bekommen deshalb ihre eigenen Felder.
       urlaub_von: anhang(p).von || null,
       urlaub_bis: anhang(p).bis || null,
+      // Die ganze Konfiguration eines Events reist im Anhang mit: die Karte
+      // soll sagen, was, wofür, für wen, wie oft und wie lange.
+      event: anhang(p).konf || null,
       alt_rhythmus: p.quest_rhythmus || null,
       alt_wiederkehrend: !!p.quest_wiederkehrend,
       status: p.status,
@@ -692,10 +703,13 @@ async function melden(env, ich, daten) {
   const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   const quest = await env.DB.prepare(
-    `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen
+    `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen, event_id
        from quests where id = ?1 and couple_id = ?2 and active = 1`
   ).bind(questId, ich.couple_id).first();
   if (!quest) throw new Fehler("Diese Quest gibt es nicht");
+
+  // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
+  if (quest.event_id) await eventPruefen(env, ich, quest.event_id, menge);
 
   // Bei einer wiederkehrenden Quest gilt zusätzlich die Sperre und die Zuteilung.
   const vorzeitig = meldenErlaubt(quest, ich, daten);
@@ -766,12 +780,17 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
 
 async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "", gutschriftAn = null }) {
   const belohnung = await env.DB.prepare(
-    "select id, name, cost from rewards where id = ?1 and couple_id = ?2 and active = 1"
+    "select id, name, cost, event_id from rewards where id = ?1 and couple_id = ?2 and active = 1"
   ).bind(rewardId, ich.couple_id).first();
   if (!belohnung) throw new Fehler("Diese Belohnung gibt es nicht");
 
+  // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
+  if (belohnung.event_id) await eventPruefen(env, ich, belohnung.event_id, 1);
+
   // Auch der Preis friert jetzt ein — wer im Rabatt beantragt, behält ihn.
-  const { wert } = belohnungWert(belohnung, await laufendeAktionen(env, ich.couple_id));
+  // Ein Event hat seinen eigenen Preis; eine Aktion legt sich nicht darauf.
+  const { wert } = belohnungWert(belohnung,
+    belohnung.event_id ? [] : await laufendeAktionen(env, ich.couple_id));
   const empfaenger = await gutschriftPruefen(env, ich, gutschriftAn);
 
   const antrag = id();
@@ -965,9 +984,12 @@ async function vorschlagen(env, ich, daten) {
   const { art, zielId, wert, name = "", kategorie = "Sonstiges", grund = "", bestaetigen = true } = daten;
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
                  "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe",
-                 "urlaub_person", "urlaub_haushalt", "ruecktritt"];
+                 "urlaub_person", "urlaub_haushalt", "ruecktritt",
+                 "neues_event", "event_aendern", "event_aus"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
+  if (art === "neues_event" || art === "event_aendern") return eventVorschlagen(env, ich, daten);
+  if (art === "event_aus") return eventEndeVorschlagen(env, ich, daten);
   if (art === "ruecktritt") return ruecktrittVorschlagen(env, ich, daten);
   if (art === "urlaub_person" || art === "urlaub_haushalt") return urlaubVorschlagen(env, ich, daten);
   if (art === "neue_aktion") return aktionVorschlagen(env, ich, daten);
@@ -984,9 +1006,10 @@ async function vorschlagen(env, ich, daten) {
     const tabelle = art === "delete_quest" ? "quests" : "rewards";
     const spalte = art === "delete_quest" ? "points" : "cost";
     const ziel = await env.DB.prepare(
-      `select ${spalte} as wert from ${tabelle} where id = ?1 and couple_id = ?2 and active = 1`
+      `select ${spalte} as wert, event_id from ${tabelle} where id = ?1 and couple_id = ?2 and active = 1`
     ).bind(zielId, ich.couple_id).first();
     if (!ziel) throw new Fehler("Das gibt es nicht");
+    if (ziel.event_id) throw new Fehler("Das gehört zu einem Event — dort wird es beendet");
     alt = ziel.wert;
 
     const schonOffen = await env.DB.prepare(
@@ -997,9 +1020,10 @@ async function vorschlagen(env, ich, daten) {
     const tabelle = art === "quest_points" ? "quests" : "rewards";
     const spalte = art === "quest_points" ? "points" : "cost";
     const ziel = await env.DB.prepare(
-      `select ${spalte} as wert from ${tabelle} where id = ?1 and couple_id = ?2`
+      `select ${spalte} as wert, event_id from ${tabelle} where id = ?1 and couple_id = ?2`
     ).bind(zielId, ich.couple_id).first();
     if (!ziel) throw new Fehler("Das gibt es nicht");
+    if (ziel.event_id) throw new Fehler("Das gehört zu einem Event — dort wird es geändert");
     if (ziel.wert === neu) throw new Fehler("Das ist der aktuelle Wert");
     alt = ziel.wert;
   } else if (!String(name).trim()) {
@@ -1048,6 +1072,107 @@ async function abstimmen(env, ich, vorschlagId, antwort, grund = "") {
       : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: "Der alte Stand gilt weiter" });
   }
   return { ok: true, status, wert: vorschlag.new_value };
+}
+
+/* ------------------------------------------------------------------ Events */
+
+/** Wie ein Event in einem Satz dasteht — für die Karte und die Nachricht. */
+function eventSatz(konf) {
+  const teile = [];
+  teile.push(konf.richtung === "verdienen"
+    ? `${konf.titel} bringt ${konf.cleanies} Cleanies`
+    : `${konf.titel} für ${konf.cleanies} Cleanies`);
+  if (konf.proPerson) teile.push(`höchstens ${konf.proPerson}× pro Person`);
+  if (konf.gesamt) teile.push(`${konf.gesamt}× insgesamt`);
+  teile.push(konf.rhythmus
+    ? `${konf.rhythmus}, je ${konf.laenge} ${konf.laenge === 1 ? "Tag" : "Tage"}`
+    : konf.von ? `${konf.von} bis ${konf.bis}`
+    : `${konf.laenge} ${konf.laenge === 1 ? "Tag" : "Tage"}`);
+  return teile.join(" · ");
+}
+
+/**
+ * Ein Event vorschlagen oder ändern. Die Konfiguration reist im Anhang mit und
+ * wird erst mit der letzten Stimme zu einem Event — bis dahin ändert sich
+ * nichts. Die Richtung bleibt beim Ändern, wie sie war: sie entscheidet, ob
+ * eine Belohnung oder eine Quest dahintersteht.
+ */
+async function eventVorschlagen(env, ich, daten) {
+  const aendern = daten.art === "event_aendern";
+
+  const koepfe = await env.DB.prepare("select user_id from members where couple_id = ?1")
+    .bind(ich.couple_id).all();
+  const mitglieder = koepfe.results.map((m) => m.user_id);
+
+  let alt = null;
+  if (aendern) {
+    alt = await env.DB.prepare("select * from events where id = ?1 and couple_id = ?2 and aktiv = 1")
+      .bind(daten.zielId, ich.couple_id).first();
+    if (!alt) throw new Fehler("Dieses Event gibt es nicht", 404);
+    daten = { ...daten, richtung: alt.richtung };
+  }
+
+  const konf = konfigPruefen(daten, mitglieder);
+
+  const offen = await env.DB.prepare(
+    `select 1 as da from proposals
+      where couple_id = ?1 and status = 'offen' and kind in ('neues_event','event_aendern','event_aus')
+        and (?2 is null or target_id = ?2)`
+  ).bind(ich.couple_id, aendern ? alt.id : null).first();
+  if (offen) throw new Fehler(aendern ? "Zu diesem Event läuft schon eine Abstimmung"
+                                      : "Ein Vorschlag für ein Event steht noch zur Abstimmung");
+
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, target_id, old_value, new_value, name, category, reason, payload, created_by)
+       values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
+    ).bind(vorschlag, ich.couple_id, aendern ? "event_aendern" : "neues_event",
+           aendern ? alt.id : null, aendern ? alt.cleanies : null, konf.cleanies,
+           konf.titel, konf.richtung, String(daten.grund || "").slice(0, 300),
+           JSON.stringify({ konf }), ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+
+  await meldeAllen(env, ich, {
+    art: "info", quelle: vorschlag,
+    titel: `${vorname(ich.name)} schlägt ${aendern ? "eine Änderung am Event" : "ein Event"} vor`,
+    text: `${eventSatz(konf)} — deine Stimme fehlt.`
+  });
+  return { ok: true, satz: eventSatz(konf) };
+}
+
+/** Ein Event beenden. Eine gemeinsame Regel soll nicht eine Person allein
+ *  abschaffen können — auch nicht die, die sie vorgeschlagen hat. */
+async function eventEndeVorschlagen(env, ich, { zielId, grund = "" }) {
+  const ev = await env.DB.prepare("select * from events where id = ?1 and couple_id = ?2 and aktiv = 1")
+    .bind(zielId, ich.couple_id).first();
+  if (!ev) throw new Fehler("Dieses Event gibt es nicht", 404);
+
+  const offen = await env.DB.prepare(
+    `select 1 as da from proposals where couple_id = ?1 and status = 'offen'
+       and kind in ('event_aendern','event_aus') and target_id = ?2`
+  ).bind(ich.couple_id, ev.id).first();
+  if (offen) throw new Fehler("Zu diesem Event läuft schon eine Abstimmung");
+
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, target_id, new_value, name, category, reason, created_by)
+       values (?1, ?2, 'event_aus', ?3, ?4, ?5, ?6, ?7, ?8)`
+    ).bind(vorschlag, ich.couple_id, ev.id, ev.cleanies, ev.titel, ev.richtung,
+           String(grund).slice(0, 300), ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+
+  await meldeAllen(env, ich, {
+    art: "info", quelle: vorschlag,
+    titel: `${vorname(ich.name)} möchte ein Event beenden`,
+    text: `${ev.titel} — deine Stimme fehlt.`
+  });
+  return { ok: true };
 }
 
 /** Von einer zugeteilten Aufgabe zurücktreten. Nur die Person, der sie in
@@ -1313,6 +1438,11 @@ async function uebernehmen(env, vorschlag) {
     delete_reward: () => env.DB.prepare("update rewards set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
     neue_aktion: () => aktionAnlegen(env, vorschlag),
+    // Ein Event legt zwei Dinge auf einmal an: die Regel und den Eintrag, an
+    // dem sie hängt — die Belohnung oder die Quest mit der Uhr.
+    neues_event: () => eventAnlegen(env, vorschlag, anhang(vorschlag).konf || {}),
+    event_aendern: () => eventAendern(env, vorschlag, anhang(vorschlag).konf || {}),
+    event_aus: () => eventAus(env, vorschlag),
     neue_aufgabe: () => questMitRhythmus(env, vorschlag),
     aufgabe_aendern: () => rhythmusSetzen(env, vorschlag),
     delete_aufgabe: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")

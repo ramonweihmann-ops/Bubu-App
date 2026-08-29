@@ -50,6 +50,7 @@ genau so, wie er es soll.
 | `urlaub-api.sh` | Urlaub für eine Person und für den Haushalt |
 | `gutschrift-api.sh` | Cleanies einer Belohnung dem Empfänger gutschreiben |
 | `ruecktritt-api.sh` | Von einer zugeteilten Aufgabe zurücktreten — Mehrheit statt Einstimmigkeit |
+| `event-api.sh` | Events: anlegen, freigeben, einlösen, Deckel, Dauerevent, beenden |
 | `ui.mjs` | Dunkles Design, Einstellungen |
 | `ui3.mjs` | Ersteinrichtung von der Begrüßung bis zum Einladecode |
 | `ui-plan.mjs` | Der Haushaltsplan auf dem Schirm |
@@ -64,5 +65,6 @@ genau so, wie er es soll.
 | `jubel-api.sh` | Cleanies-Phasen verschieben, eigene GIFs hochladen und löschen |
 | `ui-jubel.mjs` | Der Jubel in der App, die Einstellungen der Verwaltung |
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
+| `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt bis zum Beenden |
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |

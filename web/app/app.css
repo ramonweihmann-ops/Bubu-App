@@ -626,3 +626,30 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   width: 46px; height: 46px; border-radius: 12px; object-fit: cover;
   background: var(--tint-2); flex: none;
 }
+
+/* ---------- Events ---------- */
+/* Ein Event ist eine Regel auf Zeit. Es bekommt das ruhige Blau des
+ * Fristbalkens: nicht Rot (das warnt), nicht Grün (das ist der Urlaub) —
+ * ein Zeitfenster, mehr nicht. */
+:root { --event-tint: #eaf1fb; }
+:root[data-theme="dunkel"] { --event-tint: #16274a; }
+
+.card.event { border-color: var(--ruhig); background: var(--event-tint); }
+.chip.zeit { background: var(--ruhig); color: #fff; }
+:root[data-theme="dunkel"] .chip.zeit { color: #0f1c31; }
+.eventkopf { display: flex; align-items: center; gap: 9px; }
+.eventkopf > svg { flex: none; color: var(--ruhig); }
+.eventkopf .t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; }
+
+/* Die Wochentage und die vier Rhythmen eines Dauerevents: dasselbe Raster wie
+ * beim Haushaltsplan, nur anders breit. */
+.rhythmuswahl.sieben { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.rhythmuswahl.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Das fertige Event in einem Satz — wer abstimmt, soll es nicht aus sechs
+ * Feldern zusammensuchen müssen. */
+.eventsatz {
+  font-size: 13px; color: var(--ink-2); background: var(--tint);
+  border-radius: 12px; padding: 10px 11px;
+}
+.eventsatz b { color: var(--ink); }
