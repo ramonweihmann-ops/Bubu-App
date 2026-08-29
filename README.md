@@ -26,6 +26,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Jubel nach Cleanies-Phasen":** [`web/mockup-animationen/`](./web/mockup-animationen) —
   live unter `haus-quest.com/mockup-animationen/`. Alle dreißig Animationen laufen dort echt,
   aus derselben Datei wie in der App.
+- **Mockup „Events konfigurieren":** [`web/mockup-events/`](./web/mockup-events) — live unter
+  `haus-quest.com/mockup-events/`. Der Entwurf, aus dem die Events entstanden sind.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -40,9 +42,9 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 | --- | --- |
 | Preis steht vorher | Beim Melden wird der aktuelle Punktwert eingefroren. Spätere Änderungen wirken nie rückwirkend. |
 | Vier Augen | Melden darf jeder, freigeben nur jemand **anderes**. Wer meldet, kann nie selbst bestätigen — sonst reicht eine beliebige andere Person aus dem Haushalt. |
-| Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**, Aktion starten: nur mit Zustimmung **aller**. Ein Nein lässt alles beim Alten, eine fehlende Stimme hält den Vorschlag offen. |
+| Nur gemeinsam | Punktwert ändern, Quest oder Belohnung anlegen **oder löschen**, Aktion starten, Event konfigurieren: nur mit Zustimmung **aller**. Ein Nein lässt alles beim Alten, eine fehlende Stimme hält den Vorschlag offen. |
 
-Die Übernahme selbst — neuer Punktwert, neuer Eintrag, Löschung, Aktion — passiert in derselben
+Die Übernahme selbst — neuer Punktwert, neuer Eintrag, Löschung, Aktion, Event — passiert in derselben
 Transaktion wie das Schließen der Abstimmung: entweder beides oder nichts. Sollte eine Abstimmung
 doch einmal trotz vollständiger Zustimmung offen stehen bleiben, zieht die App sie beim nächsten Laden nach.
 
@@ -338,6 +340,36 @@ wer vorher gemeldet hat, bekommt nichts nachträglich. Damit bleibt die Grundreg
 der Preis steht fest, bevor gearbeitet wird — und niemand hat einen Grund, Meldungen
 zurückzuhalten.
 
+## Events
+
+Eine **Regel auf Zeit, die der Haushalt selbst schreibt** — das Gegenstück zur festen
+Belohnungsliste. Angelegt wird sie unter **Wir → Aktionen → Event konfigurieren**, freigegeben
+wie alles andere: nur mit der Zustimmung aller.
+
+| Feld | |
+| --- | --- |
+| Richtung | **ausgeben** (Cleanies gehen weg, es gibt etwas dafür) oder **verdienen** |
+| Wofür | freies Textfeld, Pflicht — kein Menü, keine Kategorien |
+| Was gilt | freiwilliges Kleingedrucktes („nicht nach 20 Uhr") |
+| Cleanies | eine Zahl pro Stück; was ein Stück ist, sagt der Text |
+| Wie oft | einmal pro Person oder mehrfach, dazu ein freiwilliger Deckel fürs ganze Event |
+| Für wen | alle oder ausgewählte Personen; wer nicht dabei ist, sieht es ohne Knopf |
+| Wann | eine **Dauer** ab Freigabe *oder* ein **Zeitraum** im Kalender |
+| Dauerevent | Rhythmus (jede Woche · alle 2 Wochen · 1× im Monat · 1× im Quartal), Starttag, Fensterlänge |
+
+Der Kniff dabei: ein freigegebenes Event ist **keine neue Mechanik**. Es hängt an einer ganz
+gewöhnlichen Belohnung (Richtung „ausgeben") oder an einer ganz gewöhnlichen Quest
+(„verdienen") und schaltet sie im Fenster scharf. Einlösen ist deshalb der Antrag, den es
+längst gibt — samt Freigabe, Empfangsbestätigung, Rückholung bei Nichtlieferung, Verlauf und
+Statistik. Ein eigener Reiter hätte all das noch einmal von vorn gebraucht.
+
+Ein Dauerevent wird **einmal** abgestimmt und rückt danach von allein weiter — beim Laden der
+App und im Wecker. Der Starttag rastet dabei immer wieder ein: ein Haushaltsurlaub schiebt die
+Fenster um seine Tage mit, und „jedes Wochenende" liegt danach wieder am Wochenende.
+**Ändern und Beenden** gehen über dieselbe Abstimmung wie das Anlegen; ein laufendes Fenster
+wird nie mittendrin abgeschnitten. Eine laufende Aktion legt sich **nicht** auf einen
+Eventpreis — sonst hieße „20 Cleanies" mal 20 und mal 15.
+
 ## Benachrichtigungen
 
 Jede Entscheidung erreicht die andere Person auf zwei Wegen:
@@ -360,7 +392,7 @@ web/app/        Die App selbst (index.html, app.css, app.js) — ohne Bauschritt
 worker/         Schnittstelle: index.js (Router und Wecker), auth.js (Google),
                 api.js (Regeln), plan.js (Quests mit Rhythmus),
                 rueckmeldung.js (Rückfragen, Empfang, Strafe, Zurückziehen),
-                urlaub.js (Urlaubsmodus),
+                urlaub.js (Urlaubsmodus), events.js (Regeln auf Zeit),
                 melden.js und push.js (Benachrichtigungen)
 d1/migrations/  Datenbank: Tabellen, Ansichten, Änderungsschritte
 tests/          Regressionssuiten: API über curl, Oberfläche über Playwright

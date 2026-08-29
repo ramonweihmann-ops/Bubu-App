@@ -1627,6 +1627,8 @@ async function ausgabe(env, ich) {
     uebertragungen: await hole("select * from transfers where couple_id = ?1"),
     abstimmungen: await hole("select * from proposals where couple_id = ?1"),
     bewerbungen: await hole("select * from bewerbungen where couple_id = ?1"),
+    events: await hole("select * from events where couple_id = ?1"),
+    urlaube: await hole("select * from urlaube where couple_id = ?1"),
     buchungen: await hole("select * from ledger where couple_id = ?1 order by created_at")
   };
 }

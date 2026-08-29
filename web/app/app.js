@@ -2828,7 +2828,7 @@ function sheetEvent(vorlage = null) {
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
         <span style="flex:1;font-size:12.5px;color:var(--ink-2)">Insgesamt höchstens</span>
-        <input id="evgesamt" class="phasenfeld" type="number" min="1" max="999" inputmode="numeric"
+        <input id="evgesamt" class="phasenfeld" style="width:76px" type="number" min="1" max="999" inputmode="numeric"
           placeholder="∞" value="${e?.gesamt || ""}">
       </div>
       <span style="font-size:11px;color:var(--ink-3)">Leer heißt ohne Deckel — dann bremst nur das Konto.</span>
@@ -2862,7 +2862,7 @@ function sheetEvent(vorlage = null) {
         </div>
       </div>
       <div class="field" id="monatstag" hidden><label>Beginnt am Tag</label>
-        <input id="evmonatstag" class="phasenfeld" type="number" min="1" max="28" inputmode="numeric"
+        <input id="evmonatstag" class="phasenfeld" style="width:76px" type="number" min="1" max="28" inputmode="numeric"
           value="${!wochenweise && e?.starttag ? e.starttag : 1}">
         <span style="font-size:11px;color:var(--ink-3)">1 bis 28 — damit kein Fenster im Februar verschwindet.</span>
       </div>
