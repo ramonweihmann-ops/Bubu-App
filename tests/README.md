@@ -64,4 +64,5 @@ genau so, wie er es soll.
 | `jubel-api.sh` | Cleanies-Phasen verschieben, eigene GIFs hochladen und löschen |
 | `ui-jubel.mjs` | Der Jubel in der App, die Einstellungen der Verwaltung |
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
+| `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |
