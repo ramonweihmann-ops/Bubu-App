@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Events konfigurieren</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --ruhig-tint:#e7f0fc;
+  --bald:#c47a00; --bald-tint:#fdf1dc;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1060px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:40px 0 10px}
+h3{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:-.01em;margin:26px 0 6px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:66ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.bu{font-size:12.5px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+
+.phone{width:340px;max-width:100%;height:700px;background:var(--bg);border:9px solid var(--ink);
+  border-radius:36px;overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);
+  display:flex;flex-direction:column;margin:0 auto}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.kopf{flex:none;padding:16px 15px 6px;display:flex;align-items:center;gap:10px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.15}
+.kopf .sub{font-size:12px;color:var(--ink-3)}
+.inhalt{flex:1;overflow-y:auto;padding:0 15px 14px;display:flex;flex-direction:column;gap:10px}
+.inhalt>*{flex-shrink:0}
+.grabber{width:38px;height:4px;border-radius:999px;background:var(--line);margin:2px auto 4px;flex:none}
+
+.btn{font:inherit;font-size:15px;font-weight:700;border-radius:13px;padding:12px 15px;border:1px solid transparent;
+  cursor:pointer;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--ink);width:100%}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--bg);border-color:var(--line)}
+.btn.text{background:none;color:var(--ink-2);font-weight:600;padding:8px}
+.btn.klein{font-size:13px;padding:9px 12px}
+.btnrow{display:flex;gap:8px}.btnrow>.btn{flex:1}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:9px}
+.card.flat{background:var(--tint);border-color:transparent}
+.card.alarm{border-color:var(--accent);background:var(--accent-tint)}
+.card.frei{border-color:var(--frei);background:var(--frei-tint)}
+.card.event{border-color:var(--ruhig);background:var(--ruhig-tint)}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:5px 0 -4px}
+.note{font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:9px 10px}
+.note b{color:var(--ink)}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;background:var(--tint-2);color:var(--ink-2);display:inline-flex;gap:5px;align-items:center;flex:none}
+.chip.rot{background:var(--accent-tint);color:var(--accent)}
+.chip.gruen{background:var(--frei);color:#fff}
+.chip.navy{background:var(--ink);color:#fff}
+.chip.blau{background:var(--ruhig);color:#fff}
+.pill{font-family:var(--font-data);font-size:13px;font-weight:700;background:var(--ink);color:#fff;
+  border-radius:999px;padding:5px 10px;flex:none}
+
+.zeile{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:14px;background:var(--bg);text-align:left}
+.zeile .ico{width:32px;height:32px;border-radius:50%;background:var(--tint);display:grid;place-items:center;flex:none;color:var(--ink-2)}
+.zeile .n{flex:1;min-width:0}
+.zeile .t{display:block;font-size:13.5px;font-weight:700}
+.zeile .m{display:block;font-size:11.5px;color:var(--ink-3)}
+.zeile .pf{color:var(--ink-3);flex:none}
+.zeile.an{border-color:var(--accent)}
+.zeile.an .ico{background:var(--accent-tint);color:var(--accent)}
+
+.feld{display:flex;flex-direction:column;gap:5px}
+.feld label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.feld textarea,.feld input,.feld select{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:10px;width:100%;background:var(--bg);color:var(--ink)}
+.feld textarea{min-height:70px;resize:none}
+.feld .hinweis{font-size:11px;color:var(--ink-3)}
+.pflicht{color:var(--accent);font-weight:700}
+.zweifeld{display:flex;gap:8px}.zweifeld>*{flex:1;min-width:0}
+
+.stepper{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:12px;padding:6px 10px;background:var(--bg)}
+.stepper button{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--tint);font:inherit;font-size:17px;color:var(--ink);cursor:pointer}
+.stepper .val{font-family:var(--font-data);font-size:19px;font-weight:700;min-width:38px;text-align:center}
+.stepper .eh{margin-left:auto;font-family:var(--font-data);font-size:13px;color:var(--ink-2)}
+
+.wahl{display:flex;flex-wrap:wrap;gap:6px}
+.wahl button{font:inherit;font-size:12.5px;font-weight:600;border-radius:999px;padding:7px 11px;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);cursor:pointer}
+.wahl button[data-an]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.schalter{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:14px;padding:11px;background:var(--bg)}
+.schalter[data-an]{border-color:var(--frei)}
+.schalter .n{flex:1;min-width:0}
+.schalter .t{display:block;font-size:13.5px;font-weight:700}
+.schalter .m{display:block;font-size:11.5px;color:var(--ink-3)}
+.knopf{width:44px;height:26px;border-radius:999px;background:var(--tint-2);position:relative;flex:none}
+.knopf::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(21,44,79,.35)}
+.knopf[data-an]{background:var(--frei)}
+.knopf[data-an]::after{left:21px}
+
+.leute{display:flex;gap:6px;flex-wrap:wrap}
+.person{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 11px 3px 3px;font-size:12.5px;font-weight:600;background:var(--bg);color:var(--ink-2)}
+.person[data-an]{border-color:var(--ink);background:var(--ink);color:#fff}
+.person .a{width:22px;height:22px;border-radius:50%;background:var(--tint-2);display:grid;place-items:center;font-size:12px;flex:none}
+
+.vote{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px}
+.change{font-family:var(--font-data);font-size:13px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.change .old{text-decoration:line-through;color:var(--ink-3)}
+.change .new{color:var(--frei);font-weight:700}
+.stance{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}
+.stance i{font-style:normal;font-weight:700;color:var(--ink)}
+.zaehlbalken{display:flex;gap:4px;align-items:center}
+.zaehlbalken i{flex:1;height:6px;border-radius:999px;background:var(--tint-2);display:block}
+.zaehlbalken i[data-ja]{background:var(--frei)}
+.rechnung2{font-family:var(--font-data);font-size:15px;display:flex;align-items:center;gap:9px}
+.rechnung2 .weg{color:var(--ink-3);text-decoration:line-through}
+.rechnung2 .neu{font-weight:700;color:var(--ink)}
+
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:7px 5px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--ink-3);min-width:0}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td b{white-space:nowrap}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+.rechnung{font-family:var(--font-data);font-size:13px;white-space:nowrap}
+
+.icontausch{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);
+  border-radius:16px;padding:16px 18px;margin-top:10px}
+.icontausch figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:7px;width:96px}
+.icontausch .kreis{width:52px;height:52px;border-radius:50%;background:var(--accent-tint);color:var(--accent);display:grid;place-items:center}
+.icontausch figcaption{font-size:11.5px;color:var(--ink-3);text-align:center}
+.icontausch .pfeil{font-size:22px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-8-5.1-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 15.9 12 21 12 21z" fill="currentColor"/></symbol>
+  <symbol id="i-waage" viewBox="0 0 24 24">
+    <path d="M12 5.6v14.2M8.2 19.8h7.6M3.6 7.4h16.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="12" cy="4.1" r="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    <path d="M3.6 7.4 1.2 12.6q2.4 3.2 4.8 0z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M20.4 7.4 18 12.6q2.4 3.2 4.8 0z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-kalender" viewBox="0 0 24 24">
+    <rect x="3.5" y="5.5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M3.5 10h17M8 3.5v4M16 3.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M8 14h3v3H8z" fill="currentColor"/>
+  </symbol>
+</defs></svg>
+
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Abstimmung</span>
+  <h1>Events konfigurieren</h1>
+  <p class="lead">
+    Cleanies sammeln sich an — und bleiben liegen. Die Belohnungsliste ist fest, sie gilt immer
+    und für alle gleich. Ein <b>Event</b> ist das Gegenstück: eine Regel auf Zeit, die ihr selbst
+    schreibt. Wofür ist ein leeres Textfeld, die Cleanies stellt ihr ein, und wie lange es gilt,
+    entscheidet ihr — einmalig oder als Dauerevent, das von allein wiederkommt.
+  </p>
+  <p class="lead">
+    Der Trick dabei: ein freigegebenes Event ist keine neue Mechanik. Es ist eine
+    <b>Belohnung mit Uhr</b> (Cleanies raus) oder eine <b>Quest mit Uhr</b> (Cleanies rein).
+    Einlösen, freigeben, Empfang bestätigen — alles läuft durch die Wege, die es schon gibt.
+  </p>
+
+  <h2>Wo der neue Knopf steht</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Wir</div><div class="sub">Anna · Jonas · Mika</div></div>
+          <span style="color:var(--ink-3)">⚙</span></div>
+        <div class="inhalt">
+          <p class="label">Aktionen</p>
+          <div class="zeile an">
+            <span class="ico"><svg width="18" height="18"><use href="#i-waage"/></svg></span>
+            <span class="n"><span class="t">Aktion starten</span>
+              <span class="m">Doppelte Cleanies oder Rabatt — befristet, nur gemeinsam</span></span>
+            <span class="pf">›</span>
+          </div>
+          <div class="zeile an">
+            <span class="ico"><svg width="18" height="18"><use href="#i-kalender"/></svg></span>
+            <span class="n"><span class="t">Event konfigurieren</span>
+              <span class="m">Cleanies gegen etwas eintauschen — was, sagt ihr</span></span>
+            <span class="pf">›</span>
+          </div>
+
+          <p class="label">Läuft gerade</p>
+          <div class="card event" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="flex:1;font-size:14px;font-weight:700">Zockzeit am Tablet</span>
+              <span class="chip blau">noch 1 Tag</span>
+            </div>
+            <div style="font-size:12px;color:var(--ink-2)">20 ★ pro Stunde · nur Mika · 1 von 3
+              eingelöst</div>
+          </div>
+
+          <p class="label">Wiederkehrend</p>
+          <div class="zeile">
+            <span class="ico">↻</span>
+            <span class="n"><span class="t">Taschengeld-Wochenende</span>
+              <span class="m">10 ★ = 1 € · jede Woche · wieder ab Sa, 30.08.</span></span>
+            <span class="pf">›</span>
+          </div>
+
+          <p class="label">Offene Abstimmungen</p>
+          <div class="card flat" style="font-size:12.5px;color:var(--ink-2)">
+            Nichts offen.</div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span data-an><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Unter <b>Aktionen</b>, direkt unter „Aktion starten“ — gleiche Ecke, gleiche
+        Logik: beides sind Regeln auf Zeit, beides geht nur gemeinsam. Darunter neu: was gerade
+        läuft und was wiederkommt.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="inhalt" style="padding-top:12px">
+          <div class="grabber"></div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em">
+            Event konfigurieren</div>
+
+          <div class="btnrow">
+            <button class="btn dark klein">Cleanies ausgeben</button>
+            <button class="btn ghost klein">verdienen</button>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-3);margin-top:-4px">
+            Wer mitmacht, <b>gibt</b> Cleanies aus und bekommt etwas dafür.</div>
+
+          <div class="feld">
+            <label>Wofür <span class="pflicht">· nötig</span></label>
+            <input value="1 Stunde Zockzeit am Tablet">
+            <span class="hinweis">Frei beschreibbar. Kein Menü, keine Kategorien.</span>
+          </div>
+
+          <div class="feld">
+            <label>Was gilt (freiwillig)</label>
+            <textarea style="min-height:88px">Switch, Tablet oder PC. Nicht nach 20 Uhr, nicht vor den Hausaufgaben.</textarea>
+          </div>
+
+          <div class="feld">
+            <label>Wie viele Cleanies</label>
+            <div class="stepper">
+              <button>−</button><span class="val">20</span><button>+</button>
+              <span class="eh">★ pro Stück</span>
+            </div>
+          </div>
+
+          <div class="feld">
+            <label>Wie oft</label>
+            <div class="btnrow">
+              <button class="btn ghost klein">Einmal pro Person</button>
+              <button class="btn dark klein">Mehrfach</button>
+            </div>
+            <div class="stepper" style="margin-top:5px">
+              <button>−</button><span class="val">3</span><button>+</button>
+              <span class="eh">× pro Person</span>
+            </div>
+          </div>
+
+          <div class="feld">
+            <label>Für wen</label>
+            <div class="leute">
+              <span class="person"><span class="a">🦊</span>Anna</span>
+              <span class="person"><span class="a">🐺</span>Jonas</span>
+              <span class="person" data-an><span class="a">🐨</span>Mika</span>
+            </div>
+            <span class="hinweis">Niemand ausgewählt heißt: für alle.</span>
+          </div>
+        </div>
+      </div></div>
+      <p class="bu">Aufbau wie „Aktion starten“: erst die Richtung, dann die Zahl, dann der Rest.
+        <b>„Wofür“ ist ein leeres Feld</b> — genau das ist der Unterschied zwischen einer Familie
+        und einer WG, und den wollen wir nicht vorschreiben.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="inhalt" style="padding-top:12px">
+          <div class="grabber"></div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em">
+            Event konfigurieren</div>
+          <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">… weiter unten im selben Blatt</div>
+
+          <div class="feld">
+            <label>Wann</label>
+            <div class="btnrow">
+              <button class="btn dark klein">Dauer</button>
+              <button class="btn ghost klein">Zeitraum</button>
+            </div>
+            <div class="wahl" style="margin-top:6px">
+              <button>Heute</button><button data-an>2 Tage</button><button>1 Woche</button>
+              <button>2 Wochen</button><button>1 Monat</button>
+            </div>
+          </div>
+
+          <div class="schalter">
+            <span class="n"><span class="t">Dauerevent</span>
+              <span class="m">Kommt von allein wieder — wie eine Aufgabe im Plan</span></span>
+            <span class="knopf"></span>
+          </div>
+
+          <div class="feld">
+            <label>Warum (freiwillig)</label>
+            <textarea>Damit sich das Aufräumen auch mal in etwas verwandelt.</textarea>
+          </div>
+
+          <div class="note"><b>Alle drei müssen zustimmen.</b> Anna, Jonas und Mika — danach
+            läuft das Event sofort, bis es abgelaufen ist.</div>
+
+          <div class="card flat" style="gap:5px">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-family:var(--font-data)">
+              Steht dann so da</div>
+            <div style="font-size:13px"><b>1 Stunde Zockzeit am Tablet</b> für <b>20 ★</b>,
+              höchstens 3× für Mika, läuft <b>2 Tage</b>.</div>
+          </div>
+
+          <button class="btn dark">Zur Abstimmung geben</button>
+          <button class="btn text">Doch nicht</button>
+        </div>
+      </div></div>
+      <p class="bu">Die Dauer sind dieselben Knöpfe wie bei „Aktion starten“, nur mit zwei mehr.
+        Unten steht das fertige Event noch einmal <b>in einem Satz</b> — wer es abstimmt, soll es
+        nicht aus fünf Feldern zusammensuchen müssen.</p>
+    </div>
+  </div>
+
+  <h2>Zeitraum statt Dauer — und das Dauerevent</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="inhalt" style="padding-top:12px">
+          <div class="grabber"></div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em">
+            Event konfigurieren</div>
+
+          <div class="feld">
+            <label>Wann</label>
+            <div class="btnrow">
+              <button class="btn ghost klein">Dauer</button>
+              <button class="btn dark klein">Zeitraum</button>
+            </div>
+          </div>
+
+          <div class="zweifeld">
+            <div class="feld"><label>Von</label><input value="30.08.2026"></div>
+            <div class="feld"><label>Bis</label><input value="01.09.2026"></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-3);margin-top:-4px">
+            Drei Tage — Samstagfrüh bis Montagabend.</div>
+
+          <div class="schalter">
+            <span class="n"><span class="t">Dauerevent</span>
+              <span class="m">Kommt von allein wieder</span></span>
+            <span class="knopf"></span>
+          </div>
+
+          <div class="note">Ein fester Zeitraum ist für das Einmalige: <b>ein Ferienwochenende</b>,
+            die Woche vor dem Geburtstag, die Zeit bis zum Umzug.</div>
+
+          <button class="btn dark">Zur Abstimmung geben</button>
+        </div>
+      </div></div>
+      <p class="bu"><b>Dauer oder Zeitraum</b> — dieselbe Sache, zwei Wege es zu sagen. „2 Tage“
+        rechnet ab jetzt, ein Zeitraum steht im Kalender. Mehr Auswahl braucht es nicht.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="inhalt" style="padding-top:12px">
+          <div class="grabber"></div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em">
+            Event konfigurieren</div>
+
+          <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">
+            „1 € Taschengeld“ für 10 ★ — jetzt der Rhythmus</div>
+
+          <div class="schalter" data-an>
+            <span class="n"><span class="t">Dauerevent</span>
+              <span class="m">Kommt von allein wieder</span></span>
+            <span class="knopf" data-an></span>
+          </div>
+
+          <div class="feld">
+            <label>Wie oft kommt es</label>
+            <div class="wahl">
+              <button data-an>jede Woche</button><button>alle 2 Wochen</button>
+              <button>1× im Monat</button><button>1× im Quartal</button>
+            </div>
+          </div>
+
+          <div class="feld">
+            <label>Beginnt am</label>
+            <div class="wahl">
+              <button>Mo</button><button>Di</button><button>Mi</button><button>Do</button>
+              <button>Fr</button><button data-an>Sa</button><button>So</button>
+            </div>
+          </div>
+
+          <div class="feld">
+            <label>Und läuft dann</label>
+            <div class="wahl"><button data-an>2 Tage</button><button>3 Tage</button>
+              <button>1 Woche</button></div>
+          </div>
+
+          <div class="card event" style="gap:5px">
+            <div style="font-size:13px"><b>Jeden Samstag 0 Uhr bis Sonntag 24 Uhr.</b></div>
+            <div style="font-size:12px;color:var(--ink-2)">Nächste Male: 30.08. · 06.09. · 13.09.</div>
+          </div>
+
+          <div class="note"><b>Einmal abstimmen, dann läuft es.</b> Ein Dauerevent wird nicht
+            jedes Mal neu freigegeben — sonst wäre es keins.</div>
+
+          <button class="btn dark">Zur Abstimmung geben</button>
+        </div>
+      </div></div>
+      <p class="bu">Das Wochenend-Beispiel: <b>jede Woche, ab Samstag, 2 Tage lang</b>. Aus drei
+        Angaben wird ein Satz, den auch ein Kind versteht — und eine Liste der nächsten Termine,
+        damit niemand rechnen muss.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Prüfen</div><div class="sub">Wartet auf deine Entscheidung</div></div></div>
+        <div class="inhalt">
+          <div class="vote">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;min-width:0">
+                <span style="font-size:14.5px;font-weight:700;display:block">Neues Event: Zockzeit am Tablet</span>
+                <span style="font-size:11.5px;color:var(--ink-3);display:block">Cleanies eintauschen —
+                  Regel auf Zeit</span>
+              </span>
+              <span class="chip rot">Offen</span>
+            </div>
+            <div class="change"><span class="new">20 ★</span>→<span>1 Stunde Zockzeit</span></div>
+            <div style="font-size:12.5px;color:var(--ink-2)">
+              Nur für <b>Mika</b> · höchstens <b>3×</b> · läuft <b>2 Tage</b> ab Freigabe.</div>
+            <div style="font-size:12px;color:var(--ink-2)">„Switch, Tablet oder PC. Nicht nach
+              20 Uhr, nicht vor den Hausaufgaben.“</div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Vorgeschlagen von Anna · vor 3 Min. —
+              „Damit sich das Aufräumen auch mal in etwas verwandelt.“</div>
+            <div class="stance"><span>Anna: <i>zugestimmt</i></span><span>Du: <i>offen</i></span>
+              <span>Mika: <i>offen</i></span></div>
+            <div class="zaehlbalken"><i data-ja></i><i></i><i></i></div>
+            <div style="font-size:11.5px;color:var(--ink-3)">Übernommen wird der Vorschlag erst,
+              wenn <b>alle drei</b> zugestimmt haben.</div>
+            <div class="btnrow"><button class="btn dark">Zustimmen</button>
+              <button class="btn ghost">Ablehnen</button></div>
+          </div>
+
+          <div class="note">Wie jede andere Abstimmung. Ein <b>Nein</b> beendet den Vorschlag
+            sofort — ein Event ist eine Regel für alle.</div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span data-an><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Die Karte sagt <b>was, wofür, für wen, wie oft und wie lange</b> — dieselbe
+        Anreicherung, die wir bei den anderen Abstimmungen schon gemacht haben.</p>
+    </div>
+  </div>
+
+  <h2>Wenn es läuft</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Hallo Mika</div><div class="sub">Samstag, 30. August</div></div></div>
+        <div class="inhalt">
+          <div class="card" style="gap:7px;flex-direction:row;align-items:center">
+            <span style="width:34px;height:34px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-size:17px">🐨</span>
+            <span style="flex:1"><span style="font-size:12px;color:var(--ink-3);display:block">Dein Konto</span>
+              <span style="font-family:var(--font-data);font-size:22px;font-weight:700">64 ★</span></span>
+          </div>
+
+          <div class="card event" style="gap:8px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="color:var(--ruhig);flex:none"><svg width="20" height="20"><use href="#i-waage"/></svg></span>
+              <span style="flex:1;font-size:14px;font-weight:700">Zockzeit am Tablet</span>
+              <span class="chip blau">noch 1 Tag</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink-2)"><b>20 ★</b> für 1 Stunde ·
+              du kannst noch <b>3×</b></div>
+            <button class="btn primary klein">Einlösen</button>
+          </div>
+
+          <div class="card event" style="gap:8px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="color:var(--ruhig);flex:none"><svg width="20" height="20"><use href="#i-waage"/></svg></span>
+              <span style="flex:1;font-size:14px;font-weight:700">1 € Taschengeld</span>
+              <span class="chip blau">noch 2 Tage</span>
+            </div>
+            <div style="font-size:12.5px;color:var(--ink-2)"><b>10 ★</b> = 1 € · ohne Deckel ·
+              <b>↻ jedes Wochenende</b></div>
+            <button class="btn ghost klein">Einlösen</button>
+          </div>
+
+          <div class="quick" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+            <div class="card flat" style="align-items:center;font-size:11px;padding:10px 6px">🧹<span>Quest</span></div>
+            <div class="card flat" style="align-items:center;font-size:11px;padding:10px 6px">🎁<span>Belohnung</span></div>
+            <div class="card flat" style="align-items:center;font-size:11px;padding:10px 6px">⇄<span>Senden</span></div>
+          </div>
+        </div>
+        <div class="leiste">
+          <span data-an><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span><b>🛡</b>Prüfen</span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Laufende Events stehen <b>ganz oben auf der Startseite</b>, direkt unter dem
+        Konto — dort, wo heute schon das Aktionsbanner sitzt. Mit Restzeit und einem Knopf, der
+        etwas tut.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="inhalt" style="padding-top:12px">
+          <div class="grabber"></div>
+          <div style="font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em">
+            Zockzeit am Tablet</div>
+          <div style="font-size:12px;color:var(--ink-3);margin-top:-6px">Event · noch 1 Tag</div>
+
+          <div class="card flat" style="font-size:12.5px">Switch, Tablet oder PC. Nicht nach
+            20 Uhr, nicht vor den Hausaufgaben.</div>
+
+          <div class="feld">
+            <label>Wie oft</label>
+            <div class="stepper"><button>−</button><span class="val">1</span><button>+</button>
+              <span class="eh">Stunde</span></div>
+            <span class="hinweis">Noch 3 von 3 frei.</span>
+          </div>
+
+          <div class="card" style="gap:7px">
+            <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-family:var(--font-data)">
+              Dein Konto danach</div>
+            <div class="rechnung2"><span class="weg">64 ★</span>→<span class="neu">44 ★</span></div>
+          </div>
+
+          <div class="feld">
+            <label>Wer gibt frei</label>
+            <select><option>Anna</option><option>Jonas</option></select>
+          </div>
+
+          <div class="feld">
+            <label>Nachricht (freiwillig)</label>
+            <textarea>Heute Nachmittag, ok?</textarea>
+          </div>
+
+          <div class="note">Läuft wie eine Belohnung: <b>erst wenn Anna freigibt</b>, sind die
+            Cleanies weg. Danach bestätigst du, dass du die Stunde bekommen hast.</div>
+
+          <button class="btn primary">Einlösen</button>
+          <button class="btn text">Doch nicht</button>
+        </div>
+      </div></div>
+      <p class="bu">Das Einlösen ist <b>keine neue Mechanik</b> — es ist der Antrag, den es für
+        Belohnungen längst gibt: Prüfen, freigeben, Empfang bestätigen, bei Nichtlieferung
+        zurückholen.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div style="flex:1">
+          <div class="titel">Belohnungen</div><div class="sub">Dein Konto: 64 ★</div></div></div>
+        <div class="inhalt">
+          <p class="label">Nur jetzt</p>
+          <div class="card event" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="flex:1;font-size:14px;font-weight:700">1 Stunde Zockzeit am Tablet</span>
+              <span class="pill">20 ★</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="chip blau">noch 1 Tag</span>
+              <span style="font-size:11.5px;color:var(--ink-2)">1 von 3 eingelöst · nur Mika</span>
+            </div>
+          </div>
+          <div class="card event" style="gap:7px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="flex:1;font-size:14px;font-weight:700">1 € Taschengeld</span>
+              <span class="pill">10 ★</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="chip blau">noch 2 Tage</span>
+              <span class="chip">↻ jedes Wochenende</span>
+            </div>
+          </div>
+
+          <p class="label">Immer</p>
+          <div class="card" style="gap:7px;flex-direction:row;align-items:center">
+            <span style="flex:1;font-size:14px;font-weight:700">Frühstück ans Bett</span>
+            <span class="pill">30 ★</span></div>
+          <div class="card" style="gap:7px;flex-direction:row;align-items:center">
+            <span style="flex:1;font-size:14px;font-weight:700">Kinoabend aussuchen</span>
+            <span class="pill">15 ★</span></div>
+          <div class="card" style="gap:7px;flex-direction:row;align-items:center">
+            <span style="flex:1;font-size:14px;font-weight:700">Einmal Abwasch abgeben</span>
+            <span class="pill">12 ★</span></div>
+
+          <div class="note">Ein Event steht <b>über</b> der festen Liste und verschwindet von
+            selbst. Die feste Liste bleibt, wie sie ist.</div>
+        </div>
+        <div class="leiste">
+          <span><b>⌂</b>Start</span><span><b>🧹</b>Quests</span><span><b>🛡</b>Prüfen</span>
+          <span data-an><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu">Ein laufendes Event taucht <b>in der Belohnungsliste</b> auf, blau abgesetzt
+        und mit Uhr. Richtung „Cleanies verdienen“ landet es genauso in der <b>Quest-Liste</b>.</p>
+    </div>
+  </div>
+
+  <h2>„Aktion starten“ bekommt die Waage</h2>
+  <p class="lead">Das Herz stand für „Aktion“, seit es nur eine gab. Jetzt stehen zwei Regeln auf
+    Zeit nebeneinander, und ein Herz sagt über keine von beiden etwas. Eine Waage schon: hier wird
+    aufgewogen — Cleanies gegen Prozente, Cleanies gegen Zockzeit.</p>
+  <div class="icontausch">
+    <figure>
+      <span class="kreis"><svg width="26" height="26"><use href="#i-heart"/></svg></span>
+      <figcaption>bisher<br><code>i-heart</code></figcaption>
+    </figure>
+    <span class="pfeil">→</span>
+    <figure>
+      <span class="kreis"><svg width="26" height="26"><use href="#i-waage"/></svg></span>
+      <figcaption>neu<br><code>i-waage</code></figcaption>
+    </figure>
+    <div style="flex:1;min-width:220px;font-size:13px;color:var(--ink-2)">
+      Gleiche Strichstärke, gleiche Rundungen wie die übrigen Symbole — nur umrissen, nicht
+      gefüllt. Das Herz bleibt im Programm: es sitzt weiter an teuren Belohnungen und im Hinweis
+      „+20 % Aktion läuft“.
+    </div>
+  </div>
+
+  <h2>Die Regeln</h2>
+  <table>
+    <tr><th style="width:26%">Sache</th><th>Wie es läuft</th></tr>
+    <tr><td><b>Wer darf anlegen</b></td><td>Jeder im Haushalt. Freigeben müssen aber alle — wie bei „Aktion starten“.</td></tr>
+    <tr><td><b>Richtung</b></td><td><b>Eintauschen</b>: Cleanies gehen weg, es gibt etwas dafür. <b>Verdienen</b>: es gibt Cleanies für etwas, das sonst keine Quest ist.</td></tr>
+    <tr><td><b>Wofür</b></td><td>Freies Textfeld, Pflicht. Dazu ein freiwilliges Feld für das Kleingedruckte.</td></tr>
+    <tr><td><b>Cleanies</b></td><td>Eine Zahl pro Stück. Was ein „Stück“ ist, sagt der Text — eine Stunde, ein Euro, eine Party.</td></tr>
+    <tr><td><b>Wie oft</b></td><td>Einmal pro Person oder mehrfach mit Deckel. Ohne Deckel geht auch — dann begrenzt nur das Konto.</td></tr>
+    <tr><td><b>Für wen</b></td><td>Alle oder ausgewählte Personen. Wer nicht dabei ist, sieht das Event trotzdem — nur ohne Knopf.</td></tr>
+    <tr><td><b>Wann</b></td><td>Dauer ab Freigabe <i>oder</i> ein Zeitraum im Kalender. Eins von beidem, nicht beides.</td></tr>
+    <tr><td><b>Dauerevent</b></td><td>Rhythmus + Starttag + Fensterlänge. Wird <b>einmal</b> abgestimmt und kommt dann von allein.</td></tr>
+    <tr><td><b>Einlösen</b></td><td>Wie eine Belohnung: Antrag → jemand gibt frei → Cleanies gebucht → Empfang bestätigen. Bei „verdienen“ wie eine Quest: melden → jemand gibt frei.</td></tr>
+    <tr><td><b>Abgelaufen</b></td><td>Das Event verschwindet aus den Listen. Offene Anträge daraus bleiben gültig und werden normal zu Ende gebracht.</td></tr>
+    <tr><td><b>Ändern und Beenden</b></td><td>Über die Abstimmung, wie das Anlegen. Ein laufendes Fenster wird nicht mittendrin abgeschnitten.</td></tr>
+    <tr><td><b>Im Verlauf</b></td><td>Jede Einlösung steht mit Eventnamen im Cleanies-Konto. Nichts passiert unsichtbar.</td></tr>
+    <tr><td><b>Urlaub</b></td><td>Haushaltsurlaub schiebt Dauerevents mit — genau wie den Haushaltsplan.</td></tr>
+  </table>
+
+  <h2>Wie das in euren Worten aussieht</h2>
+  <table>
+    <tr><th>Haushalt</th><th>Wofür</th><th class="rechnung">★</th><th>Wann</th></tr>
+    <tr><td>Familie</td><td>1 € Taschengeld</td><td class="rechnung">10</td><td>jede Woche, Sa–So, ohne Deckel</td></tr>
+    <tr><td>Familie</td><td>1 Stunde Zockzeit am Tablet</td><td class="rechnung">20</td><td>2 Tage, höchstens 3× für Mika</td></tr>
+    <tr><td>Familie</td><td>Du bestimmst das Abendessen</td><td class="rechnung">15</td><td>1× im Monat, 1 Tag</td></tr>
+    <tr><td>WG</td><td>Party anmelden — Küche und Wohnzimmer</td><td class="rechnung">25</td><td>Zeitraum 01.–30.09., einmal pro Person</td></tr>
+    <tr><td>WG</td><td>Du kochst Sonntag für alle <i>(verdienen)</i></td><td class="rechnung">+15</td><td>jede Woche, So, einmal</td></tr>
+    <tr><td>Partner</td><td>Serienabend, du suchst aus</td><td class="rechnung">12</td><td>alle 2 Wochen, 1 Tag</td></tr>
+    <tr><td>Partner</td><td>Einmal ausschlafen, ich mach den Rest</td><td class="rechnung">30</td><td>1× im Monat, 1 Tag</td></tr>
+  </table>
+
+  <h2>Die Rhythmen</h2>
+  <p class="lead">Dieselben wie im Haushaltsplan, damit niemand zwei Systeme lernen muss — plus
+    Starttag und Fensterlänge, weil ein Event anders als eine Aufgabe eine <i>Dauer</i> hat und
+    nicht nur einen Termin.</p>
+  <table>
+    <tr><th>Rhythmus</th><th>Beispiel</th><th>Ergibt</th></tr>
+    <tr><td class="rechnung">jede Woche</td><td>ab Sa, 2 Tage</td><td>Sa 0 Uhr – So 24 Uhr, jede Woche</td></tr>
+    <tr><td class="rechnung">alle 2 Wochen</td><td>ab Fr, 3 Tage</td><td>Fr–So, jede zweite Woche</td></tr>
+    <tr><td class="rechnung">1× im Monat</td><td>ab dem 1., 1 Woche</td><td>die erste Woche jedes Monats</td></tr>
+    <tr><td class="rechnung">1× im Quartal</td><td>ab dem 1., 2 Wochen</td><td>vier Fenster im Jahr</td></tr>
+  </table>
+
+  <h2>Was ein Event von einer Belohnung unterscheidet</h2>
+  <table>
+    <tr><th style="width:22%"></th><th>Belohnung</th><th>Event</th></tr>
+    <tr><td><b>Gilt</b></td><td>immer</td><td>nur im Fenster</td></tr>
+    <tr><td><b>Für wen</b></td><td>alle</td><td>alle oder ausgewählte</td></tr>
+    <tr><td><b>Wie oft</b></td><td>beliebig</td><td>mit Deckel, wenn ihr wollt</td></tr>
+    <tr><td><b>Richtung</b></td><td>nur ausgeben</td><td>ausgeben oder verdienen</td></tr>
+    <tr><td><b>Wiederkehr</b></td><td>—</td><td>Dauerevent mit Rhythmus</td></tr>
+    <tr><td><b>Einlösen</b></td><td colspan="2" style="color:var(--ink-2)">identisch — Antrag, Freigabe, Empfangsbestätigung</td></tr>
+  </table>
+
+  <h2>Fünf Entscheidungen, die ich getroffen habe</h2>
+  <p class="lead">Sie standen nicht in deiner Beschreibung. Sag Bescheid, wenn eine davon anders
+    sein soll — dann ändere ich sie vor dem Einbau.</p>
+
+  <div class="frage">
+    <b>Jede Einlösung geht trotzdem durch „Prüfen“.</b>
+    Die Abstimmung am Anfang gibt die <i>Regel</i> frei, nicht jede einzelne Auszahlung. Sonst
+    müsste jemand Geld herausrücken oder das Tablet freigeben, ohne es mitbekommen zu haben.
+    So ist es wie bei einer Belohnung: Mika beantragt, ein Elternteil gibt frei, Mika bestätigt
+    den Erhalt — und wenn nichts kommt, holt er die Cleanies zurück.
+  </div>
+
+  <div class="frage">
+    <b>Ein Event ist eine Belohnung mit Uhr — keine sechste Kachel.</b>
+    Es taucht in der Belohnungsliste auf (oder in der Quest-Liste, Richtung „verdienen“), blau
+    abgesetzt und mit Restzeit. Damit funktionieren Verlauf, Rückfrage, Nichtlieferung, Statistik
+    und Push vom ersten Tag an. Ein eigener Reiter würde all das noch einmal von vorn brauchen.
+  </div>
+
+  <div class="frage">
+    <b>„Für wen“ ist dabei, obwohl du es nicht gefordert hast.</b>
+    Zockzeit für die Kinder ist etwas anderes als Zockzeit für alle, und ohne dieses Feld müsste
+    man es in den Text schreiben und hoffen. Leer gelassen heißt: für alle — wer das Feld nicht
+    braucht, merkt nicht, dass es da ist.
+  </div>
+
+  <div class="frage">
+    <b>Ein Dauerevent wird einmal abgestimmt, nicht jedes Mal.</b>
+    Sonst wäre es kein Dauerevent, sondern eine Erinnerung, ein Event anzulegen. Ändern und
+    Beenden gehen dafür wieder über die Abstimmung — eine gemeinsame Regel soll nicht eine
+    Person allein abschaffen können, auch nicht die, die sie vorgeschlagen hat.
+  </div>
+
+  <div class="frage">
+    <b>Der Deckel ist freiwillig.</b>
+    „10 ★ = 1 €“ ohne Grenze kann teuer werden — aber das Konto begrenzt es ja schon, und die
+    Cleanies waren vorher Arbeit. Wer trotzdem eine Obergrenze will, setzt sie pro Person oder
+    fürs ganze Event. Voreingestellt ist kein Deckel.
+  </div>
+
+  <h2>Was ich dafür bauen würde</h2>
+  <table>
+    <tr><th style="width:26%">Teil</th><th>Was dazukommt</th></tr>
+    <tr><td><b>Datenbank</b></td><td>Eine Tabelle <code>events</code> (Richtung, Text, Cleanies, Deckel, Für wen, Fenster, Rhythmus) und eine <code>event_fenster</code> für die einzelnen Läufe eines Dauerevents. Ein neuer Vorschlagstyp <code>neues_event</code>.</td></tr>
+    <tr><td><b>Worker</b></td><td>Das Fenster eines Dauerevents zieht der tägliche Cron nach — dieselbe Stelle, die schon den Haushaltsplan weiterrückt und den Urlaub berücksichtigt.</td></tr>
+    <tr><td><b>Oberfläche</b></td><td>Der Knopf, ein Blatt zum Konfigurieren, die Eventkarten in Start, Quests und Belohnungen, die Abstimmungskarte und die Liste unter „Wir“.</td></tr>
+    <tr><td><b>Symbol</b></td><td><code>i-waage</code> neu im Sprite; „Aktion starten“ und die Aktionsbanner stellen um.</td></tr>
+    <tr><td><b>Tests</b></td><td><code>event-api.sh</code> für die Regeln und <code>ui-event.mjs</code> zu dritt auf dem Schirm — wie bei allem anderen auch.</td></tr>
+  </table>
+
+</div>
+</body>
+</html>
