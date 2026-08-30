@@ -55,7 +55,7 @@ lauf "event-api.sh" bash event-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-plan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event cleanie-shot mockup-anim mockup-events; do
+for t in ui ui-plan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event cleanie-shot mockup-anim mockup-events mockup-klang; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

@@ -67,4 +67,5 @@ genau so, wie er es soll.
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
 | `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt bis zum Beenden |
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
+| `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |

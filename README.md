@@ -28,6 +28,9 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   aus derselben Datei wie in der App.
 - **Mockup „Events konfigurieren":** [`web/mockup-events/`](./web/mockup-events) — live unter
   `haus-quest.com/mockup-events/`. Der Entwurf, aus dem die Events entstanden sind.
+- **Hörprobe „Klang zum Jubel":** [`web/mockup-klang/`](./web/mockup-klang) — live unter
+  `haus-quest.com/mockup-klang/`. Vier Klangfamilien in allen drei Cleanies-Phasen, aus
+  derselben Datei, die in der App läuft.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.

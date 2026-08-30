@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Hörprobe: Klang zum Jubel</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:26px 16px 70px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.02em;margin:38px 0 10px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:66ch}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.karte{border:1px solid var(--line);border-radius:18px;background:var(--bg);padding:16px;margin-bottom:14px}
+.kopf{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.kopf h3{font-family:var(--font-display);font-weight:800;font-size:18px;margin:0;letter-spacing:-.01em}
+.kopf .id{font-family:var(--font-data);font-size:11px;color:var(--ink-3)}
+.kurz{font-size:13px;color:var(--ink-2);margin:0 0 12px}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+button.spiel{
+  font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line);border-radius:14px;
+  background:var(--bg);color:var(--ink);cursor:pointer;padding:12px 10px;display:flex;
+  flex-direction:column;align-items:center;gap:3px;line-height:1.25;
+}
+button.spiel:hover{border-color:var(--ruhig)}
+button.spiel[data-laeuft]{background:var(--ruhig);border-color:var(--ruhig);color:#fff}
+button.spiel .m{font-size:11px;font-weight:600;color:var(--ink-3)}
+button.spiel[data-laeuft] .m{color:#cfe0f7}
+button.spiel.nein{border-style:dashed}
+button.spiel.nein[data-laeuft]{background:var(--ink);border-color:var(--ink)}
+
+.regler{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);
+  border-radius:16px;padding:12px 16px;margin:0 0 18px}
+.regler label{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.regler input{flex:1;accent-color:var(--accent)}
+.regler b{font-family:var(--font-data);font-size:14px;width:42px;text-align:right}
+
+.wach{background:var(--accent-tint);border:1px solid var(--accent);border-radius:14px;
+  padding:12px 14px;font-size:13.5px;margin-bottom:18px}
+.wach b{display:block}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td b{white-space:nowrap}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+code{font-family:var(--font-data);font-size:12.5px;background:var(--tint-2);border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Hörprobe · zur Entscheidung</span>
+  <h1>Ein eigener Klang zum Jubel</h1>
+  <p class="lead">
+    Einen Ton kann man nicht ansehen — deshalb statt eines Mockups eine Hörprobe. Alles hier
+    klingt aus <code>web/app/klang.js</code>, also aus genau der Datei, die später in der App
+    läuft. Was du aussuchst, klingt in Haus-Quest identisch.
+  </p>
+  <p class="lead">
+    Kein Ton liegt als Datei bei: alles entsteht im Browser aus Oszillatoren und Hüllkurven.
+    Das sind ein paar hundert Zeichen statt ein paar hundert Kilobyte, es lädt nie nach, es
+    klingt offline genauso — und es wächst mit den Cleanies-Phasen mit.
+  </p>
+
+  <div class="wach"><b>Einmal irgendwo tippen, dann geht es los.</b>
+    Browser lassen Ton erst nach einer Berührung zu. Das gilt in der App genauso.</div>
+
+  <div class="regler">
+    <label for="laut">Lautstärke</label>
+    <input id="laut" type="range" min="0" max="100" value="70">
+    <b id="lautwert">70 %</b>
+  </div>
+
+  <h2>Die vier Familien</h2>
+  <p class="lead">Jede Familie spielt dieselbe Tonfolge — so vergleichst du wirklich die
+    Klangfarbe und nicht die Melodie. Die Phasen sind dieselben wie beim Jubel:
+    <b>leise</b> 1–3, <b>mittel</b> 4–6, <b>groß</b> ab 7 Cleanies.</p>
+
+  <div id="familien"></div>
+
+  <h2>Wo der Ton klingt — und wo nicht</h2>
+  <table>
+    <tr><th style="width:34%">Situation</th><th>Was passiert</th></tr>
+    <tr><td><b>Du gibst etwas frei</b></td><td>Der Moment kommt sofort — der Ton auch. Hier klingt es immer, denn du hast gerade getippt.</td></tr>
+    <tr><td><b>Deine Meldung wird bestätigt</b></td><td>Beim nächsten Öffnen der App wird der Moment nachgeholt. Der Ton kommt mit, sobald der Browser ihn zulässt — sonst bleibt es still, ohne Fehlermeldung.</td></tr>
+    <tr><td><b>Eine Ablehnung</b></td><td>Zwei tiefe, kurze Töne. Ruhig — eine Ablehnung ist kein Fehler und soll nicht scheppern.</td></tr>
+    <tr><td><b>Push aufs Handy, App zu</b></td><td><b>Kein eigener Ton möglich.</b> Siehe unten.</td></tr>
+    <tr><td><b>Stumm gestellt</b></td><td>Regler auf 0 in den Einstellungen. Dann wird der Tonkontext gar nicht erst geweckt.</td></tr>
+  </table>
+
+  <h2>Warum die Push keinen eigenen Ton bekommt</h2>
+  <p class="lead">
+    Die Web-Notifications-API hat ein Feld <code>sound</code> — im Standard. Umgesetzt hat es
+    <b>kein Browser</b>. Auf Android kommt der Ton aus dem Benachrichtigungskanal des Browsers
+    (den stellt man in den Android-Einstellungen ein), auf iOS aus dem System. Eine Webseite
+    darf ihn nicht bestimmen, und daran ändert auch ein Service Worker nichts.
+  </p>
+  <p class="lead">
+    Was dort <b>geht</b>, ist ein eigenes Vibrationsmuster — auf Android. Das ist die einzige
+    Handschrift, die eine Push von Haus-Quest tragen kann, und sie kostet nichts:
+  </p>
+  <div class="karte">
+    <div class="kopf"><h3>Vibration</h3><span class="id">nur Android · am Handy ausprobieren</span></div>
+    <p class="kurz">Am Rechner passiert hier nichts — Vibration gibt es nur auf dem Handy.</p>
+    <div class="reihe">
+      <button class="spiel" data-vib="18,60,30"><span>Zustimmung</span><span class="m">kurz–Pause–kurz</span></button>
+      <button class="spiel" data-vib="40"><span>Ablehnung</span><span class="m">ein Stupser</span></button>
+      <button class="spiel" data-vib="30,50,30,50,60"><span>Push</span><span class="m">dreifach, unverwechselbar</span></button>
+    </div>
+  </div>
+
+  <h2>Drei Entscheidungen, die ich getroffen habe</h2>
+  <p class="lead">Sag Bescheid, wenn eine davon anders sein soll — dann ändere ich sie vor dem
+    Einbau.</p>
+
+  <div class="frage">
+    <b>Der Ton wächst mit den Cleanies, wie die Animation.</b>
+    Leise sind es zwei Töne, mittel vier, groß eine ganze Kaskade mit Schlussakkord. Sonst
+    hätte man zwar Feuerwerk zu sehen, aber denselben Piep zu hören wie bei drei Cleanies.
+  </div>
+
+  <div class="frage">
+    <b>Ein Regler statt eines Schalters.</b>
+    Ganz aus ist die eine wichtige Stellung — aber „leise genug fürs Büro“ ist die zweite.
+    Der Regler steht bei jedem selbst in den Einstellungen, nicht beim Haushalt: ob dein
+    Handy klingt, ist keine Sache für eine Abstimmung.
+  </div>
+
+  <div class="frage">
+    <b>Voreingestellt ist an, mit 70 %.</b>
+    Wer es nicht mag, stellt es einmal ab. Andersherum würde es kaum jemand je entdecken.
+  </div>
+
+</div>
+
+<script type="module">
+import { SAETZE, SATZ_IDS, PHASEN, klingen, dauerVon, tonKontext } from "/app/klang.js";
+
+const PHASENNAME = { leise: "Leise", mittel: "Mittel", gross: "Groß" };
+const PHASENSPANNE = { leise: "1–3 Cleanies", mittel: "4–6 Cleanies", gross: "ab 7 Cleanies" };
+
+const laut = document.getElementById("laut");
+const lautwert = document.getElementById("lautwert");
+const lautstaerke = () => Number(laut.value) / 100;
+laut.addEventListener("input", () => { lautwert.textContent = `${laut.value} %`; });
+
+document.getElementById("familien").innerHTML = SATZ_IDS.map((id) => `
+  <div class="karte">
+    <div class="kopf"><h3>${SAETZE[id].name}</h3><span class="id">${id}</span></div>
+    <p class="kurz">${SAETZE[id].kurz}</p>
+    <div class="reihe">
+      ${PHASEN.map((p) => `
+        <button class="spiel" data-satz="${id}" data-phase="${p}">
+          <span>${PHASENNAME[p]}</span><span class="m">${PHASENSPANNE[p]}</span>
+        </button>`).join("")}
+      <button class="spiel nein" data-satz="${id}" data-phase="leise" data-nein>
+        <span>Ablehnung</span><span class="m">tief und kurz</span>
+      </button>
+    </div>
+  </div>`).join("");
+
+document.addEventListener("click", (ev) => {
+  const knopf = ev.target.closest("[data-satz],[data-vib]");
+  if (!knopf) return;
+
+  if (knopf.dataset.vib) {
+    const muster = knopf.dataset.vib.split(",").map(Number);
+    if (navigator.vibrate) navigator.vibrate(muster);
+    leuchten(knopf, muster.reduce((s, n) => s + n, 0) / 1000 + 0.15);
+    return;
+  }
+
+  const positiv = !knopf.hasAttribute("data-nein");
+  const geklungen = klingen({
+    phase: knopf.dataset.phase, satz: knopf.dataset.satz, positiv, lautstaerke: lautstaerke()
+  });
+  // Beim allerersten Tippen kann der Kontext noch schlafen. Einmal wecken und
+  // sofort noch einmal versuchen — danach läuft es.
+  if (!geklungen && lautstaerke() > 0) {
+    tonKontext();
+    setTimeout(() => klingen({
+      phase: knopf.dataset.phase, satz: knopf.dataset.satz, positiv, lautstaerke: lautstaerke()
+    }), 120);
+  }
+  leuchten(knopf, dauerVon(knopf.dataset.phase, positiv));
+});
+
+function leuchten(knopf, sekunden) {
+  knopf.setAttribute("data-laeuft", "");
+  setTimeout(() => knopf.removeAttribute("data-laeuft"), Math.round(sekunden * 1000));
+}
+</script>
+</body>
+</html>
