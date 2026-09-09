@@ -1094,6 +1094,7 @@ function sortiereUndSuche(liste, bereich, wertVon) {
 
 function questListe() {
   const gemeldet = new Set(meineOffenen().map((m) => m.quest_id));
+  const inPruefung = new Set(S.meldungen.map((m) => m.quest_id));
   const liste = sortiereUndSuche(
     S.quests.filter((q) => filter === "Alle" || q.category === filter),
     "quests",
@@ -1105,22 +1106,28 @@ function questListe() {
   return liste.map((q) => {
     // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
     const e = eventZu(q);
+    // Eine wiederkehrende Aufgabe hat nur eine Runde: da hält jede offene
+    // Meldung auf, nicht nur die eigene.
+    const wartet = q.wiederkehrend ? inPruefung.has(q.id) : gemeldet.has(q.id);
+    const meins = gemeldet.has(q.id);
     return `
     <div class="zeile">
-      <button class="rowlink" ${q.wiederkehrend ? `data-plan="${q.id}"` : `data-sheet="melden" data-id="${q.id}"`}
-        ${gemeldet.has(q.id) && !q.wiederkehrend ? "disabled" : ""}>
+      <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${wartet ? "disabled" : ""}>
         <span class="grow">
           <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
             e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}×` : ""}${
-            gemeldet.has(q.id) ? ` · wartet auf ${esc(andereName())}` : ""}</span>
+            meins ? ` · wartet auf ${esc(andereName())}`
+            : wartet ? " · wartet auf Bestätigung" : ""}</span>
         </span>
-        ${gemeldet.has(q.id) ? '<span class="chip wait">Gemeldet</span>'
+        ${wartet ? '<span class="chip wait">Gemeldet</span>'
           : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
           : `<span class="pts-pill">${cl(q.points)}</span>`}
       </button>
       ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
           aria-label="${esc(q.name)} — Event ansehen">${icon("i-kalender", 18)}</button>`
+        : q.wiederkehrend ? `<button class="stiftbtn" data-plan="${q.id}"
+          aria-label="${esc(q.name)} im Haushaltsplan">${icon("i-broom", 18)}</button>`
         : `<button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
           aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>`}
     </div>`;
@@ -1942,16 +1949,16 @@ function schirmAufgabe() {
       </div>` : ""}
 
       ${a.pruefung ? "" : `
-      <button class="btn ${gesperrt ? "ghost" : "primary"} block" data-sheet="erledigt" data-id="${a.id}"
-        ${jemandAnders ? "disabled" : ""}>
-        ${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</button>`}
+      <button class="btn ${gesperrt || jemandAnders ? "ghost" : "primary"} block"
+        data-sheet="erledigt" data-id="${a.id}">
+        ${gesperrt || jemandAnders ? "Trotzdem erledigt melden" : "Erledigt melden"}</button>`}
 
       ${!a.pruefung && a.ichKannZurueck ? `
       <button class="btn ghost block" data-sheet="ruecktritt" data-id="${a.id}">
         Zurücktreten von der Aufgabe</button>` : ""}
 
       ${gesperrt ? `<div class="note">${icon("i-lock", 16)}<span>Gesperrt bis
-        <b>${esc(a.faellig_am)}</b>. Für besondere Umstände geht es trotzdem — mit Begründung, und
+        <b>${datumKurz(a.faellig_am)}</b>. Für besondere Umstände geht es trotzdem — mit Begründung, und
         jemand anderes muss bestätigen.</span></div>` : ""}
     </div>`;
 }
@@ -2103,24 +2110,33 @@ function sheetRhythmus(quest) {
     <button class="btn primary block" data-senden="rhythmus" data-id="${quest.id}">Zur Abstimmung geben</button>`);
 }
 
+/** Dasselbe wie „Erledigt melden“ in der Quest-Liste, nur vom Aufgaben-Schirm
+ *  aus. Auch hier hält eine fremde Runde nicht auf: sie verlangt einen Satz. */
 function sheetErledigt(a) {
   const gesperrt = a.offen > 0;
+  const fremd = a.zugewiesen && a.zugewiesen !== S.ich.id ? a.zugewiesen : null;
+  const besonders = !!(gesperrt || fremd);
   sheet(`
     <div class="grabber"></div>
-    <h3>${gesperrt ? "Trotzdem erledigen" : "Erledigt melden"}</h3>
+    <h3>${besonders ? "Trotzdem melden" : "Erledigt melden"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
       <span class="pts-pill">+${cl(a.punkte)}</span>
     </div>
-    ${gesperrt ? `
-    <div class="note">${icon("i-lock", 16)}<span>Sie ist noch bis <b>${esc(a.faellig_am)}</b> gesperrt.
-      Besondere Umstände brauchen eine Begründung — und jemand anderes muss trotzdem bestätigen.</span></div>
-    <div class="field"><label>Warum jetzt schon</label>
-      <textarea id="grund" placeholder="z. B. Besuch kommt kurzfristig"></textarea></div>` : `
+    ${besonders ? `
+    <div class="note">${icon("i-lock", 16)}<span>${fremd
+      ? `Diese Runde gehört <b>${esc(nameVon(fremd))}</b>.${gesperrt
+          ? ` Gesperrt ist sie außerdem noch bis <b>${datumKurz(a.faellig_am)}</b>.` : ""}
+         Wenn du sie gemacht hast, melde sie — mit einem Satz dazu.`
+      : `Sie ist noch bis <b>${datumKurz(a.faellig_am)}</b> gesperrt. Besondere Umstände brauchen
+         eine Begründung — und jemand anderes muss trotzdem bestätigen.`}</span></div>
+    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}</label>
+      <textarea id="grund" maxlength="300" placeholder="${fremd
+        ? "z. B. Ich war da und hatte Zeit" : "z. B. Besuch kommt kurzfristig"}"></textarea></div>` : `
     <div class="note">${icon("i-info", 16)}<span>${esc(andereName())} ${beugung("bestätigt", "bestätigen")} —
       erst dann gibt es die Cleanies. Danach ist die Aufgabe für ${a.tage} Tage gesperrt.</span></div>`}
     <button class="btn primary block" data-senden="erledigt" data-id="${a.id}"
-      data-trotzdem="${gesperrt ? "ja" : "nein"}">Zur Bestätigung senden</button>`);
+      data-trotzdem="${besonders ? "ja" : "nein"}">Zur Bestätigung senden</button>`);
 }
 
 /* ------------------------------------------------------------------ Einstellungen */
@@ -2427,18 +2443,51 @@ scrim.addEventListener("click", (ev) => { if (ev.target === scrim) sheetZu(); })
 // erst nach dem nächsten Knopfdruck.
 scrim.addEventListener("input", () => { if (scrim.querySelector("#evsatz")) eventBlattFrischen(); });
 
+/**
+ * Erledigt melden — für jede Quest, auch für eine, die im Haushaltsplan steht.
+ *
+ * Dort gehört sie nicht hin, sie ist nur zusätzlich eingeplant. Deshalb bleibt
+ * sie hier wählbar; was der Plan über sie weiß, steht als Streifen darüber.
+ * Ist sie noch gesperrt oder gehört die Runde jemand anderem, hält das nicht
+ * auf — es verlangt eine Begründung.
+ */
 function sheetMelden(quest) {
   const punkte = quest.punkte_jetzt ?? quest.points;
+  const a = quest.wiederkehrend ? plan().find((p) => p.id === quest.id) : null;
+  const fremd = a && a.zugewiesen && a.zugewiesen !== S.ich.id ? a.zugewiesen : null;
+  const gesperrt = !!a && a.offen > 0;
+  const besonders = !!(fremd || gesperrt);
+  const f = a ? fristText(a.offen) : null;
+
   sheet(`
     <div class="grabber"></div>
-    <h3>Erledigt melden</h3>
+    <h3>${besonders ? "Trotzdem melden" : "Erledigt melden"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
       <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${cl(punkte)}</span>
     </div>
+    ${a ? `
+    <button class="rowlink" data-plan="${quest.id}">
+      <span class="avatar sm" style="background:var(--tint);color:var(--ruhig)">${icon("i-broom", 18)}</span>
+      <span class="grow"><span class="t">Steht auch im Haushaltsplan</span>
+        <span class="m">${esc(a.rhythmus)} · ${esc(f.text)}${
+          a.zugewiesen ? ` · gehört ${esc(nameVon(a.zugewiesen))}` : ""}</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </button>` : ""}
     ${quest.bonus ? `<div class="note">${icon("i-waage", 16)}<span>+${quest.bonus} % Aktion läuft —
       der Wert friert beim Melden ein und bleibt, auch wenn erst später bestätigt wird.</span></div>` : ""}
     ${eventHinweis(quest)}
+    ${besonders ? `
+    <div class="note">${icon("i-lock", 16)}<span>${fremd
+      ? `Diese Runde gehört <b>${esc(nameVon(fremd))}</b>.${gesperrt
+          ? ` Gesperrt ist sie außerdem noch bis <b>${datumKurz(a.faellig_am)}</b>.` : ""}
+         Wenn du sie gemacht hast, melde sie — mit einem Satz dazu.`
+      : `Sie ist noch bis <b>${datumKurz(a.faellig_am)}</b> gesperrt. Besondere Umstände brauchen
+         eine Begründung — und jemand anderes muss trotzdem bestätigen.`}</span></div>
+    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}</label>
+      <textarea id="grund" maxlength="300" placeholder="${fremd
+        ? "z. B. Ich war da und hatte Zeit" : "z. B. Besuch kommt kurzfristig"}"></textarea></div>` : ""}
+    ${a ? "" : `
     <div class="field">
       <label>Wie oft</label>
       <div class="stepper">
@@ -2448,13 +2497,14 @@ function sheetMelden(quest) {
         <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">
           = <b style="color:var(--accent)" id="summe">${punkte}</b> Cleanies</span>
       </div>
-    </div>
+    </div>`}
     <div class="field"><label>Notiz für ${esc(andereName())}</label>
       <textarea id="notiz" placeholder="optional"></textarea></div>
     <div class="note">${icon("i-info", 16)}<span>Die Cleanies werden erst gutgeschrieben, wenn
-      ${esc(andereName())} ${beugung("bestätigt", "bestätigen")}. Es zählt der Wert von jetzt — auch wenn er später geändert wird.</span></div>
-    <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${punkte}">
-      Zur Bestätigung senden</button>`);
+      ${esc(andereName())} ${beugung("bestätigt", "bestätigen")}. Es zählt der Wert von jetzt — auch wenn er später geändert wird.${
+      a ? ` Danach ist die Aufgabe für ${a.tage} Tage gesperrt.` : ""}</span></div>
+    <button class="btn primary block" data-senden="melden" data-id="${quest.id}" data-punkte="${punkte}"
+      data-trotzdem="${besonders ? "ja" : "nein"}">Zur Bestätigung senden</button>`);
 }
 
 function sheetAntrag(belohnung) {
@@ -3724,7 +3774,12 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (el.dataset.senden === "melden") {
-      await api("claims", { questId: el.dataset.id, anzahl: zahl("menge"), notiz: wert("notiz") });
+      await api("claims", {
+        // Bei einer Aufgabe aus dem Plan gibt es keinen Zähler — es ist immer
+        // genau eine Runde.
+        questId: el.dataset.id, anzahl: zahl("menge") || 1, notiz: wert("notiz"),
+        trotzdem: el.dataset.trotzdem === "ja", grund: wert("grund")
+      });
       sheetZu(); await laden();
       toast(`Gemeldet — ${andereName()} ${beugung("muss", "müssen")} bestätigen.`);
       return;

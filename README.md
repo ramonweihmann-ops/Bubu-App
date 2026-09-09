@@ -224,6 +224,24 @@ weckt den Worker deshalb jeden Morgen um 6 Uhr UTC und zieht sie für alle Haush
 beim Laden der App passiert dasselbe noch einmal. Doppelt schadet nicht, weil jeder Schritt
 am Fälligkeitsdatum festhält, dass er gelaufen ist.
 
+### Eine geplante Aufgabe bleibt eine Quest
+
+Wer eine Quest in den Haushaltsplan hebt, gibt sie nicht ab. Sie steht weiter in der
+**Quest-Liste**, lässt sich dort melden, und das Blatt zeigt als Streifen, was der Plan über
+sie weiß — Rhythmus, Frist, wem die Runde gehört. Der Plan plant sie zusätzlich ein; gehören
+tut sie ihm nicht.
+
+Zwei Dinge wollen dabei einen Satz dazu, halten aber nicht auf:
+
+| Fall | Was passiert |
+| --- | --- |
+| **Noch gesperrt** | Melden geht mit Begründung. Ohne die Sperre ließe sich dieselbe Aufgabe fünfmal am Tag abrechnen. |
+| **Runde gehört jemand anderem** | Melden geht mit Begründung. Wer die Arbeit wirklich gemacht hat, weiß der Haushalt besser als eine Regel — und bestätigen muss ohnehin jemand anderes. |
+
+Die Begründung wandert als Notiz an die Meldung, damit auf der Prüfkarte steht, was besonders
+war: „Vorzeitig: …" oder „Für Anna übernommen: …". Solange eine Meldung offen ist, ist die
+Aufgabe für alle gesperrt — es gibt nur eine Runde.
+
 ## Urlaubsmodus
 
 Zwei Dinge, die beide „Urlaub" heißen. Beide beschließt der Haushalt gemeinsam, beide

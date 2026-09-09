@@ -66,7 +66,16 @@ pruefe "B lehnt ab" "$(post tok-b "plan/$AUF/vergabe" '{"annehmen":false}' | fel
 pruefe "Jetzt ist A dran" "$(get tok-a "plan/$AUF" | feld ".dran")" "u-a"
 pruefe "A nimmt an" "$(post tok-a "plan/$AUF/vergabe" '{"annehmen":true}' | feld ".status")" "angenommen"
 pruefe "A ist zugewiesen" "$(get tok-a state | feld ".plan[0].zugewiesen")" "u-a"
-pruefe "C darf nicht melden" "$(post tok-c claims "{\"questId\":\"$AUF\",\"trotzdem\":true,\"grund\":\"egal\"}" | feld ".fehler")" "Diese Runde gehört jemand anderem"
+
+echo "== Eine fremde Runde hält nicht auf — sie verlangt eine Begründung"
+pruefe "Ohne Begründung nur ein Hinweis" "$(post tok-c claims "{\"questId\":\"$AUF\"}" | feld ".fehler")" \
+  "Diese Runde gehört jemand anderem — mit einer kurzen Begründung geht es trotzdem"
+pruefe "Zu kurz zählt nicht" "$(post tok-c claims "{\"questId\":\"$AUF\",\"trotzdem\":true,\"grund\":\"ok\"}" | feld ".fehler")" \
+  "Für besondere Umstände braucht es eine Begründung"
+pruefe "Mit Begründung geht es" "$(post tok-c claims "{\"questId\":\"$AUF\",\"trotzdem\":true,\"grund\":\"War da und hatte Zeit\"}" | feld ".ok")" "true"
+pruefe "Die Notiz sagt, für wen" "$(get tok-a state | feld ".meldungen[0].note.startsWith('Für ')")" "true"
+pruefe "Und nennt den Grund" "$(get tok-a state | feld ".meldungen[0].note.includes('War da und hatte Zeit')")" "true"
+sql "delete from claims" > /dev/null
 
 echo "== Ein einziger Bewerber bekommt sie ohne Rangliste"
 sql "update quests set faellig_am = date('now'), dran = null, zugewiesen = null, vergabe_runde = null where id='$AUF'" > /dev/null

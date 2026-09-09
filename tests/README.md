@@ -54,6 +54,7 @@ genau so, wie er es soll.
 | `ui.mjs` | Dunkles Design, Einstellungen |
 | `ui3.mjs` | Ersteinrichtung von der Begrüßung bis zum Einladecode |
 | `ui-plan.mjs` | Der Haushaltsplan auf dem Schirm |
+| `ui-questplan.mjs` | Eine Aufgabe aus dem Plan bleibt eine Quest — melden, gesperrt, fremde Runde |
 | `ui-rueck.mjs` | Rückfragen und Belohnungen auf dem Schirm |
 | `ui-wieder.mjs` | Eine Quest zur wiederkehrenden Aufgabe machen |
 | `ui-offen.mjs` | Der Wartekasten auf der Startseite |

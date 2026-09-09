@@ -386,24 +386,35 @@ export async function vergabeEntscheiden(env, ich, questId, annehmen) {
 /* ------------------------------------------------------------------ Melden und Bestätigen */
 
 /**
- * Prüft, ob eine wiederkehrende Quest gerade gemeldet werden darf. Wird aus
- * dem gewöhnlichen Melden gerufen — für alle anderen Quests passiert nichts.
+ * Was einer Meldung im Weg steht — und was sie wieder freimacht.
+ *
+ * Eine wiederkehrende Aufgabe bleibt eine ganz gewöhnliche Quest: sie steht
+ * weiter in der Quest-Liste, und melden darf sie jeder. Sie gehört dem
+ * Haushaltsplan nicht allein — der plant sie nur zusätzlich ein.
+ *
+ * Zwei Dinge sind dabei besonders und wollen einen Satz dazu: die Sperre bis
+ * zur Fälligkeit (sonst ließe sich dieselbe Aufgabe fünfmal am Tag abrechnen)
+ * und eine Runde, die jemand anderem zugeteilt ist. Beides hält nicht auf, es
+ * verlangt nur eine Begründung — bestätigen muss ohnehin jemand anderes, und
+ * wer die Arbeit wirklich gemacht hat, weiß der Haushalt besser als eine Regel.
+ *
+ * Gibt null zurück, wenn nichts im Weg ist.
  */
 export function meldenErlaubt(quest, ich, { trotzdem = false, grund = "" } = {}) {
   if (!quest.wiederkehrend) return null;
 
-  if (quest.zugewiesen && quest.zugewiesen !== ich.id) {
-    throw new Fehler("Diese Runde gehört jemand anderem");
-  }
+  const fremd = quest.zugewiesen && quest.zugewiesen !== ich.id ? quest.zugewiesen : null;
   const offen = tageBis(quest.faellig_am);
+  if (!fremd && offen <= 0) return null;
+
+  if (!trotzdem) {
+    throw new Fehler(fremd
+      ? "Diese Runde gehört jemand anderem — mit einer kurzen Begründung geht es trotzdem"
+      : `Gesperrt bis ${quest.faellig_am} — noch ${offen} ${offen === 1 ? "Tag" : "Tage"}`);
+  }
   const sauber = String(grund).slice(0, 300).trim();
-  if (offen > 0 && !trotzdem) {
-    throw new Fehler(`Gesperrt bis ${quest.faellig_am} — noch ${offen} ${offen === 1 ? "Tag" : "Tage"}`);
-  }
-  if (offen > 0 && sauber.length < 3) {
-    throw new Fehler("Für besondere Umstände braucht es eine Begründung");
-  }
-  return offen > 0 ? sauber : null;      // Begründung, falls vorzeitig
+  if (sauber.length < 3) throw new Fehler("Für besondere Umstände braucht es eine Begründung");
+  return { grund: sauber, fremd, vorzeitig: offen > 0 };
 }
 
 /**

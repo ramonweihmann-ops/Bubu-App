@@ -711,8 +711,9 @@ async function melden(env, ich, daten) {
   // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
   if (quest.event_id) await eventPruefen(env, ich, quest.event_id, menge);
 
-  // Bei einer wiederkehrenden Quest gilt zusätzlich die Sperre und die Zuteilung.
-  const vorzeitig = meldenErlaubt(quest, ich, daten);
+  // Bei einer wiederkehrenden Quest wollen Sperre und Zuteilung einen Satz dazu.
+  // Aufhalten tun sie nicht: die Aufgabe gehört dem Plan nicht allein.
+  const besonders = meldenErlaubt(quest, ich, daten);
 
   const laeuft = quest.wiederkehrend
     ? await env.DB.prepare("select 1 as da from claims where quest_id = ?1 and status = 'offen'").bind(quest.id).first()
@@ -721,7 +722,15 @@ async function melden(env, ich, daten) {
 
   // Der Wert friert jetzt ein — inklusive einer gerade laufenden Aktion.
   const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));
-  const bemerkung = vorzeitig ? `Vorzeitig: ${vorzeitig}` : String(notiz).slice(0, 300);
+
+  // Die Begründung wandert als Notiz mit, damit auf der Prüfkarte steht, was
+  // besonders war — vorzeitig, für jemand anderen übernommen, oder beides.
+  const wessen = besonders?.fremd ? vorname((await person(env, besonders.fremd))?.name) : "";
+  const bemerkung = besonders
+    ? `${besonders.fremd
+        ? `Für ${wessen} übernommen${besonders.vorzeitig ? ", vorzeitig" : ""}`
+        : "Vorzeitig"}: ${besonders.grund}`
+    : String(notiz).slice(0, 300);
 
   const meldung = id();
   await env.DB.prepare(
@@ -731,7 +740,8 @@ async function melden(env, ich, daten) {
   await meldeAllen(env, ich, {
     art: "info", quelle: meldung,
     titel: `${vorname(ich.name)} hat etwas erledigt`,
-    text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Cleanies warten auf eine Bestätigung.`
+    text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Cleanies warten auf eine Bestätigung.${
+      besonders?.fremd ? ` Die Runde war ${wessen} zugeteilt.` : ""}`
   });
   return { ok: true };
 }
