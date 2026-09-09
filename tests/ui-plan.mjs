@@ -76,10 +76,12 @@ pruefe("Zähler für drei Personen", await a.locator(".rang").count(), 3);
 pruefe("Gesperrt-Hinweis", (await a.locator(".body").innerText()).includes("Gesperrt bis"), true);
 await a.screenshot({ path: `${AUS}/q4-aufgabe.png`, fullPage: true });
 
-console.log("== Trotzdem erledigen braucht eine Begründung");
+console.log("== Trotzdem melden braucht eine Begründung");
 await a.click('[data-sheet="erledigt"]');
 await a.waitForSelector('[data-senden="erledigt"]');
-pruefe("Blatt heißt Trotzdem erledigen", await a.locator(".sheet h3").innerText(), "Trotzdem erledigen");
+// Beide Wege heißen gleich: „Trotzdem melden“ — aus der Quest-Liste wie vom
+// Aufgaben-Schirm.
+pruefe("Blatt heißt Trotzdem melden", await a.locator(".sheet h3").innerText(), "Trotzdem melden");
 await a.click('[data-senden="erledigt"]');
 await a.waitForTimeout(800);
 pruefe("Fehler ohne Begründung", (await a.locator("#toast").innerText()).includes("Begründung"), true);
