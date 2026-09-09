@@ -2130,7 +2130,8 @@ function sheetErledigt(a) {
          Wenn du sie gemacht hast, melde sie — mit einem Satz dazu.`
       : `Sie ist noch bis <b>${datumKurz(a.faellig_am)}</b> gesperrt. Besondere Umstände brauchen
          eine Begründung — und jemand anderes muss trotzdem bestätigen.`}</span></div>
-    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}</label>
+    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}
+      <span class="pflicht">· nötig</span></label>
       <textarea id="grund" maxlength="300" placeholder="${fremd
         ? "z. B. Ich war da und hatte Zeit" : "z. B. Besuch kommt kurzfristig"}"></textarea></div>` : `
     <div class="note">${icon("i-info", 16)}<span>${esc(andereName())} ${beugung("bestätigt", "bestätigen")} —
@@ -2484,7 +2485,8 @@ function sheetMelden(quest) {
          Wenn du sie gemacht hast, melde sie — mit einem Satz dazu.`
       : `Sie ist noch bis <b>${datumKurz(a.faellig_am)}</b> gesperrt. Besondere Umstände brauchen
          eine Begründung — und jemand anderes muss trotzdem bestätigen.`}</span></div>
-    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}</label>
+    <div class="field"><label>${fremd ? "Warum du" : "Warum jetzt schon"}
+      <span class="pflicht">· nötig</span></label>
       <textarea id="grund" maxlength="300" placeholder="${fremd
         ? "z. B. Ich war da und hatte Zeit" : "z. B. Besuch kommt kurzfristig"}"></textarea></div>` : ""}
     ${a ? "" : `
@@ -3750,6 +3752,12 @@ document.addEventListener("click", async (ev) => {
     }
 
     if (el.dataset.senden === "erledigt") {
+      // Ohne Begründung geht es nicht weiter — das sagen wir hier, nicht erst
+      // nach einer Runde zum Server.
+      if (el.dataset.trotzdem === "ja" && wert("grund").length < 3) {
+        document.getElementById("grund")?.focus();
+        throw new Error("Schreib kurz dazu, warum es trotzdem sein soll");
+      }
       await api("claims", {
         questId: el.dataset.id, anzahl: 1,
         trotzdem: el.dataset.trotzdem === "ja", grund: wert("grund")
@@ -3774,6 +3782,12 @@ document.addEventListener("click", async (ev) => {
       return;
     }
     if (el.dataset.senden === "melden") {
+      // Ohne Begründung geht es nicht weiter — das sagen wir hier, nicht erst
+      // nach einer Runde zum Server.
+      if (el.dataset.trotzdem === "ja" && wert("grund").length < 3) {
+        document.getElementById("grund")?.focus();
+        throw new Error("Schreib kurz dazu, warum es trotzdem sein soll");
+      }
       await api("claims", {
         // Bei einer Aufgabe aus dem Plan gibt es keinen Zähler — es ist immer
         // genau eine Runde.

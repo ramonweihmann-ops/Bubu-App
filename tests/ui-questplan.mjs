@@ -120,6 +120,26 @@ await gesperrt.click();
 await a.waitForSelector('[data-senden="melden"]', { timeout: 8000 });
 enthaelt("Das Blatt heißt jetzt anders", await a.locator(".sheet h3").innerText(), "Trotzdem melden");
 pruefe("Ein Grundfeld ist da", await a.locator("#grund").count(), 1);
+// Beschriftungen stellt das Design auf Großbuchstaben um.
+enthaelt("Und es steht dran, dass es nötig ist", await a.locator(".sheet .pflicht").innerText(), "NÖTIG");
+
+console.log("== Ohne Begründung passiert etwas Sichtbares");
+await a.click('[data-senden="melden"]');
+await a.waitForTimeout(700);
+pruefe("Ein Hinweis erscheint", await a.locator("#toast[data-open]").count(), 1);
+enthaelt("Er sagt, was fehlt", await a.locator("#toast").innerText(), "warum es trotzdem sein soll");
+// Er muss auch im Bild stehen. Eine kaputte Regel in app.css hat ihn einmal
+// unter den Bildschirmrand geschoben — dann sah es aus, als passiere nichts.
+const lage = await a.evaluate(() => {
+  const t = document.getElementById("toast");
+  const r = t.getBoundingClientRect();
+  return { position: getComputedStyle(t).position, unten: r.bottom, oben: r.top, hoehe: window.innerHeight };
+});
+pruefe("Er klebt am Rand", lage.position, "fixed");
+pruefe("… und steht im Bild", lage.unten <= lage.hoehe && lage.oben >= 0, true);
+pruefe("Das Blatt bleibt offen", await a.locator("#scrim[data-open]").count(), 1);
+pruefe("Und nichts wurde gemeldet", await a.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).meldungen.length), 0);
 pruefe("Und der Knopf weiß es", await a.locator('[data-senden="melden"]').getAttribute("data-trotzdem"), "ja");
 await a.screenshot({ path: `${AUS}/q3-gesperrt.png`, fullPage: true });
 await a.fill("#grund", "Besuch kommt kurzfristig");

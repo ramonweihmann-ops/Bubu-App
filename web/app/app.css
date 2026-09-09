@@ -432,9 +432,9 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .celebrate > :not(.jubelflaeche) { position: relative; z-index: 1; }
 .jubelgif { position: absolute; inset: 0; margin: auto; width: min(300px, 78vw); height: auto;
   object-fit: contain; pointer-events: none; z-index: 0; opacity: .9; }
-  to { transform: translateY(105dvh) rotate(560deg); opacity: 0; }
-}
 
+/* Meldungen unten am Rand. Sie müssen über allem liegen — auch über einem
+ * offenen Blatt, denn genau von dort kommen die meisten Fehler. */
 .toast {
   position: fixed; left: 16px; right: 16px; bottom: calc(var(--unten) + 84px); z-index: 25;
   background: var(--kontrast-bg); color: var(--kontrast-ink); border-radius: 14px; padding: 14px 15px;
@@ -653,3 +653,7 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   border-radius: 12px; padding: 10px 11px;
 }
 .eventsatz b { color: var(--ink); }
+
+/* Ein Feld, ohne das es nicht weitergeht. Der Hinweis steht an der
+ * Beschriftung, nicht erst in der Fehlermeldung. */
+.pflicht { color: var(--accent); font-weight: 700; }
