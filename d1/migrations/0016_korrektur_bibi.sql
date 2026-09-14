@@ -1,0 +1,24 @@
+-- Punktekorrektur von Hand: Bibi bekommt 5 Cleanies gutgeschrieben.
+--
+-- Außerhalb des gewöhnlichen Weges, deshalb hier und nicht in der App. Es gibt
+-- bewusst keine Schaltfläche, die Cleanies ohne Meldung und ohne Bestätigung
+-- bucht — das Vier-Augen-Prinzip ist der Kern der ganzen Sache. Eine Migration
+-- ist der einzige Weg, der ohne Umweg an die Datenbank kommt, und zugleich der
+-- einzige, der sich hinterher nachlesen lässt: sie steht im Verlauf des
+-- Projekts und die Buchung steht im Verlauf des Haushalts.
+--
+-- Cleanies werden nie gespeichert, sondern aus „ledger" gerechnet (siehe die
+-- Ansicht „balances"). Eine Korrektur ist deshalb genau eine Zeile mehr und
+-- keine Änderung an einer alten. Der Verlauf bleibt vollständig und ehrlich.
+--
+-- Gesucht wird über den Anzeigenamen: die Kennung einer Person ist ein
+-- Google-Subject, das hier niemand kennt. Die App zeigt überall den Vornamen,
+-- deshalb greift die Bedingung sowohl bei „Bibi" als auch bei „Bibi Nachname".
+-- Findet sie niemanden, passiert nichts — die Migration läuft trotzdem durch
+-- und hält keine Auslieferung auf.
+--
+-- Die Kennung der Buchung leitet sich aus der Person ab. Damit kann auch ein
+-- zweiter Anlauf nichts doppelt buchen, und mehrere Treffer kollidieren nicht
+-- im Primärschlüssel.
+
+insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id) select 'korrektur-2026-09-14-' || m.user_id, m.couple_id, m.user_id, 5, 'Korrektur von Hand', 'korrektur', 'korrektur-2026-09-14-' || m.user_id from members m join users u on u.id = m.user_id where lower(trim(u.name)) = 'bibi' or lower(trim(u.name)) like 'bibi %';
