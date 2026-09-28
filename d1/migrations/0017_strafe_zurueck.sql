@@ -1,0 +1,25 @@
+-- Die letzte Gruppenstrafe zurücknehmen.
+--
+-- Wieder von Hand und außerhalb des gewöhnlichen Weges, deshalb als Migration:
+-- es gibt keine Schaltfläche, die eine Buchung rückgängig macht.
+--
+-- Zurückgenommen wird durch eine Gegenbuchung, nicht durch Löschen. Der Verlauf
+-- soll erzählen, was passiert ist — auch, dass etwas zurückgenommen wurde. Der
+-- Betrag spiegelt die ursprüngliche Zeile exakt („-l.delta"), damit hier keine
+-- Zahl steht, die jemand hätte falsch abtippen können.
+--
+-- Getroffen wird genau eine Runde. Eine Gruppenstrafe bucht für alle
+-- Anwesenden zusammen unter derselben Kennung „<quest>:<fällig am>"; über die
+-- findet die Abfrage alle Zeilen dieser einen Runde und keine ältere. Die
+-- andere Strafe der App — „Nicht eingelöst" aus rueckmeldung.js — trägt
+-- dieselbe Art, aber einen anderen Text und trifft immer nur eine Person;
+-- sie bleibt deshalb ausdrücklich unberührt.
+--
+-- „strafe_runde" an der Aufgabe bleibt stehen. Sie merkt sich, dass diese Runde
+-- schon abgerechnet ist — würde man sie zurücksetzen, buchte der Wecker am
+-- nächsten Morgen dieselbe Strafe gleich wieder.
+--
+-- Begrenzt auf den Haushalt, in dem Bibi ist, damit kein fremder Haushalt
+-- etwas erstattet bekommt. Findet sich nichts, passiert nichts.
+
+insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id) select 'ruecknahme-' || l.id, l.couple_id, l.member_id, -l.delta, replace(l.reason, 'Gruppenstrafe: ', 'Strafe zurückgenommen: '), 'korrektur', 'ruecknahme-' || l.id from ledger l where l.source_type = 'strafe' and l.reason like 'Gruppenstrafe:%' and l.couple_id in (select m.couple_id from members m join users u on u.id = m.user_id where lower(trim(u.name)) = 'bibi' or lower(trim(u.name)) like 'bibi %') and l.source_id = (select x.source_id from ledger x where x.couple_id = l.couple_id and x.source_type = 'strafe' and x.reason like 'Gruppenstrafe:%' order by x.created_at desc, x.rowid desc limit 1) and not exists (select 1 from ledger g where g.id = 'ruecknahme-' || l.id);
