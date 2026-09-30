@@ -224,6 +224,17 @@ weckt den Worker deshalb jeden Morgen um 6 Uhr UTC und zieht sie für alle Haush
 beim Laden der App passiert dasselbe noch einmal. Doppelt schadet nicht, weil jeder Schritt
 am Fälligkeitsdatum festhält, dass er gelaufen ist.
 
+### Mehrmals melden, bevor jemand entschieden hat
+
+Eine offene Meldung hält keine zweite auf. Wäsche hängt man mehrmals am Tag auf, und
+niemand sitzt daneben und gibt jedes Mal sofort frei — die Arbeit soll nicht warten müssen,
+bis jemand Zeit zum Bestätigen hatte. Die Quest bleibt in der Liste wählbar und zeigt daneben,
+wie viele Meldungen schon warten; im Blatt steht derselbe Hinweis.
+
+**Jede Meldung wird einzeln entschieden.** Zweimal gemeldet und zweimal bestätigt heißt
+zweimal Cleanies — die Arbeit war ja auch zweimal da. Das Vier-Augen-Prinzip bleibt davon
+unberührt: freigeben muss weiterhin jemand anderes.
+
 ### Eine geplante Aufgabe bleibt eine Quest
 
 Wer eine Quest in den Haushaltsplan hebt, gibt sie nicht ab. Sie steht weiter in der

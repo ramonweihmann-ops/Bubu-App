@@ -715,10 +715,10 @@ async function melden(env, ich, daten) {
   // Aufhalten tun sie nicht: die Aufgabe gehört dem Plan nicht allein.
   const besonders = meldenErlaubt(quest, ich, daten);
 
-  const laeuft = quest.wiederkehrend
-    ? await env.DB.prepare("select 1 as da from claims where quest_id = ?1 and status = 'offen'").bind(quest.id).first()
-    : null;
-  if (laeuft) throw new Fehler("Dazu wartet schon eine Meldung auf Bestätigung");
+  // Eine offene Meldung hält keine zweite auf. Wäsche hängt man mehrmals am
+  // Tag auf, und niemand sitzt daneben und gibt jedes Mal sofort frei — die
+  // Arbeit soll nicht warten müssen, bis jemand Zeit zum Bestätigen hatte.
+  // Jede Meldung wird einzeln entschieden, das Vier-Augen-Prinzip bleibt.
 
   // Der Wert friert jetzt ein — inklusive einer gerade laufenden Aktion.
   const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));

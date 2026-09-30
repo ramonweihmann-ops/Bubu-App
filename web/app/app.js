@@ -1093,8 +1093,15 @@ function sortiereUndSuche(liste, bereich, wertVon) {
 /* ------------------------------------------------------------------ Quests */
 
 function questListe() {
-  const gemeldet = new Set(meineOffenen().map((m) => m.quest_id));
-  const inPruefung = new Set(S.meldungen.map((m) => m.quest_id));
+  // Wie viele Meldungen zu einer Quest noch auf eine Entscheidung warten —
+  // insgesamt und davon meine. Aufhalten tun sie nichts: dieselbe Quest lässt
+  // sich mehrmals melden, auch wenn die erste noch offen ist.
+  const wartende = {};
+  const meineWartenden = {};
+  for (const m of S.meldungen) {
+    wartende[m.quest_id] = (wartende[m.quest_id] || 0) + 1;
+    if (m.claimed_by === S.ich.id) meineWartenden[m.quest_id] = (meineWartenden[m.quest_id] || 0) + 1;
+  }
   const liste = sortiereUndSuche(
     S.quests.filter((q) => filter === "Alle" || q.category === filter),
     "quests",
@@ -1106,22 +1113,20 @@ function questListe() {
   return liste.map((q) => {
     // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
     const e = eventZu(q);
-    // Eine wiederkehrende Aufgabe hat nur eine Runde: da hält jede offene
-    // Meldung auf, nicht nur die eigene.
-    const wartet = q.wiederkehrend ? inPruefung.has(q.id) : gemeldet.has(q.id);
-    const meins = gemeldet.has(q.id);
+    const wartet = wartende[q.id] || 0;
+    const meins = meineWartenden[q.id] || 0;
     return `
     <div class="zeile">
-      <button class="rowlink" data-sheet="melden" data-id="${q.id}" ${wartet ? "disabled" : ""}>
+      <button class="rowlink" data-sheet="melden" data-id="${q.id}">
         <span class="grow">
           <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
             e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}×` : ""}${
-            meins ? ` · wartet auf ${esc(andereName())}`
-            : wartet ? " · wartet auf Bestätigung" : ""}</span>
+            wartet ? ` · ${wartet === 1 ? "eine Meldung wartet" : `${wartet} Meldungen warten`}${
+              meins ? ` auf ${esc(andereName())}` : " auf Bestätigung"}` : ""}</span>
         </span>
-        ${wartet ? '<span class="chip wait">Gemeldet</span>'
-          : q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
+        ${wartet ? `<span class="chip wait">${wartet > 1 ? `${wartet}× ` : ""}gemeldet</span>` : ""}
+        ${q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
           : `<span class="pts-pill">${cl(q.points)}</span>`}
       </button>
       ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
@@ -1799,13 +1804,15 @@ function planZeile(a) {
   const f = fristText(a.offen);
   // Blass wird nur, was gerade nicht deine Sache ist. Dass eine Aufgabe noch
   // nicht dran ist, sagt der Balken — dafür muss nicht die halbe Liste grau sein.
-  const fremd = a.pruefung || (a.zugewiesen && a.zugewiesen !== S.ich.id);
+  // Eine wartende Meldung macht die Aufgabe nicht fremd — melden darf man
+  // trotzdem noch einmal.
+  const fremd = a.zugewiesen && a.zugewiesen !== S.ich.id;
   return `
     <button class="aufgabe" data-plan="${a.id}" ${fremd ? "data-gesperrt" : ""}>
       <span class="n">
         <span class="t">${esc(a.name)}</span>
         <span class="m">${planGruppiert ? "" : esc(a.raum) + " · "}${esc(a.rhythmus)}${
-          a.pruefung ? " · wartet auf Bestätigung"
+          a.pruefung ? ` · ${a.wartend > 1 ? `${a.wartend} Meldungen warten` : "wartet auf Bestätigung"}`
           : a.zugewiesen ? ` · ${esc(nameVon(a.zugewiesen))}`
           : a.dran ? ` · ${esc(nameVon(a.dran))} entscheidet`
           : a.bewerber ? ` · ${a.bewerber} ${a.bewerber === 1 ? "Bewerbung" : "Bewerbungen"}` : ""}</span>
@@ -1948,10 +1955,10 @@ function schirmAufgabe() {
           : `<button class="btn dark block" data-bewerbung="ja" data-id="${a.id}">Ich übernehme das</button>`}
       </div>` : ""}
 
-      ${a.pruefung ? "" : `
       <button class="btn ${gesperrt || jemandAnders ? "ghost" : "primary"} block"
         data-sheet="erledigt" data-id="${a.id}">
-        ${gesperrt || jemandAnders ? "Trotzdem erledigt melden" : "Erledigt melden"}</button>`}
+        ${a.pruefung ? "Noch einmal melden"
+          : gesperrt || jemandAnders ? "Trotzdem erledigt melden" : "Erledigt melden"}</button>
 
       ${!a.pruefung && a.ichKannZurueck ? `
       <button class="btn ghost block" data-sheet="ruecktritt" data-id="${a.id}">
@@ -2010,6 +2017,7 @@ function sheetRuecktritt(a) {
       <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
       <span class="pts-pill">+${cl(a.punkte)}</span>
     </div>
+    ${wartendeMeldungen(a.id)}
     <div class="field">
       <label>Warum geht es nicht <span style="color:var(--accent)">· nötig</span></label>
       <textarea id="rtgrund" maxlength="300" placeholder="Kurz, damit die anderen entscheiden können"></textarea>
@@ -2452,6 +2460,16 @@ scrim.addEventListener("input", () => { if (scrim.querySelector("#evsatz")) even
  * Ist sie noch gesperrt oder gehört die Runde jemand anderem, hält das nicht
  * auf — es verlangt eine Begründung.
  */
+/** Wie viele Meldungen zu dieser Quest noch offen sind — und der Satz dazu.
+ *  Aufhalten tut das nichts, es soll nur niemand aus Versehen doppelt melden. */
+function wartendeMeldungen(questId) {
+  const n = S.meldungen.filter((m) => m.quest_id === questId).length;
+  if (!n) return "";
+  return `<div class="note">${icon("i-clock", 16)}<span><b>${
+    n === 1 ? "Eine Meldung wartet" : `${n} Meldungen warten`} noch auf eine Entscheidung.</b>
+    Eine weitere geht trotzdem — jede wird einzeln entschieden.</span></div>`;
+}
+
 function sheetMelden(quest) {
   const punkte = quest.punkte_jetzt ?? quest.points;
   const a = quest.wiederkehrend ? plan().find((p) => p.id === quest.id) : null;
@@ -2467,6 +2485,7 @@ function sheetMelden(quest) {
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
       <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${cl(punkte)}</span>
     </div>
+    ${wartendeMeldungen(quest.id)}
     ${a ? `
     <button class="rowlink" data-plan="${quest.id}">
       <span class="avatar sm" style="background:var(--tint);color:var(--ruhig)">${icon("i-broom", 18)}</span>
@@ -3756,7 +3775,7 @@ document.addEventListener("click", async (ev) => {
       // nach einer Runde zum Server.
       if (el.dataset.trotzdem === "ja" && wert("grund").length < 3) {
         document.getElementById("grund")?.focus();
-        throw new Error("Schreib kurz dazu, warum es trotzdem sein soll");
+        throw new Error("Ohne Begründung geht es nicht — schreib kurz dazu, warum.");
       }
       await api("claims", {
         questId: el.dataset.id, anzahl: 1,
@@ -3786,7 +3805,7 @@ document.addEventListener("click", async (ev) => {
       // nach einer Runde zum Server.
       if (el.dataset.trotzdem === "ja" && wert("grund").length < 3) {
         document.getElementById("grund")?.focus();
-        throw new Error("Schreib kurz dazu, warum es trotzdem sein soll");
+        throw new Error("Ohne Begründung geht es nicht — schreib kurz dazu, warum.");
       }
       await api("claims", {
         // Bei einer Aufgabe aus dem Plan gibt es keinen Zähler — es ist immer

@@ -93,7 +93,10 @@ export async function planListe(env, paar, ichId) {
 
   return quests.results.map((q) => {
     const meine = bewerbungen.results.filter((b) => b.quest_id === q.id);
-    const pruefung = offene.results.find((c) => c.quest_id === q.id) || null;
+    // Mehrere offene Meldungen sind erlaubt — für die Karte zählt die erste,
+    // für den Hinweis daneben, wie viele es insgesamt sind.
+    const wartende = offene.results.filter((c) => c.quest_id === q.id);
+    const pruefung = wartende[0] || null;
     return {
       id: q.id,
       name: q.name,
@@ -107,6 +110,7 @@ export async function planListe(env, paar, ichId) {
       zugewiesen: q.zugewiesen,
       bewerber: meine.length,
       ichBeworben: meine.some((b) => b.member_id === ichId),
+      wartend: wartende.length,
       pruefung: pruefung ? { id: pruefung.id, von: pruefung.claimed_by, punkte: q.points,
                              created_at: pruefung.created_at } : null
     };

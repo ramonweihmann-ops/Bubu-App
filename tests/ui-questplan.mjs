@@ -30,9 +30,11 @@ sql("update quests set wiederkehrend = 0, faellig_am = null, zugewiesen = null, 
 
 // Eine Quest in den Plan heben — direkt in der Datenbank, den Weg dorthin
 // prüft ui-wieder.mjs.
-const [q] = frage("select id, name from quests where active = 1 and event_id is null"
+const [q] = frage("select id, name, points from quests where active = 1 and event_id is null"
   + " and couple_id = (select couple_id from members where user_id = 'u-a') limit 1");
 sql(`update quests set wiederkehrend = 1, rhythmus = '1× pro Woche', tage = 7, faellig_am = date('now') where id = '${q.id}'`);
+
+const PUNKTE = q.points;
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 async function seiteFuer(token) {
@@ -96,21 +98,41 @@ await momenteWeg(a);
 pruefe("Die Meldung liegt an", await a.evaluate(async () =>
   (await (await fetch("/api/state")).json()).meldungen.length), 1);
 const wieder = await zurQuest(a);
-enthaelt("In der Liste steht sie als gemeldet", await wieder.innerText(), "Gemeldet");
-pruefe("Und ist gesperrt", await wieder.isDisabled(), true);
+enthaelt("In der Liste steht, dass eine wartet", await wieder.innerText(), "gemeldet");
+pruefe("Aber sie bleibt anwählbar", await wieder.isDisabled(), false);
 
-console.log("== Auch für die anderen — es gibt nur eine Runde");
+console.log("== Und noch einmal melden geht, ohne dass jemand freigegeben hat");
+await wieder.click();
+await a.waitForSelector(`[data-senden="melden"]`, { timeout: 8000 });
+enthaelt("Das Blatt sagt, dass schon eine wartet", await a.locator(".sheet").innerText(),
+  "Eine Meldung wartet");
+await a.click(`[data-senden="melden"]`);
+await a.waitForTimeout(1600);
+await momenteWeg(a);
+pruefe("Jetzt warten zwei", await a.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).meldungen.length), 2);
+enthaelt("Und die Liste zählt mit", await (await zurQuest(a)).innerText(), "2× gemeldet");
+
+console.log("== Auch die anderen sehen beide und dürfen selbst melden");
 await laden(b);
 const beiB = await zurQuest(b);
-enthaelt("B sieht es auch", await beiB.innerText(), "Gemeldet");
-pruefe("B kann nicht doppelt melden", await beiB.isDisabled(), true);
+enthaelt("B sieht die Zahl", await beiB.innerText(), "2× gemeldet");
+pruefe("B ist nicht gesperrt", await beiB.isDisabled(), false);
 
-// Bestätigen, damit die Runde weiterrückt und die Sperre greift.
+console.log("== B entscheidet beide einzeln");
+const vorB = await a.evaluate(async () => (await (await fetch("/api/state")).json()).ich.punkte);
 await b.click('.navbar [data-go="pruefen"]');
-await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
-await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
-await b.waitForTimeout(1800);
-await momenteWeg(b);
+for (let i = 0; i < 2; i++) {
+  await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
+  await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
+  await b.waitForTimeout(1800);
+  await momenteWeg(b);
+}
+pruefe("Nichts wartet mehr", await b.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).meldungen.length), 0);
+// Zweimal gemeldet heißt zweimal bezahlt — die Arbeit war ja auch zweimal da.
+pruefe("A hat beide Male bekommen", await a.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).ich.punkte), vorB + 2 * PUNKTE);
 
 console.log("== Gesperrt heißt: mit Begründung geht es trotzdem");
 await laden(a);
@@ -127,7 +149,7 @@ console.log("== Ohne Begründung passiert etwas Sichtbares");
 await a.click('[data-senden="melden"]');
 await a.waitForTimeout(700);
 pruefe("Ein Hinweis erscheint", await a.locator("#toast[data-open]").count(), 1);
-enthaelt("Er sagt, was fehlt", await a.locator("#toast").innerText(), "warum es trotzdem sein soll");
+enthaelt("Er sagt, was fehlt", await a.locator("#toast").innerText(), "Ohne Begründung");
 // Er muss auch im Bild stehen. Eine kaputte Regel in app.css hat ihn einmal
 // unter den Bildschirmrand geschoben — dann sah es aus, als passiere nichts.
 const lage = await a.evaluate(() => {
