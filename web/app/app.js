@@ -281,6 +281,11 @@ function naechstesEreignis() {
   }
 }
 
+/* Was zuletzt gezeichnet wurde. Damit erkennt zeichne(), ob sich überhaupt
+ * etwas geändert hat — und ob der Schirm derselbe geblieben ist. */
+let letztesBild = "";
+let letzteAnsicht = null;
+
 function zeichne() {
   if (!S) return;
   if (!S.angemeldet) return anmelden();
@@ -308,7 +313,7 @@ function zeichne() {
   const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start",
                   raeume: "start", haushalt: "start", plan: "start", aufgabe: "start" }[ansicht] || ansicht;
 
-  app.innerHTML = inhalt() + `
+  const bild = inhalt() + `
     <nav class="navbar">
       ${nav.map((n) => `
         <button data-go="${n.id}" aria-current="${aktiv === n.id}">
@@ -316,6 +321,40 @@ function zeichne() {
           ${icon(n.icon, 21)}${n.label}
         </button>`).join("")}
     </nav>`;
+
+  // Die Abfrage im Hintergrund läuft alle 25 Sekunden. Baute sie den Schirm
+  // jedes Mal neu, risse sie ihn mitten im Lesen nach oben — und aus dem
+  // Suchfeld den Fokus gleich mit. Hat sich nichts geändert, passiert deshalb
+  // auch nichts. Der Blick auf die Leiste ist die Probe, ob überhaupt der
+  // gewohnte Aufbau steht: nach Anmeldung oder Einrichtung fehlt sie.
+  const derselbe = ansicht === letzteAnsicht;
+  if (derselbe && bild === letztesBild && app.querySelector(".navbar")) return;
+
+  // Muss doch neu gebaut werden, retten wir Scrollhöhe und Fokus hinüber —
+  // aber nur innerhalb desselben Schirms. Ein Wechsel fängt oben an.
+  const vorher = derselbe ? app.querySelector(".body") : null;
+  const hoehe = vorher ? vorher.scrollTop : 0;
+  const aktivesFeld = derselbe ? document.activeElement : null;
+  const feldId = aktivesFeld && aktivesFeld.id
+    && /^(INPUT|TEXTAREA)$/.test(aktivesFeld.tagName) ? aktivesFeld.id : null;
+  let stelle = null;
+  if (feldId) { try { stelle = aktivesFeld.selectionStart; } catch { stelle = null; } }
+
+  app.innerHTML = bild;
+  letztesBild = bild;
+  letzteAnsicht = ansicht;
+
+  const nachher = app.querySelector(".body");
+  if (nachher && hoehe) nachher.scrollTop = hoehe;
+  if (feldId) {
+    const ziel = document.getElementById(feldId);
+    if (ziel) {
+      ziel.focus({ preventScroll: true });
+      if (stelle !== null && ziel.setSelectionRange) {
+        try { ziel.setSelectionRange(stelle, stelle); } catch { /* nicht jedes Feld kann das */ }
+      }
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ Anmeldung */

@@ -53,6 +53,7 @@ genau so, wie er es soll.
 | `event-api.sh` | Events: anlegen, freigeben, einlösen, Deckel, Dauerevent, beenden |
 | `ui.mjs` | Dunkles Design, Einstellungen |
 | `ui3.mjs` | Ersteinrichtung von der Begrüßung bis zum Einladecode |
+| `ui-scroll.mjs` | Der Schirm springt nicht nach oben, wenn im Hintergrund geladen wird |
 | `ui-plan.mjs` | Der Haushaltsplan auf dem Schirm |
 | `ui-questplan.mjs` | Eine Aufgabe aus dem Plan bleibt eine Quest — melden, gesperrt, fremde Runde |
 | `ui-rueck.mjs` | Rückfragen und Belohnungen auf dem Schirm |
