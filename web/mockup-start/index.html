@@ -207,6 +207,32 @@ h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing
 .blatt h5{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800}
 @keyframes hoch{from{transform:translateY(40%)}to{transform:none}}
 
+/* ---------- Mischung ---------- */
+.stapel.klein{height:266px}
+.stapel.klein .karte{padding:12px 14px;gap:5px}
+.stapel.klein .karte .was{font-size:20px}
+.stapel.klein .karte .betrag{font-size:30px}
+.stapel.klein .karte .knoepfe button{padding:11px}
+.m-kacheln{margin-top:14px}
+#m-schirm .inhalt{gap:8px}
+#m-schirm .konto{padding:8px 14px}
+#m-schirm .konto .zahl{font-size:29px}
+.stapel.klein .karte .notiz{padding:6px 10px}
+.stapel.klein .karte .wer{margin-top:0}
+.m-kacheln .kachel{transition:transform .15s}
+.m-kacheln .kachel:active{transform:scale(.97)}
+.m-kacheln .kachel .hinweis{font-size:11px;font-weight:600;color:var(--bald);line-height:1.3;margin-top:1px}
+.m-jubel{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:15}
+.flieg{position:absolute;left:50%;top:44%;z-index:16;pointer-events:none;transform:translate(-50%,0);opacity:0;
+  font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--frei);background:var(--frei-tint);
+  border-radius:999px;padding:6px 14px;white-space:nowrap}
+.flieg[data-an]{animation:steigen .9s cubic-bezier(.2,.9,.3,1)}
+@keyframes steigen{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}25%{opacity:1;transform:translate(-50%,-10px) scale(1.06)}
+  100%{opacity:0;transform:translate(-50%,-70px) scale(1)}}
+.fortschritt i.pop{animation:hupf .35s ease}
+@keyframes hupf{0%{transform:scaleY(1)}40%{transform:scaleY(2.4)}100%{transform:scaleY(1)}}
+code{font-family:var(--font-data);font-size:12px;background:var(--tint-2);border-radius:5px;padding:1px 5px}
+
 /* ---------- Vorher ---------- */
 .vorher{height:718px;overflow-y:auto;background:#fff}
 .vorher img{display:block;width:100%;height:auto}
@@ -257,6 +283,100 @@ td.vb{font-family:var(--font-data);font-size:11.5px;color:var(--ruhig);white-spa
   <p class="lead">Die Telefone sind keine Bilder — man kann sie anfassen. Abhaken, wischen,
     aufklappen: genau das, was sich „lebendig“ statt „statisch“ anfühlen soll, lässt sich nur so
     beurteilen.</p>
+
+  <!-- ================================================================ MISCHUNG -->
+  <h2>Die Mischung: der Stapel aus B, die Kacheln aus A</h2>
+  <p class="lead">Dein Wunsch nach dem ersten Durchgang: das Wischen und die Knöpfe aus <b>B</b>,
+    weil sie sich nach Belohnung anfühlen — aber statt der Zeilen, die in B untereinander standen,
+    die <b>Kacheln aus A</b>. Genau das Gefühl habe ich dabei noch verstärkt. Zum Ausprobieren
+    einmal alle neun Karten durchwischen.</p>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B + A · Stapel mit Kacheln</h3><span class="vorbild">neu</span></div>
+      <div class="phone"><div class="schirm" id="m-schirm">
+        <div class="kopf"><div><div class="titel">Hallo Anna</div><div class="sub">Donnerstag, 15. Oktober</div></div>
+          <span class="ic">🕑</span><span class="ic">⚙</span></div>
+        <div class="inhalt">
+          <div class="konto">
+            <div class="ich"><span class="zahl">82<i>★</i></span><span class="unter">dein Konto · +23 diese Woche</span></div>
+            <div class="andere"><span class="mini"><span class="av">🐺</span><b>53</b></span><span class="mini"><span class="av">🐨</span><b>45</b></span></div>
+          </div>
+          <div class="laeuft">
+            <span class="pille aktion">⚖ +50 % auf alles <i>2 T</i></span>
+            <span class="pille event">🗓 Pizza-Abend · 15★ <i>3 T</i></span>
+          </div>
+          <div class="abschnitt"><h4>Für dich</h4><span class="zahl" id="m-zahl">9</span>
+            <div class="fortschritt" id="m-fort" style="flex:1;margin:0 6px"></div>
+            <button class="rechts" data-m-alle style="margin-left:0">Alle ›</button></div>
+          <div class="stapel klein" id="m-stapel">
+            <div class="fertig" id="m-fertig"><div class="gross">✓</div><b>Alles erledigt</b>
+              <span>Nichts wartet mehr auf dich. Die anderen sehen es gleich.</span>
+              <button data-neu>Noch einmal zeigen</button></div>
+          </div>
+          <div class="kacheln2 m-kacheln">
+            <div class="kachel" data-m-blatt="plan"><span class="k">Haushaltsplan</span><span class="v rot">1 überfällig</span>
+              <span class="k">1 gehört dir heute</span></div>
+            <div class="kachel" data-m-blatt="woche"></div>
+          </div>
+          <div class="zuletzt" data-m-blatt="wartet" style="cursor:pointer"><span>Wartet auf die anderen · <b>2</b></span><a href="#">ansehen ›</a></div>
+          <div class="zuletzt"><span>Zuletzt: <b>Jonas</b> +4 · vor 3 Std.</span><a href="#">Verlauf ›</a></div>
+        </div>
+        <div class="leiste">
+          <span data-an><b>⌂</b>Start<em class="badge" id="m-badge">9</em></span><span><b>🧹</b>Quests</span>
+          <span><button class="plus">+</button><small>Erledigt</small></span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+        <canvas class="m-jubel" id="m-jubel" aria-hidden="true"></canvas>
+        <div class="flieg" id="m-flieg"></div>
+        <div class="blatt-schleier" id="m-schleier"><div class="blatt" id="m-blatt"></div></div>
+      </div></div>
+      <p class="bu"><b>Oben der Stapel</b>, wie in B. <b>Darunter die zwei Kacheln aus A</b> —
+        Haushaltsplan und Diese Woche — statt Boxen untereinander. „Wartet“ und „Zuletzt“ sind nur noch
+        je eine dünne Zeile. Alles öffnet beim Tippen sein Blatt.</p>
+    </div>
+
+    <div class="spalte">
+      <h3 style="margin-top:4px">Was sich gegenüber B ändert</h3>
+      <table>
+        <tr><th style="width:38%">Stelle</th><th>B</th><th>Mischung</th></tr>
+        <tr><td><b>Unter dem Stapel</b></td><td>zwei Boxen untereinander</td><td>die zwei Kacheln aus A nebeneinander</td></tr>
+        <tr><td><b>Wartet auf die anderen</b></td><td>eigene Box</td><td>eine dünne Zeile</td></tr>
+        <tr><td><b>Diese Woche</b></td><td>fehlte</td><td>eigene Kachel, +64★ für alle</td></tr>
+        <tr><td><b>Alles auf einmal sehen</b></td><td>ging nicht</td><td>„Alle ›“ neben dem Fortschritt öffnet die Liste</td></tr>
+        <tr><td><b>Zuletzt</b></td><td>fehlte</td><td>eine Zeile, Rest im Verlauf</td></tr>
+      </table>
+
+      <h3 style="margin-top:18px">Mehr Belohnungsgefühl</h3>
+      <p class="bu" style="margin-bottom:6px">Genau das, was dir an B gefallen hat, an vier Stellen
+        verstärkt:</p>
+      <table>
+        <tr><th style="width:38%">Moment</th><th>Was passiert</th></tr>
+        <tr><td><b>Zustimmen</b></td><td>Die Karte fliegt weg, und für einen Augenblick steigt <b>„+4★ für Jonas“</b> auf — man sieht, was man gerade ausgelöst hat.</td></tr>
+        <tr><td><b>Jede Karte</b></td><td>Ein Strich im Fortschritt füllt sich mit einem kleinen Hüpfer; am Handy gibt es einen kurzen Ruck.</td></tr>
+        <tr><td><b>Die letzte Karte</b></td><td>„Alles erledigt“ — und dazu der <b>echte Jubel</b> der App aus <code>feier.js</code>, kein Nachbau.</td></tr>
+        <tr><td><b>Die Zahl</b></td><td>Die rote 9 oben und unten zählt mit herunter, bis sie verschwindet.</td></tr>
+      </table>
+
+      <h3 style="margin-top:18px">Wochenziel — nur, wenn eins eingetragen ist</h3>
+      <p class="bu">Die Kachel „Diese Woche“ zeigt immer, was der Haushalt zusammen geschafft hat.
+        Ist ein <b>Ziel eingetragen</b>, kommt ein Balken dazu: „Ziel 80★“. Ist keins eingetragen,
+        steht dort <b>„Ziel muss noch eingetragen werden“</b>. Tipp auf die Kachel und probier beides
+        aus. Serie und Wertung gibt es nicht.</p>
+
+      <h3 style="margin-top:18px">Entschieden und offen</h3>
+      <div class="frage"><b>Letzte Aktivität: eine Zeile wie in A.</b> „Zuletzt: Jonas +4 · vor 3 Std.“,
+        und „Verlauf ›“ führt zum Rest. — <i>entschieden</i></div>
+      <div class="frage"><b>Wochenziel: nur, wenn eingetragen.</b> Sonst der Hinweis in der Kachel.
+        Eintragen würde die Verwaltung, wie die Jubel-Phasen. — <i>entschieden</i></div>
+      <div class="frage"><b>Prüfen-Reiter geht in der Startseite auf.</b> Das Plus in der Mitte bekommt
+        seinen Platz; alles, was dort stand, kommt als Karte in den Stapel und unter „Alle ›“.
+        — <i>noch offen: so lassen?</i></div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:56px">Wie es dazu kam</h2>
+  <p class="lead">Das Vorher-Bild und die drei ersten Vorschläge, aus denen die Mischung entstanden
+    ist — zum Vergleich.</p>
 
   <!-- ================================================================ VORHER -->
   <h2>Heute, an einem vollen Tag</h2>
@@ -510,29 +630,21 @@ td.vb{font-family:var(--font-data);font-size:11.5px;color:var(--ruhig);white-spa
     alle in dieselbe Richtung. Die Serie belohnt den Einzelnen, die Wertung stellt Leute
     gegeneinander — beides kann in einer WG schnell kippen.</p>
 
-  <!-- ================================================================ EMPFEHLUNG -->
-  <h2>Meine Empfehlung</h2>
+  <!-- ================================================================ ENTSCHIEDEN -->
+  <h2>Entschieden</h2>
   <div class="empfehlung">
-    <h3>A als Startseite — und der Stapel aus B als „Alle durchgehen“</h3>
-    <p><b>A</b> ist für den Alltag am praktischsten: man sieht alles, und eine einzelne Sache ist mit
-      einem Tipp oder Wisch erledigt. Wenn sich viel angesammelt hat, öffnet <b>„Alle durchgehen“</b>
-      den Stapel aus <b>B</b> — dann geht es Karte für Karte, groß und schnell. <b>C</b> sieht am
-      ordentlichsten aus, kostet aber für jede Kleinigkeit einen Tipp mehr; für „einfach und
-      praktisch“ ist das der falsche Tausch.</p>
+    <h3>B mit den Kacheln aus A — die Mischung ganz oben</h3>
+    <p>Der Stapel aus <b>B</b> wegen des Wischens und der Knöpfe — das hat ein
+      <b>Belohnungsgefühl</b>, das eine Liste nicht hat. Darunter die <b>Kacheln aus A</b> statt der
+      Zeilen, die in B untereinander standen. Die drei Vorschläge oben bleiben zum Vergleich stehen.</p>
   </div>
-
-  <h2>Was ich von dir brauche</h2>
-  <div class="frage"><b>1. Welche Variante?</b> A, B, C — oder A mit dem Stapel aus B, wie empfohlen.</div>
-  <div class="frage"><b>2. Prüfen-Reiter aufgeben?</b> In allen drei Vorschlägen geht er in der
-    Startseite auf, und das Plus bekommt seinen Platz. Wer lieber einen eigenen Reiter behält,
-    bekommt das Plus stattdessen als runden Knopf unten rechts.</div>
-  <div class="frage"><b>3. Wochenziel, Serie, Wertung?</b> Gar nichts, nur das Wochenziel, oder mehr.</div>
-  <div class="frage"><b>4. Letzte Aktivität?</b> Eine Zeile „Zuletzt …“ wie gezeigt, oder ganz weg
-    und nur noch hinter dem Uhr-Symbol.</div>
 
 </div>
 
-<script>
+<script type="module">
+// Der echte Jubel der App — kein Nachbau.
+import { spielen, stoppen } from "/app/feier.js";
+
 /* ---------------------------------------------------------------- Wischen
  * Ein kleines Helferlein für Zeilen und Karten: nach rechts heißt ja, nach
  * links heißt nein/nachfragen. Über die Schwelle hinaus fliegt es weg, darunter
@@ -593,25 +705,24 @@ function wischbar(el, griff, fertig) {
   }));
 })();
 
-/* ---------------------------------------------------------------- B */
-(function () {
-  const KARTEN = [
-    { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "1 gr. Fenster putzen", betrag: "+4★", notiz: "„Auch die Fensterbänke“", ja: "Zustimmen", nein: "Nachfragen" },
-    { art: "plan", name: "Gehört dir", av: "🧽", wer: "Haushaltsplan · heute fällig", was: "Küche reinigen nach Kochen", betrag: "+5★", ja: "Erledigt", nein: "Später" },
-    { art: "frage", name: "Rückfrage", av: "🐺", wer: "Jonas fragt nach", was: "„Hast du auch den Herd gemacht?“", betrag: "", notiz: "zu deiner Meldung: Fenster putzen", ja: "Antworten", nein: "Später" },
-    { art: "melden", name: "Meldung", av: "🐨", wer: "Mika hat gemeldet", was: "Staub wischen", betrag: "+6★", ja: "Zustimmen", nein: "Nachfragen" },
-    { art: "vote", name: "Abstimmung", av: "🐺", wer: "Jonas schlägt vor", was: "Neue Quest: Altglas wegbringen", betrag: "6★", neutral: true, notiz: "„Stapelt sich“", ja: "Ja", nein: "Nein" },
-    { art: "vote", name: "Abstimmung", av: "🐨", wer: "Mika schlägt vor", was: "Staub wischen wird teurer", betrag: "6 → 9★", neutral: true, notiz: "„Dauert länger als gedacht“", ja: "Ja", nein: "Nein" },
-    { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "Wohnung saugen · 2×", betrag: "+12★", ja: "Zustimmen", nein: "Nachfragen" },
-    { art: "plan", name: "Überfällig", av: "🧹", wer: "Haushaltsplan · seit 3 Tagen", was: "Großen Raum wischen", betrag: "+8★", ja: "Erledigt", nein: "Später" },
-    { art: "schuld", name: "Du schuldest", av: "🎁", wer: "für Jonas · Samstag", was: "Freizeitaktivität bestimmen", betrag: "", ja: "Geliefert", nein: "Später" }
-  ];
-  const stapel = document.getElementById("b-stapel");
-  const fertig = document.getElementById("b-fertig");
-  const fort = document.getElementById("b-fort");
-  const badge = document.getElementById("b-badge");
-  let i = 0;
+/* ---------------------------------------------------------------- Stapel
+ * Ein Baustein für B und für die Mischung. Die Mischung bekommt zusätzlich das
+ * Belohnungsgefühl: aufsteigende Cleanies, ein Hüpfer im Fortschritt, ein
+ * kurzer Ruck am Handy und am Ende der echte Jubel aus feier.js. */
+const KARTEN = [
+  { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "1 gr. Fenster putzen", betrag: "+4★", notiz: "„Auch die Fensterbänke“", ja: "Zustimmen", nein: "Nachfragen", lohn: "+4★ für Jonas" },
+  { art: "plan", name: "Gehört dir", av: "🧽", wer: "Haushaltsplan · heute fällig", was: "Küche reinigen nach Kochen", betrag: "+5★", ja: "Erledigt", nein: "Später", lohn: "gemeldet" },
+  { art: "frage", name: "Rückfrage", av: "🐺", wer: "Jonas fragt nach", was: "„Hast du auch den Herd gemacht?“", betrag: "", notiz: "zu deiner Meldung: Fenster putzen", ja: "Antworten", nein: "Später" },
+  { art: "melden", name: "Meldung", av: "🐨", wer: "Mika hat gemeldet", was: "Staub wischen", betrag: "+6★", ja: "Zustimmen", nein: "Nachfragen", lohn: "+6★ für Mika" },
+  { art: "vote", name: "Abstimmung", av: "🐺", wer: "Jonas schlägt vor", was: "Neue Quest: Altglas wegbringen", betrag: "6★", neutral: true, notiz: "„Stapelt sich“", ja: "Ja", nein: "Nein" },
+  { art: "vote", name: "Abstimmung", av: "🐨", wer: "Mika schlägt vor", was: "Staub wischen wird teurer", betrag: "6 → 9★", neutral: true, notiz: "„Dauert länger als gedacht“", ja: "Ja", nein: "Nein" },
+  { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "Wohnung saugen · 2×", betrag: "+12★", ja: "Zustimmen", nein: "Nachfragen", lohn: "+12★ für Jonas" },
+  { art: "plan", name: "Überfällig", av: "🧹", wer: "Haushaltsplan · seit 3 Tagen", was: "Großen Raum wischen", betrag: "+8★", ja: "Erledigt", nein: "Später", lohn: "gemeldet" },
+  { art: "schuld", name: "Du schuldest", av: "🎁", wer: "für Jonas · Samstag", was: "Freizeitaktivität bestimmen", betrag: "", ja: "Geliefert", nein: "Später", lohn: "geliefert" }
+];
 
+function stapelBauen({ stapel, fertig, fort, badge, zahl = null, belohnung = null }) {
+  let i = 0;
   fort.innerHTML = KARTEN.map(() => "<i></i>").join("");
 
   function karte(k, n) {
@@ -628,7 +739,7 @@ function wischbar(el, griff, fertig) {
     return d;
   }
 
-  function zeichnen() {
+  function zeichnen(neuFertig = -1) {
     stapel.querySelectorAll(".karte").forEach((k) => k.remove());
     const sichtbar = KARTEN.slice(i, i + 3);
     sichtbar.slice().reverse().forEach((k, r) => {
@@ -639,23 +750,134 @@ function wischbar(el, griff, fertig) {
       if (platz === 0) wischbar(d, d, (rt) => weiter(d, rt));
     });
     fertig.toggleAttribute("data-an", i >= KARTEN.length);
-    [...fort.children].forEach((b, n) => b.toggleAttribute("data-ok", n < i));
+    [...fort.children].forEach((b, n) => {
+      b.toggleAttribute("data-ok", n < i);
+      if (n === neuFertig) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+    });
     const rest = KARTEN.length - i;
     badge.textContent = rest; badge.style.display = rest ? "" : "none";
+    if (zahl) {
+      zahl.textContent = rest || "✓";
+      zahl.style.background = rest ? "" : "var(--frei)";
+    }
   }
 
   function weiter(d, richtung) {
+    if (d.dataset.weg) return;
+    d.dataset.weg = "1";
+    const k = KARTEN[i];
     d.style.transform = `translateX(${richtung === "ja" ? 420 : -420}px) rotate(${richtung === "ja" ? 18 : -18}deg)`;
     d.style.opacity = "0";
-    setTimeout(() => { i += 1; zeichnen(); }, 260);
+    if (belohnung) belohnung.karte(k, richtung, i === KARTEN.length - 1);
+    setTimeout(() => { i += 1; zeichnen(i - 1); if (belohnung && i === KARTEN.length) belohnung.fertig(); }, 260);
   }
 
   stapel.addEventListener("click", (e) => {
     const b = e.target.closest("[data-b]");
     if (b) weiter(b.closest(".karte"), b.dataset.b);
-    if (e.target.closest("[data-neu]")) { i = 0; zeichnen(); }
+    if (e.target.closest("[data-neu]")) { i = 0; zeichnen(); if (belohnung) belohnung.zurueck(); }
   });
   zeichnen();
+}
+
+/* ---------------------------------------------------------------- B */
+stapelBauen({
+  stapel: document.getElementById("b-stapel"),
+  fertig: document.getElementById("b-fertig"),
+  fort: document.getElementById("b-fort"),
+  badge: document.getElementById("b-badge")
+});
+
+/* ---------------------------------------------------------------- Mischung */
+(function () {
+  const flieg = document.getElementById("m-flieg");
+  const leinwand = document.getElementById("m-jubel");
+
+  stapelBauen({
+    stapel: document.getElementById("m-stapel"),
+    fertig: document.getElementById("m-fertig"),
+    fort: document.getElementById("m-fort"),
+    badge: document.getElementById("m-badge"),
+    zahl: document.getElementById("m-zahl"),
+    belohnung: {
+      // Zustimmen zeigt kurz, was man ausgelöst hat. Später/Nein bleibt still.
+      karte(k, richtung) {
+        if (navigator.vibrate) navigator.vibrate(richtung === "ja" ? 18 : 8);
+        if (richtung !== "ja" || !k.lohn) return;
+        flieg.textContent = k.lohn;
+        flieg.removeAttribute("data-an"); void flieg.offsetWidth; flieg.setAttribute("data-an", "");
+      },
+      // Die letzte Karte bekommt den echten Jubel der App.
+      fertig() {
+        if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
+        spielen(leinwand, { phase: "mittel" });
+      },
+      zurueck() { stoppen(leinwand); }
+    }
+  });
+
+  /* Die Blätter hinter den Kacheln und hinter „Alle anzeigen“. */
+  const schleier = document.getElementById("m-schleier");
+  const blatt = document.getElementById("m-blatt");
+  let ziel = 0;                       // 0 heißt: noch keins eingetragen
+  const WOCHE = 64;
+
+  const zeile = (t, r = "›") => `<div class="zeile"><b style="font-weight:600">${t}</b><i>${r}</i></div>`;
+  const BLAETTER = {
+    alle: () => `<h5>Für dich · ${KARTEN.length}</h5>` + KARTEN.map((k) => zeile(`${k.name}: ${k.was}`)).join(""),
+    plan: () => `<h5>Haushaltsplan</h5>` + zeile("Großen Raum wischen · seit 3 Tagen überfällig") +
+      zeile("Küche reinigen · gehört dir, heute") + zeile("Bad putzen · in 4 Tagen"),
+    wartet: () => `<h5>Wartet auf die anderen</h5>` + zeile("Fenster putzen · Rückfrage offen", "+4★") +
+      zeile("Bad putzen · seit 2 Std.", "+12★"),
+    woche: () => `<h5>Diese Woche</h5>` + zeile("Anna", "+23★") + zeile("Jonas", "+27★") + zeile("Mika", "+14★") +
+      zeile("<b>Zusammen</b>", "+64★") +
+      (ziel
+        ? `<div class="zeile"><b style="font-weight:600">Wochenziel</b><i>${WOCHE} von ${ziel}★</i></div>
+           <button class="knopfchen hell" data-ziel-weg style="align-self:flex-start">Ziel entfernen</button>`
+        : `<div class="note" style="font-size:12.5px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:10px">
+             <b style="color:var(--ink)">Wochenziel muss noch eingetragen werden.</b>
+             Ein gemeinsames Ziel für alle — nicht gegeneinander.</div>
+           <div style="display:flex;align-items:center;gap:10px">
+             <button class="rund" data-ziel-schritt="-10">−</button>
+             <b id="m-zielwahl" style="font-family:var(--font-display);font-size:24px;min-width:70px;text-align:center">80★</b>
+             <button class="rund" data-ziel-schritt="10">+</button>
+             <button class="knopfchen navy" data-ziel-setzen style="margin-left:auto">Eintragen</button>
+           </div>`)
+  };
+
+  function oeffnen(art) {
+    blatt.innerHTML = `<div class="griff"></div>` + BLAETTER[art]();
+    schleier.setAttribute("data-auf", "");
+  }
+
+  function wocheZeichnen() {
+    const k = document.querySelector('[data-m-blatt="woche"]');
+    k.innerHTML = ziel
+      ? `<span class="k">Diese Woche</span><span class="v">+${WOCHE}★ <span style="font-size:12px;color:var(--ink-3)">von ${ziel}</span></span>
+         <span style="display:block;height:5px;border-radius:999px;background:var(--tint-2);margin-top:4px;overflow:hidden">
+           <span style="display:block;height:100%;width:${Math.min(100, Math.round(WOCHE / ziel * 100))}%;background:var(--frei)"></span></span>
+         <span class="k" style="margin-top:2px">Ziel ${ziel}★</span>`
+      : `<span class="k">Diese Woche</span><span class="v">+${WOCHE}★</span>
+         <span class="hinweis">Ziel muss noch eingetragen werden</span>`;
+  }
+
+  document.querySelectorAll("[data-m-blatt]").forEach((k) => k.addEventListener("click", () => oeffnen(k.dataset.mBlatt)));
+  document.querySelector("[data-m-alle]").addEventListener("click", () => oeffnen("alle"));
+  schleier.addEventListener("click", (e) => {
+    if (e.target === schleier) { schleier.removeAttribute("data-auf"); return; }
+    const s = e.target.closest("[data-ziel-schritt]");
+    if (s) {
+      const feld = document.getElementById("m-zielwahl");
+      const n = Math.max(10, Math.min(500, parseInt(feld.textContent, 10) + Number(s.dataset.zielSchritt)));
+      feld.textContent = n + "★";
+    }
+    if (e.target.closest("[data-ziel-setzen]")) {
+      ziel = parseInt(document.getElementById("m-zielwahl").textContent, 10);
+      wocheZeichnen(); oeffnen("woche");
+    }
+    if (e.target.closest("[data-ziel-weg]")) { ziel = 0; wocheZeichnen(); oeffnen("woche"); }
+  });
+  wocheZeichnen();
 })();
 
 /* ---------------------------------------------------------------- C */
