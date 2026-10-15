@@ -51,6 +51,7 @@ genau so, wie er es soll.
 | `gutschrift-api.sh` | Cleanies einer Belohnung dem Empfänger gutschreiben |
 | `ruecktritt-api.sh` | Von einer zugeteilten Aufgabe zurücktreten — Mehrheit statt Einstimmigkeit |
 | `event-api.sh` | Events: anlegen, freigeben, einlösen, Deckel, Dauerevent, beenden |
+| `bilder-api.sh` | Symbole, Farben und Hintergründe: ohne Abstimmung, nur Emoji oder kleine Bilder, Auslieferung nur im eigenen Haushalt |
 | `ui.mjs` | Dunkles Design, Einstellungen |
 | `ui3.mjs` | Ersteinrichtung von der Begrüßung bis zum Einladecode |
 | `ui-scroll.mjs` | Der Schirm springt nicht nach oben, wenn im Hintergrund geladen wird |
@@ -69,6 +70,7 @@ genau so, wie er es soll.
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
 | `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt über die Pille bis zum Beenden |
 | `ui-start.mjs` | Die Startseite: Stapel per Knopf und Wisch, Später, Jubel, Kacheln, Wochenziel, das Plus — alles auf einem Bildschirm |
+| `ui-bilder.mjs` | Der Stift oben, Symbol und Farbe wählen, eigenes Bild hochladen, Hintergründe für Belohnungen — zu zweit |
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
 | `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |

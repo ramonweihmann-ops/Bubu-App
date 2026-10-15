@@ -1488,10 +1488,11 @@ function plusListe(text = "") {
     .sort((a, b) => (b.genutzt || 0) - (a.genutzt || 0) || a.name.localeCompare(b.name, "de"));
   if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
   return liste.slice(0, s ? 30 : 8).map((q) => `
-    <button class="rowlink" data-melden-aus="${q.id}">
+    <button class="rowlink questzeile" data-melden-aus="${q.id}">
+      ${symbolKachel(questSymbol(q), questFarbe(q))}
       <span class="grow"><span class="t">${esc(q.name)}</span>
         <span class="m">${esc(q.category)}${q.genutzt ? ` · ${q.genutzt}× erledigt` : ""}</span></span>
-      <span class="pts-pill">${cl(q.punkte_jetzt ?? q.points)}</span>
+      ${wertSpalte(q.punkte_jetzt ?? q.points)}
     </button>`).join("");
 }
 
@@ -1559,6 +1560,191 @@ function sortiereUndSuche(liste, bereich, wertVon) {
   return kopie;
 }
 
+/* ------------------------------------------------------------------ Bilder */
+//
+// Jede Quest hat ein Symbol auf einer farbigen Kachel, jede Belohnung ein
+// Symbol statt des Herzens und ein Bild über der Schrift. Was noch niemand
+// gewählt hat, schlägt die App vor — aus dem Namen, sonst aus dem Raum.
+// Gewählt wird hinter dem Stift oben, gespeichert ohne Abstimmung: Bilder
+// sind Ordnung wie die Räume, keine Cleanies.
+
+const KACHELFARBEN = ["blau", "gruen", "rot", "gelb", "lila", "grau"];
+const RAUMFARBE = {
+  "Küche": "gelb", "Bad": "blau", "Wohnen": "gruen", "Wohnzimmer": "gruen", "Fenster": "blau",
+  "Schlafzimmer": "lila", "Kinderzimmer": "rot", "Garten": "gruen", "Balkon": "gruen", "Sonstiges": "grau"
+};
+
+/** Die Symbole in Gruppen, wie man sie von WhatsApp kennt. */
+const SYMBOLGRUPPEN = {
+  "Putzen": "🧹 🧽 🧼 🪣 🧴 🧻 🫧 ✨ 🪶 💨 🧤 🪥",
+  "Küche": "🍳 🍽️ 🥄 🍴 🔪 🧊 🥘 🍲 🥗 ☕ 🍞 🫖",
+  "Wäsche": "🧺 👕 👖 🧦 👗 🛏️ 🧸 🪡 🧷 👟 🧥 🧣",
+  "Bad": "🛁 🚿 🚽 🪒 🪞 🧴 🧻 🪥 💧 🫧 🧼 🪠",
+  "Wohnen": "🛋️ 🪑 📦 🖥️ 💡 🪟 🚪 🖼️ 🕯️ 🪴 🧯 🔧",
+  "Draußen": "🌱 🌳 🍂 ❄️ 🚗 🚲 🏡 🌻 💧 ☀️ 🌧️ 🪵",
+  "Erledigen": "🛒 🗑️ ♻️ 📰 🍾 📬 💊 🩺 💶 📅 📞 🧾",
+  "Tiere & Kinder": "🐶 🐱 🐟 🐦 🐾 👶 🧒 🎒 🍼 🧩 🐹 🐢",
+  "Belohnung": "🎬 🍿 🍕 🍰 💆 💅 🎮 🎟️ 🛍️ 🌴 🍷 📚 🎵 💐 🛌 ❤️ 🎁 ⭐ 🌸 🥪 🛡️ 🧖 💇 🧴"
+};
+const symbolGruppe = (g) => SYMBOLGRUPPEN[g].split(" ");
+
+/** Motive für den Hintergrund einer Belohnung: ein ruhiger Verlauf mit drei
+ *  großen Zeichen. Eigene Fotos kommen über „Eigenes Foto“ dazu. */
+const MOTIVE = {
+  kino:     { name: "Kino",        m: ["#2a2f5c", "#7a4fd0"], z: ["🎬", "🍿", "⭐"] },
+  essen:    { name: "Essen",       m: ["#ffb35c", "#ec5f3a"], z: ["🍕", "🍔", "🍟"] },
+  wellness: { name: "Wellness",    m: ["#b9e6d8", "#5fb59a"], z: ["🧖", "🌿", "🫧"] },
+  ausflug:  { name: "Ausflug",     m: ["#9fd3ff", "#2f6fd0"], z: ["🏞️", "🚲", "☀️"] },
+  zocken:   { name: "Zocken",      m: ["#3b3f4a", "#ec0f06"], z: ["🎮", "👾", "🕹️"] },
+  suess:    { name: "Süßes",       m: ["#ffd6e5", "#ff8fb1"], z: ["🍰", "🍩", "🍬"] },
+  ruhe:     { name: "Ausschlafen", m: ["#c7d2ff", "#6a7bd8"], z: ["🛌", "🌙", "💤"] },
+  shoppen:  { name: "Shoppen",     m: ["#ffe08a", "#f0a500"], z: ["🛍️", "👗", "💳"] },
+  natur:    { name: "Blumen",      m: ["#e9f7c6", "#8cc63f"], z: ["💐", "🌷", "🦋"] }
+};
+
+/* Vorschläge aus dem Namen: das erste Stichwort gewinnt, deshalb stehen die
+ * genaueren vorn („Staubsaugen“ vor „Staub“, „Tisch“ vor „wischen“). */
+const QUEST_STICHWORTE = [
+  [/staubsaug|sauge/, "🧹"], [/staub/, "🪶"], [/fenster/, "🪟"], [/dunstabzug/, "💨"],
+  [/backofen|ofen/, "🧽"], [/fliesen/, "🧼"], [/kühlschrank|gefrier/, "🧊"],
+  [/spülmaschine|geschirr|abwasch|spülen/, "🍽️"], [/küche|koch|herd/, "🍳"],
+  [/wc|toilette|klo/, "🚽"], [/bad|dusche|wanne/, "🛁"], [/wäsche|waschen|bügel/, "🧺"],
+  [/bett|bezieh/, "🛏️"], [/aufräum|ordnung/, "📦"], [/tisch/, "🪑"], [/boden|wisch/, "🪣"],
+  [/monitor|bildschirm|computer|pc/, "🖥️"], [/papier/, "📰"], [/glas|flasche/, "🍾"],
+  [/müll|abfall|tonne/, "🗑️"], [/arzt|termin/, "🩺"], [/einkauf|supermarkt/, "🛒"],
+  [/rasen|garten|unkraut/, "🌱"], [/blume|pflanze|gieß/, "🪴"], [/hund|gassi/, "🐶"],
+  [/katze|katzenklo/, "🐱"], [/auto|wagen/, "🚗"], [/kind|baby/, "🧒"], [/post|brief/, "📬"]
+];
+const RAUMSYMBOL = {
+  "Küche": "🍽️", "Bad": "🛁", "Wohnen": "🛋️", "Wohnzimmer": "🛋️", "Fenster": "🪟", "Flur": "🚪",
+  "Schlafzimmer": "🛏️", "Kinderzimmer": "🧸", "Arbeitszimmer": "🖥️", "Balkon": "🪴", "Garten": "🌱",
+  "Keller": "📦", "Garage": "🚗", "Hauswirtschaft": "🧺"
+};
+const BELOHNUNG_STICHWORTE = [
+  [/film|serie|kino/, "🎬", "kino"], [/liefer|pizza|essen|restaurant/, "🍕", "essen"],
+  [/massage/, "💆", "wellness"], [/eincrem|creme/, "🧴", "wellness"], [/gua sha|gesicht/, "🌸", "wellness"],
+  [/zopf|haare|frisur/, "💇", "wellness"], [/brot|frühstück/, "🥪", "essen"],
+  [/freizeit|ausflug|aktivität/, "🎟️", "ausflug"], [/spiel|zock|game/, "🎮", "zocken"],
+  [/schlaf|ausschlaf/, "🛌", "ruhe"], [/kuchen|süß|eis\b|schoko/, "🍰", "suess"],
+  [/shop|kaufen/, "🛍️", "shoppen"], [/blume|strauß/, "💐", "natur"], [/veto/, "🛡️", null]
+];
+
+const klein = (t) => String(t || "").toLowerCase();
+const questSymbol = (q) => q.icon || QUEST_STICHWORTE.find(([re]) => re.test(klein(q.name)))?.[1]
+  || RAUMSYMBOL[q.category] || "✨";
+const questFarbe = (q) => q.farbe || RAUMFARBE[q.category]
+  || KACHELFARBEN[[...String(q.category)].reduce((n, z) => n + z.charCodeAt(0), 0) % KACHELFARBEN.length];
+const belohnungTreffer = (b) => BELOHNUNG_STICHWORTE.find(([re]) => re.test(klein(b.name)));
+const belohnungSymbol = (b) => b.icon || belohnungTreffer(b)?.[1] || "❤️";
+/** Das Bild über der Schrift: gewählt, vorgeschlagen — oder bewusst keins. */
+const belohnungHintergrund = (b) => b.bild === "ohne" ? null
+  : b.bild || (belohnungTreffer(b)?.[2] ? `motiv:${belohnungTreffer(b)[2]}` : null);
+
+/** Ein Symbol: Emoji oder eigenes Bild. Eigene Bilder kommen einzeln vom
+ *  Server und bleiben im Browser liegen — die Kennung ändert sich mit jedem
+ *  neuen Bild. */
+function symbolHtml(icon) {
+  if (!icon) return "";
+  if (icon.startsWith("foto:")) return `<img src="/api/bild/${esc(icon.slice(5))}" alt="">`;
+  if (icon.startsWith("data:")) return `<img src="${esc(icon)}" alt="">`;
+  return `<span class="emoji">${esc(icon)}</span>`;
+}
+const symbolKachel = (icon, farbe, groesse = "") =>
+  `<span class="symbolkachel ${groesse}" data-farbe="${farbe || "grau"}">${symbolHtml(icon)}</span>`;
+
+function motivHtml(bild) {
+  if (!bild) return "";
+  if (bild.startsWith("foto:")) return `<span class="motiv"><img src="/api/bild/${esc(bild.slice(5))}" alt=""></span>`;
+  if (bild.startsWith("data:")) return `<span class="motiv"><img src="${esc(bild)}" alt=""></span>`;
+  const m = MOTIVE[bild.slice(6)];
+  if (!m) return "";
+  return `<span class="motiv" style="--m1:${m.m[0]};--m2:${m.m[1]}">
+    <span class="z1">${m.z[0]}</span><span class="z2">${m.z[1]}</span><span class="z3">${m.z[2]}</span></span>`;
+}
+
+/** Die Cleanies-Spalte: die Zahl vorn, der Stern ganz schwach dahinter. Läuft
+ *  eine Aktion, steht der alte Wert klein darüber. */
+const wertSpalte = (n, vorher = null) =>
+  `<span class="wert">${vorher !== null ? `<s>${vorher}</s>` : ""}<b>${n}</b></span>`;
+
+/* Bearbeiten: der Stift oben schaltet die Liste um. Antippen meldet dann
+ * nicht mehr, sondern öffnet das Menü zum Anpassen. */
+const bearbeiten = { quests: false, belohnungen: false };
+
+/* Was im Bild-Blatt gerade gewählt ist — erst „Übernehmen“ schickt es ab. */
+let bildWahl = null;
+
+function bildWahlStarten(art, id) {
+  const quest = art === "quest";
+  const x = (quest ? S.quests : S.belohnungen).find((e) => e.id === id);
+  if (!x) return null;
+  const start = quest ? { icon: questSymbol(x), farbe: questFarbe(x) }
+                      : { icon: belohnungSymbol(x), bild: belohnungHintergrund(x) || "ohne" };
+  bildWahl = { art, id, start, ...start,
+    kat: quest ? (Object.keys(SYMBOLGRUPPEN).find((g) => symbolGruppe(g).includes(start.icon)) || "Putzen") : "Belohnung" };
+  return x;
+}
+const bildWahlEintrag = () => (bildWahl.art === "quest" ? S.quests : S.belohnungen).find((e) => e.id === bildWahl.id);
+
+function sheetSymbol() {
+  const w = bildWahl;
+  const x = bildWahlEintrag();
+  if (!x) return sheetZu();
+  const quest = w.art === "quest";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${quest ? "Bild" : "Symbol"} für „${esc(x.name)}“</h3>
+    <div class="bildvorschau">${quest ? symbolKachel(w.icon, w.farbe, "gross")
+      : `<span class="rico gross">${symbolHtml(w.icon)}</span>`}
+      <span class="grow"><b>${esc(x.name)}</b></span></div>
+    ${quest ? `<div class="farbwahl">${KACHELFARBEN.map((f) => `
+      <button class="symbolkachel" data-farbe="${f}" data-symfarbe="${f}" aria-pressed="${w.farbe === f}"
+        aria-label="Farbe ${f}"></button>`).join("")}</div>` : ""}
+    <div class="symkats">${Object.keys(SYMBOLGRUPPEN).map((g) => `
+      <button data-symkat="${esc(g)}" aria-pressed="${w.kat === g}">${esc(g)}</button>`).join("")}</div>
+    <div class="emojiwahl">${symbolGruppe(w.kat).map((e) => `
+      <button data-emoji="${e}" aria-pressed="${w.icon === e}" aria-label="${e}">${e}</button>`).join("")}</div>
+    <input type="file" accept="image/*" id="symbolfeld" hidden>
+    <div class="btnrow">
+      <button class="btn ghost" data-symbolfoto>${icon("i-plus", 16)}Eigenes Bild</button>
+      <button class="btn dark" data-bild-ok>Übernehmen</button>
+    </div>`);
+}
+
+function sheetHintergrund() {
+  const w = bildWahl;
+  const b = bildWahlEintrag();
+  if (!b) return sheetZu();
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Hintergrund für „${esc(b.name)}“</h3>
+    <div class="probe">
+      ${belohnungBox({ ...b, icon: w.icon, bild: w.bild }, { probe: true })}
+      <div class="note">${icon("i-info", 16)}<span>So sieht die Box aus. Die Schrift steht unter dem
+        Bild, nie darauf.</span></div>
+    </div>
+    <div class="motivwahl">${Object.entries(MOTIVE).map(([k, m]) => `
+      <button data-motiv="${k}" aria-pressed="${w.bild === `motiv:${k}`}">${motivHtml(`motiv:${k}`)}<small>${esc(m.name)}</small></button>`).join("")}</div>
+    <input type="file" accept="image/*" id="hintergrundfeld" hidden>
+    <div class="btnrow">
+      <button class="btn ghost" data-hintergrundfoto>${icon("i-plus", 16)}Eigenes Foto</button>
+      <button class="btn ghost" data-bild-ohne ${w.bild === "ohne" ? 'aria-pressed="true"' : ""}>Ohne Bild</button>
+    </div>
+    <button class="btn dark block" data-bild-ok>Übernehmen</button>`);
+}
+
+/** Ein Foto für den Hintergrund: nicht beschnitten, nur verkleinert. */
+async function fotoKleiner(datei, kante = 640) {
+  const bitmap = await createImageBitmap(datei);
+  const f = Math.min(1, kante / Math.max(bitmap.width, bitmap.height));
+  const leinwand = document.createElement("canvas");
+  leinwand.width = Math.round(bitmap.width * f);
+  leinwand.height = Math.round(bitmap.height * f);
+  leinwand.getContext("2d").drawImage(bitmap, 0, 0, leinwand.width, leinwand.height);
+  bitmap.close?.();
+  return leinwand.toDataURL("image/jpeg", 0.78);
+}
+
 /* ------------------------------------------------------------------ Quests */
 
 function questListe() {
@@ -1579,44 +1765,50 @@ function questListe() {
 
   if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
 
+  // Im Bearbeiten-Modus führt jede Zeile ins Menü zum Anpassen, sonst zum Melden.
+  const ziel = (q) => bearbeiten.quests
+    ? `data-sheet="menue" data-art="quest" data-id="${q.id}"`
+    : `data-sheet="melden" data-id="${q.id}"`;
+
   return liste.map((q) => {
-    // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
     const e = eventZu(q);
     const wartet = wartende[q.id] || 0;
     const meins = meineWartenden[q.id] || 0;
     return `
     <div class="zeile">
-      <button class="rowlink" data-sheet="melden" data-id="${q.id}">
+      <button class="rowlink questzeile" ${ziel(q)}>
+        ${symbolKachel(questSymbol(q), questFarbe(q))}
         <span class="grow">
-          <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}</span>
+          <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}${
+            wartet ? `&nbsp;<span class="chip wait">${wartet > 1 ? `${wartet}× ` : ""}gemeldet</span>` : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
-            e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}×` : ""}${
+            e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}× erledigt` : ""}${
             wartet ? ` · ${wartet === 1 ? "eine Meldung wartet" : `${wartet} Meldungen warten`}${
               meins ? ` auf ${esc(andereName())}` : " auf Bestätigung"}` : ""}</span>
         </span>
-        ${wartet ? `<span class="chip wait">${wartet > 1 ? `${wartet}× ` : ""}gemeldet</span>` : ""}
-        ${q.bonus ? `<span class="pts-pill"><s style="opacity:.55">${q.points}</s> ${cl(q.punkte_jetzt)}</span>`
-          : `<span class="pts-pill">${cl(q.points)}</span>`}
+        ${wertSpalte(q.punkte_jetzt ?? q.points, q.bonus ? q.points : null)}
       </button>
-      ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
-          aria-label="${esc(q.name)} — Event ansehen">${icon("i-kalender", 18)}</button>`
-        : q.wiederkehrend ? `<button class="stiftbtn" data-plan="${q.id}"
-          aria-label="${esc(q.name)} im Haushaltsplan">${icon("i-broom", 18)}</button>`
-        : `<button class="stiftbtn" data-sheet="menue" data-art="quest" data-id="${q.id}"
-          aria-label="${esc(q.name)} ändern oder löschen">${icon("i-stift", 18)}</button>`}
     </div>`;
   }).join("");
 }
+
+/** Oben rechts: der Stift zum Anpassen und das Plus zum Vorschlagen. Im
+ *  Bearbeiten-Modus wird aus dem Stift „Fertig“. */
+const stiftKnopf = (bereich, was) => bearbeiten[bereich]
+  ? `<button class="iconbtn fertigknopf" data-bearbeiten="${bereich}" aria-pressed="true">Fertig</button>`
+  : `<button class="iconbtn" data-bearbeiten="${bereich}" aria-pressed="false" aria-label="${was} anpassen">${icon("i-stift", 18)}</button>`;
 
 function schirmQuests() {
   const kategorien = ["Alle", ...new Set(S.quests.map((q) => q.category))];
 
   return `
     <div class="appbar">
-      <div><div class="title">Quests</div><div class="sub">Cleanies gelten für beide</div></div>
+      <div><div class="title">Quests</div><div class="sub">Cleanies gelten für alle</div></div>
+      ${stiftKnopf("quests", "Quests")}
       <button class="iconbtn" data-sheet="neu" aria-label="Quest vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${bearbeiten.quests ? '<div class="bearbeiten-hinweis">Welche Quest willst du anpassen? Tippe sie an.</div>' : ""}
       ${suchzeile("quests", "Quest suchen …")}
       ${aktionsBanner("quest_bonus")}
       ${sortierzeile("quests")}
@@ -1793,31 +1985,34 @@ function schirmPruefen() {
 
 /* ------------------------------------------------------------------ Belohnungen */
 
+/** Eine Box: oben das Bild, darunter auf ruhigem Grund die Schrift. Das
+ *  Symbol sitzt auf der Kante. Ohne Bild bleibt oben ein schmaler Streifen. */
+function belohnungBox(b, { probe = false } = {}) {
+  const kosten = b.kosten_jetzt ?? b.cost;
+  const zuTeuer = kosten > S.ich.punkte;
+  const e = eventZu(b);
+  const bild = probe ? (b.bild === "ohne" ? null : b.bild) : belohnungHintergrund(b);
+  const ziel = probe ? "data-probe"
+    : bearbeiten.belohnungen ? `data-sheet="menue" data-art="belohnung" data-id="${b.id}"`
+    : `data-sheet="antrag" data-id="${b.id}"`;
+  return `
+    <button class="reward bildbox" ${ziel} ${zuTeuer && !bearbeiten.belohnungen ? "data-locked" : ""}>
+      <span class="bildteil ${bild ? "" : "ohne"}">${motivHtml(bild)}
+        <span class="rico">${symbolHtml(probe ? b.icon : belohnungSymbol(b))}</span></span>
+      <span class="drin">
+        <span class="n">${esc(b.name)}</span>
+        <span class="c">${zuTeuer
+          ? `${S.ich.punkte} von ${kosten} Cleanies`
+          : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Cleanies`
+          : `${b.cost} Cleanies`}${e ? ` · ${eventZeit(e)}` : b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
+      </span>
+    </button>`;
+}
+
 function belohnungsListe(quelle = S.belohnungen) {
   const liste = sortiereUndSuche(quelle, "belohnungen", (b) => b.kosten_jetzt ?? b.cost);
   if (!liste.length) return '<div class="leer-hinweis" style="grid-column:1/-1">Nichts gefunden.</div>';
-
-  return liste.map((b) => {
-    const kosten = b.kosten_jetzt ?? b.cost;
-    const zuTeuer = kosten > S.ich.punkte;
-    // Was zu einem Event gehört, wird auch dort geändert — nicht hier.
-    const e = eventZu(b);
-    return `
-      <div class="reward-wrap">
-        <button class="reward" data-sheet="antrag" data-id="${b.id}" ${zuTeuer ? "data-locked" : ""}>
-          <span class="ico">${icon(e ? "i-waage" : b.cost >= 15 ? "i-shield" : "i-heart", 17)}</span>
-          <span class="n">${esc(b.name)}</span>
-          <span class="c">${zuTeuer
-            ? `${S.ich.punkte} von ${kosten} Cleanies`
-            : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Cleanies`
-            : `${b.cost} Cleanies`}${e ? ` · ${eventZeit(e)}` : b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
-        </button>
-        ${e ? `<button class="stiftbtn" data-eventmenue="${e.id}"
-            aria-label="${esc(b.name)} — Event ansehen">${icon("i-kalender", 16)}</button>`
-          : `<button class="stiftbtn" data-sheet="menue" data-art="belohnung" data-id="${b.id}"
-            aria-label="${esc(b.name)} ändern oder löschen">${icon("i-stift", 16)}</button>`}
-      </div>`;
-  }).join("");
+  return liste.map((b) => belohnungBox(b)).join("");
 }
 
 function schirmBelohnungen() {
@@ -1825,9 +2020,11 @@ function schirmBelohnungen() {
     <div class="appbar">
       <div><div class="title">Belohnungen</div>
         <div class="sub">Dein Konto: <b>${S.ich.punkte}</b> Cleanies</div></div>
+      ${stiftKnopf("belohnungen", "Belohnungen")}
       <button class="iconbtn" data-sheet="neue-belohnung" aria-label="Belohnung vorschlagen">${icon("i-plus", 18)}</button>
     </div>
     <div class="body">
+      ${bearbeiten.belohnungen ? '<div class="bearbeiten-hinweis">Welche Belohnung willst du anpassen? Tippe sie an.</div>' : ""}
       ${suchzeile("belohnungen", "Belohnung suchen …")}
       ${aktionsBanner("belohnung_rabatt")}
       ${sortierzeile("belohnungen")}
@@ -2958,6 +3155,7 @@ function sheet(html) {
   scrim.setAttribute("data-open", "");
 }
 function sheetZu() {
+  bildWahl = null;
   scrim.removeAttribute("data-open");
   scrim.innerHTML = "";
 }
@@ -2996,6 +3194,7 @@ function sheetMelden(quest) {
     <div class="grabber"></div>
     <h3>${besonders ? "Trotzdem melden" : "Erledigt melden"}</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      ${symbolKachel(questSymbol(quest), questFarbe(quest))}
       <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
       <span class="pts-pill">${quest.bonus ? `<s style="opacity:.55">${quest.points}</s> ` : ""}${cl(punkte)}</span>
     </div>
@@ -3188,26 +3387,40 @@ function sheetNeu() {
     <button class="btn primary block" data-senden="neu">Zur Abstimmung geben</button>`);
 }
 
+/** Das Menü hinter dem Stift: oben das Bild, das jeder sofort ändern darf,
+ *  darunter wie bisher alles, was über die Abstimmung läuft. Was zu einem
+ *  Event gehört, wird beim Event geändert — hier nur sein Bild. */
 function sheetMenue(art, eintrag) {
   const istQuest = art === "quest";
+  const e = eventZu(eintrag);
+  const tag = (sofort) => sofort ? '<em class="sofort">sofort</em>' : '<em class="abst">Abstimmung</em>';
   sheet(`
     <div class="grabber"></div>
     <h3>${esc(eintrag.name)}</h3>
-    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
-      <span style="flex:1;font-size:13px;color:var(--ink-2)">${istQuest ? "Quest" : "Belohnung"}</span>
-      <span class="pts-pill">${cl(istQuest ? eintrag.points : eintrag.cost)}</span>
+    <div class="bildvorschau">
+      ${istQuest ? symbolKachel(questSymbol(eintrag), questFarbe(eintrag), "gross")
+                 : `<span class="rico gross">${symbolHtml(belohnungSymbol(eintrag))}</span>`}
+      <span class="grow"><b>${istQuest ? `Quest · ${esc(eintrag.category)}` : "Belohnung"}</b></span>
+      ${wertSpalte(istQuest ? eintrag.points : eintrag.cost)}
     </div>
-    <button class="btn ghost block" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
-      ${istQuest ? "Cleanies-Wert ändern" : "Kosten ändern"}</button>
-    ${istQuest ? `<button class="btn ghost block" data-sheet="raum" data-id="${eintrag.id}">Raum ändern</button>
-    <button class="btn ghost block" data-sheet="rhythmus" data-id="${eintrag.id}">
-      ${eintrag.wiederkehrend ? "Rhythmus ändern" : "Wiederkehrende Aufgabe daraus machen"}</button>
-    ${eintrag.wiederkehrend ? `<button class="btn ghost block" data-senden="nicht-mehr" data-id="${eintrag.id}">Keine wiederkehrende Aufgabe mehr</button>` : ""}` : ""}
-    <button class="btn ghost block" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}"
-      style="color:var(--accent);border-color:var(--accent)">
-      ${istQuest ? "Quest löschen" : "Belohnung löschen"}</button>
-    <div class="note">${icon("i-vote", 16)}<span>Beides geht nur gemeinsam:
-      ${esc(andereName())} ${beugung("muss", "müssen")} zustimmen.</span></div>`);
+    <button class="wahl neu" data-symbol="${art}:${eintrag.id}">${istQuest ? "Bild ändern" : "Symbol ändern"}${tag(true)}</button>
+    ${istQuest ? "" : `<button class="wahl neu" data-hintergrund="${eintrag.id}">Hintergrundbild ändern${tag(true)}</button>`}
+    ${e ? `
+    <button class="wahl" data-eventmenue="${e.id}">Event ansehen<em class="abst">dort ändern</em></button>` : `
+    <button class="wahl" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
+      ${istQuest ? "Cleanies-Wert ändern" : "Kosten ändern"}${tag(false)}</button>
+    ${istQuest ? `
+    <button class="wahl" data-sheet="raum" data-id="${eintrag.id}">Raum ändern${tag(true)}</button>
+    <button class="wahl" data-sheet="rhythmus" data-id="${eintrag.id}">
+      ${eintrag.wiederkehrend ? "Rhythmus ändern" : "Wiederkehrende Aufgabe daraus machen"}${tag(false)}</button>
+    ${eintrag.wiederkehrend ? `
+    <button class="wahl" data-senden="nicht-mehr" data-id="${eintrag.id}">Keine wiederkehrende Aufgabe mehr${tag(false)}</button>
+    <button class="wahl" data-plan="${eintrag.id}">Im Haushaltsplan ansehen<em class="abst">›</em></button>` : ""}` : ""}
+    <button class="wahl rot" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}">
+      ${istQuest ? "Quest löschen" : "Belohnung löschen"}${tag(false)}</button>`}
+    <div class="note">${icon("i-vote", 16)}<span>Bilder und Räume sind Ordnung — die ändert jeder sofort.
+      Cleanies, Rhythmus und Löschen gehen nur gemeinsam: ${esc(andereName())}
+      ${beugung("muss", "müssen")} zustimmen.</span></div>`);
 }
 
 function sheetLoeschen(art, eintrag) {
@@ -3739,12 +3952,13 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok]");
   if (!el) return;
 
   // Navigation & Anzeige
   if (el.dataset.go) {
     ansicht = el.dataset.go;
+    bearbeiten.quests = bearbeiten.belohnungen = false;
     sheetZu();
     zeichne();
     if (ansicht === "statistik") {
@@ -3753,6 +3967,47 @@ document.addEventListener("click", async (ev) => {
     return;
   }
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
+
+  /* ---------- Bilder für Quests und Belohnungen ---------- */
+  if (el.dataset.bearbeiten) {
+    bearbeiten[el.dataset.bearbeiten] = !bearbeiten[el.dataset.bearbeiten];
+    zeichne();
+    return;
+  }
+  if (el.dataset.symbol || el.dataset.hintergrund) {
+    const [art, id] = el.dataset.symbol ? el.dataset.symbol.split(":") : ["belohnung", el.dataset.hintergrund];
+    if (!bildWahlStarten(art, id)) return;
+    if (el.dataset.symbol) sheetSymbol(); else sheetHintergrund();
+    return;
+  }
+  if (bildWahl && el.dataset.symfarbe) { bildWahl.farbe = el.dataset.symfarbe; sheetSymbol(); return; }
+  if (bildWahl && el.dataset.symkat) { bildWahl.kat = el.dataset.symkat; sheetSymbol(); return; }
+  if (bildWahl && el.dataset.emoji) { bildWahl.icon = el.dataset.emoji; sheetSymbol(); return; }
+  if (bildWahl && el.dataset.motiv) { bildWahl.bild = `motiv:${el.dataset.motiv}`; sheetHintergrund(); return; }
+  if (bildWahl && el.hasAttribute("data-bild-ohne")) { bildWahl.bild = "ohne"; sheetHintergrund(); return; }
+  if (el.hasAttribute("data-symbolfoto")) { document.getElementById("symbolfeld")?.click(); return; }
+  if (el.hasAttribute("data-hintergrundfoto")) { document.getElementById("hintergrundfeld")?.click(); return; }
+  if (bildWahl && el.hasAttribute("data-bild-ok")) {
+    const w = bildWahl;
+    const quest = w.art === "quest";
+    const neu = {};
+    if (w.icon !== w.start.icon) neu.icon = w.icon;
+    if (quest && w.farbe !== w.start.farbe) neu.farbe = w.farbe;
+    if (!quest && w.bild !== w.start.bild) neu.bild = w.bild;
+    try {
+      el.disabled = true;
+      if (Object.keys(neu).length) await api(`${quest ? "quests" : "rewards"}/${w.id}/bild`, neu);
+      bildWahl = null;
+      sheetZu();
+      await laden();
+      toast(Object.keys(neu).length ? "Geändert — gilt sofort für alle." : "Nichts geändert.");
+    } catch (fehler) {
+      toast(fehler.message, true);
+    } finally {
+      el.disabled = false;
+    }
+    return;
+  }
 
   /* ---------- Startseite ---------- */
   if (el.dataset.kartentun) {
@@ -4595,6 +4850,24 @@ function dateiLesen(datei) {
 }
 
 document.addEventListener("change", async (ev) => {
+  // Ein eigenes Bild für Symbol oder Hintergrund: auf dem Handy klein
+  // gerechnet, erst mit „Übernehmen“ abgeschickt.
+  const bildfeld = ev.target.closest("#symbolfeld, #hintergrundfeld");
+  if (bildfeld && bildfeld.files?.length && bildWahl) {
+    try {
+      if (bildfeld.id === "symbolfeld") {
+        bildWahl.icon = await fotoVerkleinern(bildfeld.files[0], 160);
+        sheetSymbol();
+      } else {
+        bildWahl.bild = await fotoKleiner(bildfeld.files[0], 640);
+        sheetHintergrund();
+      }
+    } catch {
+      toast("Dieses Bild ließ sich nicht lesen", true);
+    }
+    return;
+  }
+
   const giffeld = ev.target.closest("#giffeld");
   if (giffeld && giffeld.files?.length) {
     const datei = giffeld.files[0];

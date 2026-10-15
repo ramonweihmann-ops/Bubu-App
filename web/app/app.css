@@ -324,13 +324,6 @@ body {
 }
 .stiftbtn:active { background: var(--tint); color: var(--ink); }
 
-.reward-wrap { position: relative; display: flex; }
-.reward-wrap > .reward { flex: 1; padding-right: 40px; }
-.reward-wrap > .stiftbtn {
-  position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border-radius: 10px;
-  border-color: transparent; background: transparent;
-}
-
 /* ---------- Suchen und Sortieren ---------- */
 .suchzeile { position: relative; display: flex; align-items: center; }
 .suchzeile svg { position: absolute; left: 13px; color: var(--ink-3); pointer-events: none; }
@@ -832,3 +825,122 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 @media (prefers-reduced-motion: reduce) {
   .karte, .fortschritt i, .fortschritt i.pop, .fertig { transition: none; animation: none; }
 }
+
+/* ---------- Bilder für Quests und Belohnungen ---------- */
+/* Menschen erkennen ein Bild schneller, als sie einen Text lesen: jede Quest
+ * bekommt ein Symbol auf einer farbigen Kachel, jede Belohnung ein Bild über
+ * der Schrift. Die sechs Kachelfarben haben je einen hellen und einen dunklen
+ * Ton, damit das Symbol in beiden Sätzen trägt. */
+:root {
+  --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  --kachel-blau: #eaf1fb; --kachel-gruen: #e4f5ef; --kachel-rot: #fdecea;
+  --kachel-gelb: #fdf1dc; --kachel-lila: #f1ebfb; --kachel-grau: #eef1f6;
+  --ruhig-tint: #eaf1fb; --stern-hauch: .16;
+}
+:root[data-theme="dunkel"] {
+  --kachel-blau: #1b2f52; --kachel-gruen: #163a33; --kachel-rot: #3a1c1b;
+  --kachel-gelb: #3a2d14; --kachel-lila: #2c2350; --kachel-grau: #22324d;
+  --ruhig-tint: #16274a; --stern-hauch: .2;
+}
+
+.symbolkachel {
+  width: 46px; height: 46px; border-radius: 13px; flex: none; display: grid; place-items: center;
+  overflow: hidden; background: var(--kachel-grau);
+}
+.symbolkachel[data-farbe="blau"] { background: var(--kachel-blau); }
+.symbolkachel[data-farbe="gruen"] { background: var(--kachel-gruen); }
+.symbolkachel[data-farbe="rot"] { background: var(--kachel-rot); }
+.symbolkachel[data-farbe="gelb"] { background: var(--kachel-gelb); }
+.symbolkachel[data-farbe="lila"] { background: var(--kachel-lila); }
+.symbolkachel .emoji { font-family: var(--emoji); font-size: 27px; line-height: 1; }
+.symbolkachel img { width: 100%; height: 100%; object-fit: cover; }
+.symbolkachel.gross { width: 56px; height: 56px; border-radius: 16px; }
+.symbolkachel.gross .emoji { font-size: 33px; }
+
+/* Die Quest-Zeile: Symbol, Name, rechts die Cleanies. */
+.rowlink.questzeile { gap: 11px; padding: 8px 8px 8px 9px; }
+.questzeile .t { line-height: 1.25; }
+
+/* Die Cleanies-Spalte: die Zahl vorn, der Stern ganz schwach dahinter. */
+.wert {
+  position: relative; flex: none; min-width: 44px; height: 40px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.wert::before {
+  content: ""; position: absolute; inset: 0; margin: auto; width: 38px; height: 38px;
+  background: url(/cleanie.webp) center / contain no-repeat; opacity: var(--stern-hauch);
+}
+.wert b {
+  position: relative; font-family: var(--font-display); font-weight: 800; font-size: 19px;
+  letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.wert s { position: relative; font-family: var(--font-data); font-size: 10px; color: var(--ink-3); line-height: 1; }
+
+/* Bearbeiten: der Stift wird „Fertig“, oben steht die Frage, und jede Zeile
+ * zeigt, dass sie sich antippen lässt. */
+.iconbtn.fertigknopf { width: auto; padding: 0 13px; background: var(--kontrast-bg); border-color: var(--kontrast-bg);
+  color: var(--kontrast-ink); font: inherit; font-size: 13px; font-weight: 700; }
+.bearbeiten-hinweis { background: var(--ruhig-tint); color: var(--ruhig); border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 600; }
+.body:has(.bearbeiten-hinweis) .questzeile,
+.body:has(.bearbeiten-hinweis) .bildbox { outline: 2px dashed var(--ruhig); outline-offset: -2px; }
+
+/* Die Belohnungsbox: oben das Bild, darunter die Schrift auf ruhigem Grund —
+ * die Schrift steht nie auf dem Bild. Das Symbol sitzt auf der Kante. */
+.reward.bildbox { padding: 0; gap: 0; overflow: hidden; position: relative; }
+.bildbox .bildteil { position: relative; height: 72px; flex: none; display: block; background: var(--tint); }
+.bildbox .bildteil.ohne { height: 34px; }
+.bildbox .drin { display: flex; flex-direction: column; gap: 3px; padding: 20px 12px 12px; }
+.bildbox .bildteil.ohne + .drin { padding-top: 22px; }
+.rico {
+  width: 34px; height: 34px; border-radius: 11px; background: var(--bg); display: grid; place-items: center; overflow: hidden;
+  box-shadow: 0 2px 8px -3px rgba(21, 44, 79, .4); flex: none;
+}
+.rico .emoji { font-family: var(--emoji); font-size: 19px; line-height: 1; }
+.rico img { width: 100%; height: 100%; object-fit: cover; }
+.rico.gross { width: 56px; height: 56px; border-radius: 16px; }
+.rico.gross .emoji { font-size: 31px; }
+.bildbox .rico { position: absolute; left: 10px; bottom: -14px; }
+.motiv { position: absolute; inset: 0; overflow: hidden; display: block; background: linear-gradient(135deg, var(--m1, var(--tint)), var(--m2, var(--tint-2))); }
+.motiv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.motiv span { position: absolute; font-family: var(--emoji); line-height: 1; }
+.motiv .z1 { font-size: 60px; right: -6px; bottom: -12px; transform: rotate(-12deg); }
+.motiv .z2 { font-size: 32px; left: 10px; top: 6px; transform: rotate(10deg); opacity: .9; }
+.motiv .z3 { font-size: 24px; right: 36%; top: 26%; transform: rotate(-6deg); opacity: .8; }
+
+/* Das Menü hinter dem Stift. */
+.bildvorschau { display: flex; align-items: center; gap: 11px; background: var(--tint); border-radius: 14px; padding: 9px; }
+.bildvorschau b { font-size: 13.5px; line-height: 1.25; }
+.wahl {
+  display: flex; align-items: center; gap: 10px; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 13px; padding: 11px 12px; cursor: pointer; text-align: left;
+}
+.wahl em { margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.wahl em.sofort { background: var(--urlaub-tint); color: var(--urlaub); }
+.wahl em.abst { background: var(--tint-2); color: var(--ink-2); }
+.wahl.neu { border-color: var(--ruhig); background: var(--ruhig-tint); }
+.wahl.rot { color: var(--accent); border-color: var(--accent); }
+.wahl:disabled { opacity: .5; }
+
+/* Der Wähler: Farben, Gruppen, Symbole, Motive. */
+.farbwahl { display: flex; gap: 8px; }
+.farbwahl .symbolkachel { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.farbwahl .symbolkachel[aria-pressed="true"] { border-color: var(--ink); }
+.symkats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; flex: none; }
+.symkats::-webkit-scrollbar { display: none; }
+.symkats button { flex: none; font: inherit; font-size: 12px; font-weight: 600; border: none; background: var(--tint); color: var(--ink-2);
+  border-radius: 999px; padding: 6px 11px; cursor: pointer; }
+.symkats button[aria-pressed="true"] { background: var(--kontrast-bg); color: var(--kontrast-ink); }
+.emojiwahl { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.emojiwahl button { font-family: var(--emoji); font-size: 26px; line-height: 1; aspect-ratio: 1; max-width: 100%;
+  border: none; background: none; border-radius: 12px; cursor: pointer; padding: 0; }
+.emojiwahl button[aria-pressed="true"] { background: var(--ruhig-tint); box-shadow: inset 0 0 0 2px var(--ruhig); }
+.probe { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; align-items: center; }
+.probe .reward { cursor: default; }
+.motivwahl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.motivwahl button { position: relative; height: 62px; border-radius: 12px; border: 2px solid transparent; overflow: hidden; cursor: pointer; padding: 0; background: none; }
+.motivwahl button[aria-pressed="true"] { border-color: var(--ink); }
+.motivwahl small { position: absolute; left: 6px; bottom: 4px; font-size: 10.5px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .55); }
+.motivwahl .motiv .z1 { font-size: 38px; }
+.motivwahl .motiv .z2 { font-size: 19px; }
+.motivwahl .motiv .z3 { display: none; }
+[data-bild-ohne][aria-pressed="true"] { border-color: var(--ink); }

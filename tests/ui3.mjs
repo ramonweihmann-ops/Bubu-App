@@ -133,7 +133,8 @@ await d.click("#scrim", { position: { x: 10, y: 10 } });
 
 console.log("\n== Raum ändern über den Stift");
 await d.waitForTimeout(300);
-await d.click(".zeile .stiftbtn");
+await d.click('[data-bearbeiten="quests"]');
+await d.click(".zeile .rowlink");
 await d.waitForSelector('[data-sheet="raum"]');
 await d.click('[data-sheet="raum"]');
 await d.waitForSelector("[data-questraum]");

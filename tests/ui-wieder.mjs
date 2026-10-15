@@ -86,8 +86,10 @@ pruefe("Als Quest vorgeschlagen", offen?.art, "new_quest");
 
 console.log("== Aus einer bestehenden Quest heraus");
 await a.click('.navbar [data-go="quests"]');
-await a.waitForSelector(".zeile .stiftbtn");
-await a.click(".zeile .stiftbtn");
+// Der Stift sitzt oben: erst Bearbeiten, dann die Quest antippen.
+await a.waitForSelector('[data-bearbeiten="quests"]');
+await a.click('[data-bearbeiten="quests"]');
+await a.click(".zeile .rowlink");
 await a.waitForSelector('[data-sheet="rhythmus"]');
 pruefe("Weg zum Rhythmus da", await a.locator('[data-sheet="rhythmus"]').count(), 1);
 await a.screenshot({ path: `${AUS}/w3-stift-menue.png` });

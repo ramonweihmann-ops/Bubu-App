@@ -52,10 +52,11 @@ lauf "gutschrift-api.sh" bash gutschrift-api.sh
 lauf "ruecktritt-api.sh" bash ruecktritt-api.sh
 lauf "jubel-api.sh" bash jubel-api.sh
 lauf "event-api.sh" bash event-api.sh
+lauf "bilder-api.sh" bash bilder-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

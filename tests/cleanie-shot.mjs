@@ -32,14 +32,13 @@ for (const [thema, kuerzel] of [["hell", "h"], ["dunkel", "d"]]) {
   await s.waitForTimeout(500);
   await s.screenshot({ path: `${AUS}/cl-${kuerzel}2-quests.png` });
 
-  // Der Stern muss wirklich im Chip stecken, nicht nur im Stylesheet.
-  const sterne = await s.locator(".pts-pill img.cleanie").count();
-  console.log(`  ${sterne > 0 ? "ok  " : "FEHL"} ${thema}: Sterne in Chips: ${sterne}`);
+  // In der Quest-Liste steht der Stern schwach hinter jeder Zahl — er muss
+  // wirklich dort hängen, nicht nur im Stylesheet stehen.
+  const sterne = await s.evaluate(() => [...document.querySelectorAll(".questzeile .wert")]
+    .filter((w) => getComputedStyle(w, "::before").backgroundImage.includes("cleanie.webp")).length);
+  console.log(`  ${sterne > 0 ? "ok  " : "FEHL"} ${thema}: Sterne hinter den Cleanies: ${sterne}`);
   if (!sterne) fehler++;
-  const geladen = await s.evaluate(() => {
-    const b = document.querySelector(".pts-pill img.cleanie");
-    return b ? b.complete && b.naturalWidth > 0 : false;
-  });
+  const geladen = await s.evaluate(async () => (await fetch("/cleanie.webp")).ok);
   console.log(`  ${geladen ? "ok  " : "FEHL"} ${thema}: Bild geladen: ${geladen}`);
   if (!geladen) fehler++;
 

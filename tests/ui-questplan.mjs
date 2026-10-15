@@ -75,9 +75,14 @@ pruefe("Die Quest ist da", await zeile.count(), 1);
 pruefe("Sie führt zum Melden, nicht in den Plan", await zeile.getAttribute("data-sheet"), "melden");
 enthaelt("Mit dem Wiederhol-Zeichen", await zeile.innerText(), "↻");
 enthaelt("Und dem Rhythmus", await zeile.innerText(), "1× pro Woche");
-pruefe("Daneben ein Weg in den Plan",
-  await a.locator(`.zeile .stiftbtn[data-plan="${q.id}"]`).count(), 1);
 await a.screenshot({ path: `${AUS}/q1-liste.png`, fullPage: true });
+// Der Weg in den Plan liegt hinter dem Stift oben.
+await a.click('[data-bearbeiten="quests"]');
+await a.click(`.rowlink[data-id="${q.id}"]`);
+pruefe("Hinter dem Stift ein Weg in den Plan",
+  await a.locator(`.sheet [data-plan="${q.id}"]`).count(), 1);
+await a.click("#scrim", { position: { x: 10, y: 10 } });
+await a.click('[data-bearbeiten="quests"]');
 
 console.log("== Das Blatt zeigt, was der Plan über sie weiß");
 await zeile.click();

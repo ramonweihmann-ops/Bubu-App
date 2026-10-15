@@ -17,6 +17,7 @@ import {
   anfrageAendern, anfrageZuruecknehmen
 } from "./rueckmeldung.js";
 import { zeitraum, urlaubAnlegen, urlaubBeenden, urlaubeVon, urlaubsLage } from "./urlaub.js";
+import { questBild, belohnungBild, bildAusliefern } from "./bilder.js";
 import {
   konfigPruefen, eventAnlegen, eventAendern, eventAus,
   eventsNachziehen, eventsVon, eventPruefen
@@ -107,6 +108,10 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "requests" && teile[2] === "nachholen") return json(await belohnungNachholen(env, ich, teile[1]));
     if (teile[0] === "requests" && teile[2] === "nachhol-pruefen") return json(await nachholEntscheiden(env, ich, teile[1], !!koerper.ja));
     if (teile[0] === "quests" && teile[2] === "raum") return json(await questRaum(env, ich, teile[1], koerper.raum));
+    // Bilder sind Ordnung wie die Räume: ohne Abstimmung.
+    if (teile[0] === "quests" && teile[2] === "bild") return json(await questBild(env, ich, teile[1], koerper));
+    if (teile[0] === "rewards" && teile[2] === "bild") return json(await belohnungBild(env, ich, teile[1], koerper));
+    if (teile[0] === "bild" && teile[1] && !teile[2]) return await bildAusliefern(env, ich, teile[1]);
     if (pfad === "raeume") return json(await raumAnlegen(env, ich, koerper));
     if (teile[0] === "raeume" && teile[1]) return json(await raumAendern(env, ich, teile[1], koerper));
 
@@ -598,10 +603,10 @@ async function zustand(env, ich, versatz = 0) {
                         from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
-      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id,
+      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id, q.icon, q.farbe,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id,
+      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id, b.icon, b.bild,
                              (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
                         from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
       env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at,

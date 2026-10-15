@@ -34,7 +34,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Startseite neu gedacht":** [`web/mockup-start/`](./web/mockup-start) — live unter
   `haus-quest.com/mockup-start/`. Vorher-Bild und drei Vorschläge zum Anfassen; gebaut wurde die Mischung.
 - **Mockup „Bilder für Quests und Belohnungen":** [`web/mockup-icons/`](./web/mockup-icons) — live unter
-  `haus-quest.com/mockup-icons/`. Stift oben, Symbole für Quests, Hintergründe für Belohnungen — je drei Varianten.
+  `haus-quest.com/mockup-icons/`. Stift oben, Symbole für Quests, Hintergründe für Belohnungen — je drei Varianten;
+  gebaut wurde A bei den Quests und B bei den Belohnungen, der Stern schwach dahinter.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -195,13 +196,23 @@ wie immer.
 ## Listen bedienen
 
 Quests und Belohnungen haben oben ein Suchfeld (Groß- und Kleinschreibung sowie Umlaute egal),
-darunter Sortierung nach **meist genutzt**, **Punkten** oder **Alphabet** — die aktive
+darunter Sortierung nach **meist genutzt**, **Cleanies** oder **Alphabet** — die aktive
 Sortierung kehrt beim erneuten Tippen ihre Richtung um. Bei den Quests bleibt darunter der
 Filter nach Kategorie.
 
-Jeder Eintrag hat einen **Stift**, der ein Menü mit *Ändern* und *Löschen* öffnet. Beides geht
-weiterhin nur über die Abstimmung. Zwei getrennte Symbole je Zeile wären auf dem Handy zu
-kleine Ziele, und Löschen soll nicht direkt neben dem Melden liegen.
+Jede Quest zeigt links ein **Symbol** auf einer farbigen Kachel und rechts ihre **Cleanies**,
+der Stern ganz schwach dahinter. Jede Belohnung trägt oben ein **Bild** und darunter die
+Schrift — die Schrift steht nie auf dem Bild —, dazu ein Symbol statt des Herzens. Was noch
+niemand gewählt hat, schlägt die App aus dem Namen vor, sonst aus dem Raum.
+
+Antippen meldet eine Quest oder beantragt eine Belohnung. Zum Anpassen sitzt der **Stift
+oben neben dem Plus**: er schaltet die Liste in den Bearbeiten-Modus, dann die Quest oder
+Belohnung antippen. Das Menü bietet oben **Bild ändern** — Symbole in Gruppen wie bei
+WhatsApp, eine Farbe, oder ein eigenes Bild; bei Belohnungen ein Motiv oder ein eigenes Foto.
+Bilder sind Ordnung wie die Räume und gelten **sofort, ohne Abstimmung**. Darunter stehen wie
+bisher Cleanies-Wert, Raum, Rhythmus und Löschen; Cleanies, Rhythmus und Löschen laufen weiter
+über die Abstimmung. Eigene Bilder werden auf dem Handy verkleinert (Symbol 160, Foto 640
+Pixel) und einzeln ausgeliefert, nicht mit jeder Abfrage des Zustands.
 
 ## Einstellungen
 
