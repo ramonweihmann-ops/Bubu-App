@@ -36,6 +36,9 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Bilder für Quests und Belohnungen":** [`web/mockup-icons/`](./web/mockup-icons) — live unter
   `haus-quest.com/mockup-icons/`. Stift oben, Symbole für Quests, Hintergründe für Belohnungen — je drei Varianten;
   gebaut wurde A bei den Quests und B bei den Belohnungen, der Stern schwach dahinter.
+- **Mockup „Familienmodus":** [`web/mockup-familie/`](./web/mockup-familie) — live unter
+  `haus-quest.com/mockup-familie/`. Kinderprofile ohne Handy, drei Kinderansichten (Sparglas, Weg, Liste),
+  Eintragen für Kinder, Wünsche, Taschengeld — zur Entscheidung.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.

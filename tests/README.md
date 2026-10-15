@@ -75,6 +75,7 @@ genau so, wie er es soll.
 | `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
 | `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |
 | `mockup-icons.mjs` | Das Bilder-Mockup: Stift oben, Symbol wählen und hochladen, Hintergründe, die Schrift bleibt vorn |
+| `mockup-familie.mjs` | Das Familienmodus-Mockup: Kind meldet, Eltern bestätigen oder tragen ein, Wunsch, Kind anlegen, Taschengeld, PIN, hell und dunkel |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |
 
 ## Helfer, die nicht im Gesamtlauf stecken

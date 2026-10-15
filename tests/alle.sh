@@ -56,7 +56,7 @@ lauf "bilder-api.sh" bash bilder-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Haus-Quest Familienmodus</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen zum Anfassen. Farben und Schrift wie in der App,
+ * hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --bald:#a86800; --bald-tint:#fdf1dc;
+  --k-blau:#eaf1fb; --k-gruen:#e4f5ef; --k-rot:#fdecea; --k-gelb:#fdf1dc; --k-lila:#f1ebfb; --k-grau:#eef1f6;
+  --glas-rand:#b9c8de; --fuell-1:#ffd45c; --fuell-2:#ffab2e;
+  --qr-hell:#fff; --qr-dunkel:#152c4f;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45); --schatten:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a; --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --k-blau:#1b2f52; --k-gruen:#163a33; --k-rot:#3a1c1b; --k-gelb:#3a2d14; --k-lila:#2c2350; --k-grau:#22324d;
+    --glas-rand:#3d5378; --fuell-1:#e8b23a; --fuell-2:#c98614;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a; --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --k-blau:#1b2f52; --k-gruen:#163a33; --k-rot:#3a1c1b; --k-gelb:#3a2d14; --k-lila:#2c2350; --k-grau:#22324d;
+  --glas-rand:#3d5378; --fuell-1:#e8b23a; --fuell-2:#c98614;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:70ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:26px;align-items:start}
+.reihe.paar{grid-template-columns:minmax(0,360px) minmax(0,1fr)}
+@media (max-width:760px){.reihe.paar{grid-template-columns:minmax(0,1fr)}}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);border-radius:999px;padding:2px 9px}
+.vorbild.tipp{color:var(--frei);background:var(--frei-tint)}
+.bu{font-size:13px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+.gemeinsam{font-size:13px;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px 13px;margin:18px 0 0;max-width:80ch}
+.gemeinsam b{color:var(--ink)}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:736px;background:var(--bg);border:9px solid var(--rahmen);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px var(--schatten);display:flex;flex-direction:column;margin:0 auto}
+.schirm{flex:1;display:flex;flex-direction:column;min-height:0}
+.kopf{flex:none;padding:14px 14px 8px;display:flex;align-items:center;gap:8px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.1}
+.kopf .sub{font-size:11.5px;color:var(--ink-3)}
+.knopf{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);
+  background:var(--bg);cursor:pointer;flex:none;padding:0;font:inherit;font-family:var(--emoji);font-size:16px}
+.inhalt{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 14px 18px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.inhalt>*{flex-shrink:0}
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;border-top:1px solid var(--line);padding:6px 4px 10px;background:var(--bg)}
+.leiste button{display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;font-size:9.5px;font-weight:600;color:var(--ink-3);
+  background:none;border:none;cursor:pointer;padding:0}
+.leiste button[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1;font-family:var(--emoji)}
+.leiste .plus{width:44px;height:44px;border-radius:15px;background:var(--akzent-flaeche);color:var(--auf-akzent);font-size:24px;display:grid;place-items:center;margin:-20px auto 0}
+.plabel{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -4px;display:flex;align-items:center;gap:6px}
+.stern{display:inline-block;width:15px;height:15px;background:url(/cleanie.webp) center/contain no-repeat;vertical-align:-2px}
+.wert{position:relative;display:grid;place-items:center;flex:none;min-width:40px;height:36px}
+.wert::before{content:"";position:absolute;inset:0;margin:auto;width:34px;height:34px;background:url(/cleanie.webp) center/contain no-repeat;opacity:.18}
+.wert b{position:relative;font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.02em}
+.sym{display:grid;place-items:center;border-radius:12px;background:var(--t,var(--k-grau));flex:none;width:36px;height:36px}
+.sym span{font-family:var(--emoji);font-size:21px;line-height:1}
+.tier{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--t,var(--k-gelb));font-family:var(--emoji);font-size:19px;flex:none;
+  font-style:normal;color:var(--ink)}
+.tier.ini{font-family:var(--font-display);font-weight:800;font-size:15px}
+.tier.gross{width:52px;height:52px;font-size:30px}
+.chip{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--tint-2);color:var(--ink-2);white-space:nowrap;font-family:var(--font-ui);letter-spacing:0;text-transform:none}
+.chip.kind{background:var(--bald-tint);color:var(--bald)}
+.chip.plus{background:var(--accent-tint);color:var(--accent)}
+.toast{position:absolute;left:14px;right:14px;bottom:76px;z-index:25;background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:13px;padding:10px 12px;font-size:12.5px;display:none}
+.toast[data-an]{display:block;animation:hoch .25s ease}
+.flug{position:absolute;z-index:15;left:50%;top:150px;font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--bald);
+  pointer-events:none;animation:flug 1.3s ease-out forwards;display:flex;align-items:center;gap:4px}
+.flug .stern{width:28px;height:28px}
+@keyframes flug{0%{opacity:0;transform:translate(-50%,14px) scale(.8)}20%{opacity:1;transform:translate(-50%,0) scale(1.12)}100%{opacity:0;transform:translate(-50%,-56px)}}
+
+/* ---------- Kinderansicht: gemeinsam ---------- */
+.kidkopf{flex:none;display:flex;align-items:center;gap:6px;padding:12px 12px 6px}
+.kidkopf .was{font-family:var(--font-data);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-right:auto}
+.tierwahl{display:flex;gap:4px}
+.tierwahl button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;background:var(--tint);font-family:var(--emoji);font-size:18px;cursor:pointer;padding:0;display:grid;place-items:center}
+.tierwahl button[aria-pressed="true"]{border-color:var(--ink);background:var(--bg)}
+.kidlabel{font-family:var(--font-display);font-weight:800;font-size:16px;margin:4px 0 -2px}
+.zmarke{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 7px;background:var(--bg);white-space:nowrap}
+[data-zustand="wartet"] .zmarke{color:var(--ruhig)}
+[data-zustand="bestaetigt"] .zmarke{color:var(--frei)}
+[data-zustand="rueckfrage"] .zmarke{color:var(--accent)}
+.leer{font-size:13px;color:var(--ink-2);background:var(--tint);border-radius:14px;padding:12px;text-align:center}
+
+/* A: Sparglas */
+.hallo{display:flex;align-items:center;gap:10px}
+.hallo b{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.1;display:block}
+.hallo small{font-size:12.5px;color:var(--ink-2)}
+.sparkarte{display:flex;align-items:center;gap:16px;background:var(--tint);border-radius:20px;padding:12px 14px;border:2px solid transparent;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.sparkarte.voll{border-color:var(--frei);background:var(--frei-tint)}
+.glaswrap{flex:none;display:flex;flex-direction:column;align-items:center}
+.deckel{width:70px;height:9px;border-radius:5px;background:var(--glas-rand);margin-bottom:-1px}
+.glas{position:relative;width:78px;height:96px;border:3px solid var(--glas-rand);border-top-width:2px;border-radius:12px 12px 24px 24px;background:var(--bg);overflow:hidden}
+.fuellung{position:absolute;left:0;right:0;bottom:0;height:var(--h,0%);
+  background:url(/cleanie.webp) 4px 6px/20px repeat,linear-gradient(var(--fuell-1),var(--fuell-2));transition:height .7s cubic-bezier(.2,.9,.3,1)}
+.etikett{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:var(--bg);
+  display:grid;place-items:center;font-family:var(--emoji);font-size:24px;box-shadow:0 2px 8px -3px var(--schatten)}
+.sparkarte .text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.sparkarte small{font-size:11.5px;color:var(--ink-2)}
+.sparkarte b{font-size:15px;line-height:1.25}
+.sparkarte .zahl{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.02em;line-height:1.1;margin-top:4px}
+.sparkarte .zahl small{font-size:13px;font-weight:600}
+.sparkarte .rest{font-size:12.5px;font-weight:700;color:var(--bald)}
+.sparkarte.voll .rest{color:var(--frei)}
+.kacheln{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.kk{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;border:1px solid var(--line);border-radius:18px;background:var(--bg);
+  padding:11px;font:inherit;color:inherit;text-align:left;cursor:pointer;min-width:0;min-height:122px}
+.kk .sym{width:54px;height:54px;border-radius:16px}
+.kk .sym span{font-size:32px}
+.kk b{font-size:13.5px;line-height:1.25;font-weight:700}
+.kk .lohn{margin-top:auto;display:inline-flex;align-items:center;gap:3px;font-family:var(--font-display);font-weight:800;font-size:15px}
+.kk .zmarke{position:absolute;right:8px;top:8px}
+.kk[data-zustand="wartet"]{background:var(--ruhig-tint);border-color:var(--ruhig)}
+.kk[data-zustand="bestaetigt"]{background:var(--frei-tint);border-color:transparent}
+.kk[data-zustand="rueckfrage"]{border-color:var(--accent)}
+
+/* B: Weg zum Wunsch */
+.pfadkopf{display:flex;align-items:center;gap:8px}
+.pfadkopf b{font-family:var(--font-display);font-size:19px;font-weight:800;flex:1}
+.konto{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-display);font-weight:800;font-size:18px}
+.pfadkarte{position:relative;display:block;width:100%;height:240px;background:var(--tint);border-radius:20px;border:none;padding:0;cursor:pointer;overflow:hidden}
+.pfadkarte svg{position:absolute;inset:0;width:100%;height:100%}
+.pfadkarte .linie{fill:none;stroke:var(--glas-rand);stroke-width:5;stroke-linecap:round;stroke-dasharray:2 11}
+.stein{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:var(--bg);border:3px solid var(--glas-rand)}
+.stein.voll{background:var(--fuell-1);border-color:var(--fuell-2)}
+.schatz{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:var(--bg);border:3px dashed var(--fuell-2);
+  display:grid;place-items:center;font-family:var(--emoji);font-size:28px}
+.schatz.da{border-style:solid;background:var(--frei-tint);border-color:var(--frei)}
+.figur{position:absolute;width:38px;height:38px;margin:-30px 0 0 -19px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
+  font-family:var(--emoji);font-size:24px;box-shadow:0 4px 10px -4px var(--schatten);transition:left .6s,top .6s}
+.pfadtext{margin:0;font-size:13px;color:var(--ink-2);text-align:center}
+.pfadtext b{color:var(--ink)}
+.zeilen{display:flex;flex-direction:column;gap:7px}
+.kz{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:15px;background:var(--bg);padding:7px 9px;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.kz .sym{width:42px;height:42px;border-radius:13px}
+.kz .sym span{font-size:25px}
+.kz .n{flex:1;min-width:0;font-size:13.5px;font-weight:700;line-height:1.25}
+.kz .lohn{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-display);font-weight:800;font-size:14px;flex:none}
+.kz[data-zustand="wartet"]{background:var(--ruhig-tint);border-color:var(--ruhig)}
+.kz[data-zustand="bestaetigt"]{background:var(--frei-tint);border-color:transparent}
+.kz[data-zustand="rueckfrage"]{border-color:var(--accent)}
+
+/* C: Liste */
+.wunschbalken{display:flex;flex-direction:column;gap:7px;background:var(--tint);border-radius:16px;padding:11px 12px;border:none;font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.wunschbalken .oben{display:flex;align-items:center;gap:8px;font-size:13px}
+.wunschbalken .oben b{flex:1;min-width:0}
+.wunschbalken .oben span:first-child{font-family:var(--emoji);font-size:20px}
+.balken{height:10px;border-radius:999px;background:var(--tint-2);overflow:hidden;display:block}
+.balken i{display:block;height:100%;width:var(--h,0%);background:linear-gradient(90deg,var(--fuell-1),var(--fuell-2));transition:width .7s cubic-bezier(.2,.9,.3,1)}
+.wunschbalken small{font-size:11.5px;color:var(--ink-2)}
+.lz{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:15px;background:var(--bg);padding:8px 8px 8px 9px;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.lz .sym{width:42px;height:42px;border-radius:13px}
+.lz .sym span{font-size:24px}
+.lz .n{flex:1;min-width:0}
+.lz .n b{display:block;font-size:13.5px;line-height:1.25}
+.lz .n small{font-size:11.5px;color:var(--ink-3)}
+.lz .tun{flex:none;font-size:12px;font-weight:700;border:1.5px solid var(--accent);color:var(--accent);border-radius:999px;padding:4px 10px}
+.lz[data-zustand="wartet"]{background:var(--ruhig-tint);border-color:var(--ruhig)}
+.lz[data-zustand="bestaetigt"]{background:var(--frei-tint);border-color:transparent}
+.lz[data-ziel="ja"]{border-color:var(--fuell-2)}
+
+/* ---------- Eltern ---------- */
+.kinderreihe{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+.kinderreihe::-webkit-scrollbar{display:none}
+.kindkarte{flex:none;width:136px;border:1px solid var(--line);border-radius:16px;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:6px;
+  cursor:pointer;font:inherit;color:inherit;text-align:left}
+.kindkarte .oben{display:flex;align-items:center;gap:7px}
+.kindkarte .oben b{font-size:13.5px;display:block;line-height:1.2}
+.kindkarte .oben small{font-size:10.5px;color:var(--ink-3)}
+.kindkarte .stand{display:flex;align-items:center;gap:4px;font-family:var(--font-display);font-weight:800;font-size:17px}
+.kindkarte .ziel{font-size:11px;color:var(--ink-2)}
+.minibalken{height:6px;border-radius:999px;background:var(--tint-2);overflow:hidden;display:block}
+.minibalken i{display:block;height:100%;background:var(--fuell-2)}
+.karte{border:1px solid var(--line);border-radius:16px;padding:11px;background:var(--bg);display:flex;flex-direction:column;gap:9px}
+.karte.vonkind{border-color:var(--bald);background:linear-gradient(var(--bald-tint),var(--bg) 60%)}
+.karte .wer{display:flex;align-items:center;gap:8px;font-size:13px}
+.karte .wer .grow{flex:1;min-width:0}
+.karte .wer small{display:block;font-size:11px;color:var(--ink-3)}
+.karte .was{display:flex;align-items:center;gap:10px}
+.karte .was b{flex:1;min-width:0;font-size:14px;line-height:1.25}
+.knoepfe{display:flex;gap:7px}
+.kn{flex:1;font:inherit;font-size:13px;font-weight:700;border-radius:12px;padding:9px;border:1px solid var(--line);cursor:pointer;background:var(--bg);color:var(--ink)}
+.kn.ja{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.rowlink{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:14px;padding:9px 11px;background:var(--bg);
+  font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer}
+div.rowlink{cursor:default}
+.rowlink .grow{flex:1;min-width:0}
+.rowlink .t{font-weight:700;font-size:13.5px;display:block;line-height:1.25}
+.rowlink .m{font-size:11.5px;color:var(--ink-3);display:block}
+.rowlink .pfeil{color:var(--ink-3)}
+.rowlink .klein{font:inherit;font-size:12px;font-weight:700;border-radius:10px;padding:6px 10px;border:1px solid var(--kontrast-bg);background:var(--kontrast-bg);color:var(--kontrast-ink);cursor:pointer;flex:none}
+.fuer{font:inherit;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 9px;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);cursor:pointer;flex:none}
+.fuer[data-wert="kinder"]{background:var(--bald-tint);border-color:transparent;color:var(--bald)}
+.fuer[data-wert="erwachsene"]{background:var(--tint-2);border-color:transparent;color:var(--ink-2)}
+.fuer[data-wert="alle"]{background:var(--frei-tint);border-color:transparent;color:var(--frei)}
+.hinweis{font-size:12.5px;color:var(--ruhig);background:var(--ruhig-tint);border-radius:12px;padding:8px 11px;font-weight:600}
+.vzeile{display:flex;gap:10px;font-size:12.5px;padding:7px 2px;border-bottom:1px solid var(--line)}
+.vzeile:last-child{border-bottom:none}
+.vzeile span{flex:1;min-width:0;color:var(--ink-2)}
+.vzeile b{font-family:var(--font-data);font-size:12px}
+.vzeile b.plus{color:var(--frei)}
+.vzeile b.minus{color:var(--accent)}
+.knopf-gross{flex:1;font:inherit;font-size:14px;font-weight:700;border-radius:13px;padding:11px;border:1px solid var(--line);cursor:pointer;background:var(--bg);color:var(--ink);text-align:center}
+.knopf-gross.ja{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.knopf-gross.rot{background:var(--akzent-flaeche);border-color:var(--akzent-flaeche);color:var(--auf-akzent)}
+.knopf-gross[disabled]{opacity:.6;cursor:default}
+
+/* ---------- Blätter ---------- */
+.blatt-schleier{position:absolute;inset:0;background:var(--schleier);display:none;z-index:20;align-items:flex-end}
+.blatt-schleier[data-auf]{display:flex}
+.blatt{width:100%;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 14px 16px;display:flex;flex-direction:column;gap:9px;max-height:92%;overflow-y:auto}
+.blatt>*{flex-shrink:0}
+.blatt.hoch{animation:hoch .3s cubic-bezier(.2,.9,.3,1)}
+.blatt .griff{width:38px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 2px}
+.blattfuss{position:sticky;bottom:-16px;margin:0 -14px -16px;padding:8px 14px 16px;background:var(--bg);display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 -10px 12px -12px var(--schatten)}
+.blatt h5{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;line-height:1.2}
+@keyframes hoch{from{transform:translateY(40%)}to{transform:none}}
+.blattlabel{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:3px 0 -4px}
+.wahl{display:flex;align-items:center;gap:10px;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:13px;padding:10px 12px;cursor:pointer;text-align:left;width:100%}
+.wahl em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;background:var(--tint-2);color:var(--ink-2)}
+.wahl[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.wahl .zwei{display:flex;flex-direction:column;gap:1px;min-width:0}
+.wahl small{font-weight:400;font-size:12px;color:var(--ink-2);line-height:1.35}
+.notiz{font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:11px;padding:8px 10px}
+.notiz b{color:var(--ink)}
+.knopfreihe{display:flex;gap:8px}
+.werwahl{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.werwahl button{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;font:inherit;font-size:11.5px;font-weight:600;color:var(--ink-2);
+  background:none;border:2px solid transparent;border-radius:14px;padding:5px 8px;cursor:pointer}
+.werwahl button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink)}
+.eqliste{display:flex;flex-direction:column;gap:6px}
+.eqliste button{display:flex;align-items:center;gap:10px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:5px 6px 5px 7px;cursor:pointer;text-align:left}
+.eqliste button[aria-pressed="true"]{border-color:var(--ink);background:var(--tint);box-shadow:inset 0 0 0 1px var(--ink)}
+.eqliste .n{flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.25}
+.feld{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.feld input{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;background:var(--bg);color:var(--ink)}
+.tiere{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.tiere button{aspect-ratio:1;font-family:var(--emoji);font-size:24px;border:none;background:none;border-radius:12px;cursor:pointer;padding:0}
+.tiere button[aria-pressed="true"]{background:var(--ruhig-tint);box-shadow:inset 0 0 0 2px var(--ruhig)}
+.toggle{width:40px;height:24px;border-radius:999px;background:var(--tint-2);position:relative;flex:none;margin-left:auto}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--bg);box-shadow:0 1px 3px var(--schatten);transition:left .2s}
+[aria-pressed="true"]>.toggle{background:var(--frei)}
+[aria-pressed="true"]>.toggle::after{left:19px}
+.einwilligung{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:9px 10px;cursor:pointer}
+.einwilligung input{margin:2px 0 0;width:18px;height:18px;flex:none;accent-color:var(--ruhig)}
+.qr{background:var(--qr-hell);border-radius:16px;padding:14px;width:200px;max-width:100%;margin:0 auto;box-shadow:0 0 0 1px var(--line)}
+.qr svg{display:block;width:100%;height:auto}
+.qr rect{fill:var(--qr-dunkel)}
+.code{font-family:var(--font-data);font-size:22px;letter-spacing:.12em;text-align:center;background:var(--tint);border-radius:12px;padding:10px}
+.pinpunkte{display:flex;justify-content:center;gap:14px;margin:4px 0}
+.pinpunkte i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink)}
+.pinpunkte i.an{background:var(--ink)}
+.pinfeld{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 22px}
+.pinfeld button{font:inherit;font-size:21px;font-weight:600;color:var(--ink);background:var(--tint);border:none;border-radius:14px;padding:9px 0;cursor:pointer}
+.meldebild{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.meldebild p{margin:0;font-size:15px;color:var(--ink-2)}
+.sym.riesig{width:96px;height:96px;border-radius:28px}
+.sym.riesig span{font-size:58px}
+.wunschzeile{display:flex;align-items:center;gap:10px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:7px 9px;cursor:pointer;text-align:left;width:100%}
+.wunschzeile[aria-pressed="true"]{border-color:var(--fuell-2);box-shadow:inset 0 0 0 1px var(--fuell-2);background:var(--bald-tint)}
+.wunschzeile .n{flex:1;min-width:0}
+.wunschzeile .n b{display:block;font-size:13.5px}
+.wunschzeile .n small{font-size:11.5px;color:var(--ink-3)}
+.wunschzeile em{font-style:normal;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--frei-tint);color:var(--frei)}
+.vorschau{display:flex;align-items:center;gap:11px;background:var(--tint);border-radius:14px;padding:9px}
+.vorschau .grow{flex:1;min-width:0}
+.vorschau b{display:block;font-size:15px}
+.vorschau small{font-size:12px;color:var(--ink-2)}
+
+/* ---------- Text ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td.nein{color:var(--ink-3)}
+.tabelle{overflow-x:auto}
+.tabelle table{min-width:640px}
+.tabelle.schmal table{min-width:0}
+.empfehlung{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:20px;padding:18px 20px}
+.empfehlung h3{color:var(--kontrast-ink);margin-bottom:8px}
+.empfehlung p{margin:0 0 8px;color:var(--kontrast-ink-2);font-size:14px;max-width:80ch}
+.empfehlung p:last-child{margin:0}
+.empfehlung b{color:var(--kontrast-ink)}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0;max-width:80ch}
+.frage b{display:block}
+
+@media (prefers-reduced-motion: reduce){
+  .blatt.hoch,.toast[data-an]{animation:none}
+  .flug{animation:none;transform:translateX(-50%)}
+  .fuellung,.balken i,.figur,.toggle::after{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Familienmodus</h1>
+  <p class="lead">Kinder machen mit, auch ohne eigenes Handy. Ihr legt für jedes Kind ein Profil an.
+    Kleine Kinder tippen in einer eigenen <b>Kinderansicht</b>, die ohne Lesen auskommt, oder ihr
+    <b>tragt für sie ein</b>. Ihre Cleanies sparen sie auf einen <b>Wunsch</b>, oder ihr zahlt sie als
+    <b>Taschengeld</b> aus.</p>
+  <p class="lead">Alle Telefone lassen sich anfassen und hängen zusammen. Was ein Kind oben meldet, landet
+    unten bei Mama zum Bestätigen. Was Mama bestätigt oder für ein Kind einträgt, füllt oben das Sparglas.</p>
+
+  <!-- ================================================================ KINDER -->
+  <h2 id="kinder">Was das Kind sieht</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Sparglas</h3><span class="vorbild tipp">wie eine Spardose</span></div>
+      <div class="phone" id="ka"></div>
+      <p class="bu">Oben das Glas, das sich mit jedem Cleanie füllt, darauf der Wunsch. Darunter die Aufgaben
+        als <b>große Bilder</b>: Wer noch nicht lesen kann, erkennt sie am Symbol.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Weg zum Wunsch</h3><span class="vorbild">wie ein Brettspiel</span></div>
+      <div class="phone" id="kb"></div>
+      <p class="bu">Jede erledigte Aufgabe bringt das Tier ein Feld weiter, oben wartet der Wunsch. Am meisten
+        Spiel, aber der Weg braucht Platz und die Aufgaben rutschen nach unten.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Liste</h3><span class="vorbild">wie die App der Großen</span></div>
+      <div class="phone" id="kc"></div>
+      <p class="bu">Dieselbe Liste wie bei euch, nur mit den eigenen Aufgaben und einem Balken zum Wunsch.
+        Passt für Kinder, die schon gut lesen, etwa ab 9 oder 10.</p>
+    </div>
+  </div>
+  <p class="gemeinsam">In allen drei Varianten wechselt ihr oben zwischen den Kindern. Das <b>Schloss</b> führt
+    nur mit eurer Eltern-PIN zurück. So bestätigt auf eurem Handy oder dem Familien-Tablet niemand seine eigene
+    Aufgabe.</p>
+
+  <!-- ================================================================ ELTERN -->
+  <h2 id="eltern-bereich">Was ihr als Eltern seht</h2>
+  <div class="reihe paar">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Mamas Handy</h3><span class="vorbild">die normale App</span></div>
+      <div class="phone" id="eltern"></div>
+    </div>
+    <div class="spalte">
+      <h3>So probierst du es</h3>
+      <div class="tabelle schmal"><table>
+        <tr><th style="width:32%">Schritt</th><th>Was passiert</th></tr>
+        <tr><td><b>1 · Kind meldet</b></td><td>Oben in einer Kinderansicht „Zimmer aufräumen“ antippen und
+          „Ja, fertig!“. Auf Mamas Start erscheint die Karte zum Bestätigen.</td></tr>
+        <tr><td><b>2 · Bestätigen</b></td><td>„Bestätigen“ tippen. Oben füllt sich das Glas, die Aufgabe ist geschafft.
+          Bei „Rückfrage“ sieht das Kind, dass es noch mal schauen soll.</td></tr>
+        <tr><td><b>3 · Für ein Kind eintragen</b></td><td>Das Plus unten, dann „Lena“ und eine Aufgabe. Ihr habt es
+          gesehen, deshalb zählt es sofort.</td></tr>
+        <tr><td><b>4 · Wunsch einlösen</b></td><td>Ist ein Glas voll, tippt das Kind auf seinen Wunsch. Ihr sagt Ja,
+          die Cleanies werden abgebucht.</td></tr>
+        <tr><td><b>5 · Kind anlegen</b></td><td>Unter „Wir“: Vorname, Tier, Stufe, Einwilligung. Mit eigenem Gerät
+          gibt es einen QR-Code statt Google.</td></tr>
+        <tr><td><b>6 · Taschengeld</b></td><td>Unter „Wir“ Cleanies auszahlen. Das Geld gebt ihr selbst, die App
+          bucht es ab.</td></tr>
+        <tr><td><b>7 · Für wen</b></td><td>Unter „Quests“ sagt das Schild, wer eine Quest sieht. Antippen ändert es
+          sofort, wie bei Räumen und Bildern.</td></tr>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ================================================================ RECHTE -->
+  <h2>Wer darf was</h2>
+  <p class="lead">Ein Kind bekommt eine von drei Stufen. Ihr könnt sie jederzeit ändern, wenn es älter wird.</p>
+  <div class="tabelle"><table>
+    <tr><th style="width:15%"></th><th>Erwachsene</th><th>Kind ohne Handy</th><th>Kind mit eigenem Gerät</th><th>Jugendliche</th></tr>
+    <tr><td><b>Anmeldung</b></td><td>Google</td><td>keine, nur ein Profil</td><td>QR-Code von euch, ohne Google</td><td>eigenes Google-Konto, wie heute</td></tr>
+    <tr><td><b>Ansicht</b></td><td>normale App</td><td>Kinderansicht auf eurem Handy oder Tablet</td><td>Kinderansicht</td><td>normale App</td></tr>
+    <tr><td><b>Melden</b></td><td>ja</td><td>ihr tragt ein, oder in der Kinderansicht</td><td>ja</td><td>ja</td></tr>
+    <tr><td><b>Bestätigen</b></td><td>ja</td><td class="nein">nein</td><td>nur die Eltern, nicht die Geschwister</td><td>ja</td></tr>
+    <tr><td><b>Abstimmen</b></td><td>ja</td><td class="nein">nein</td><td class="nein">nein</td><td>ja</td></tr>
+    <tr><td><b>Belohnungen</b></td><td>Antrag</td><td>Wunsch, ihr löst ein</td><td>Wunsch an euch</td><td>Antrag wie alle</td></tr>
+    <tr><td><b>Verwalten</b></td><td>ja</td><td class="nein">nein</td><td class="nein">nein</td><td class="nein">nein</td></tr>
+    <tr><td><b>Werbung</b></td><td>nur freiwillig</td><td class="nein">nie</td><td class="nein">nie</td><td class="nein">nie</td></tr>
+  </table></div>
+  <p class="frage"><b>Vier Augen bleiben.</b> Wer Cleanies bekommt, bestätigt nie selbst. Tragt ihr für ein Kind
+    ein, seid ihr das zweite Paar Augen. Abstimmungen laufen nur unter Erwachsenen und Jugendlichen; ist nur ein
+    Erwachsener im Haushalt, gilt seine Entscheidung sofort.</p>
+
+  <!-- ================================================================ EMPFEHLUNG -->
+  <h2>Was ich empfehle</h2>
+  <div class="empfehlung">
+    <h3>Kinderansicht A · Sparglas, für Ältere C als Einstellung.</h3>
+    <p><b>Das Sparglas</b>, weil es ohne Lesen funktioniert und den Wunsch jeden Tag zeigt. Kinder sparen
+      lieber auf etwas, das sie sehen. Der Weg (B) ist schöner, schiebt aber die Aufgaben aus dem Bild.</p>
+    <p><b>Ab etwa 10 Jahren</b> stellt ihr ein Kind auf die Liste (C) um. Das kostet kaum Arbeit, weil die
+      Liste aus der Questliste entsteht, die es schon gibt.</p>
+    <p><b>So würde ich es bauen:</b> Ein Kind ist ein Mitglied ohne Google-Konto, mit Vorname und Tier,
+      ohne E-Mail und ohne Foto. Ein eigenes Gerät meldet sich über einen QR-Code an, der 10 Minuten gilt; die
+      Sitzung beendet ihr jederzeit unter „Wir“. Taschengeld ist eine Buchung wie eine Einlösung, die
+      Kontostände rechnet die App weiter aus allen Buchungen.</p>
+  </div>
+
+  <h3 style="margin-top:26px">Zu klären, bevor ich es einbaue</h3>
+  <p class="frage"><b>1. Welche Kinderansicht?</b> A, B oder C, oder wie empfohlen A mit C für Ältere.</p>
+  <p class="frage"><b>2. Taschengeld in Euro?</b> Ihr legt den Kurs fest (im Mockup 1 Cleanie = 10 Cent) und
+    zahlt selbst aus, die App bucht nur ab. Oder die Cleanies der Kinder sind nur für Wünsche da.</p>
+  <p class="frage"><b>3. Dürfen Kinder mit eigenem Gerät die Eltern bestätigen?</b> Ich empfehle ja, aber nicht die
+    Geschwister untereinander. Sonst findet ein Alleinerziehender niemanden, der bestätigt. Hat ein Haushalt nur
+    einen Erwachsenen und nur kleine Kinder, sollten seine eigenen Meldungen sofort zählen.</p>
+  <p class="frage"><b>4. Was ist kostenlos?</b> Laut Businessplan gehört der Familienmodus zu Plus. Mein Vorschlag:
+    14 Tage zum Ausprobieren, und Jugendliche mit eigenem Google-Konto bleiben wie heute kostenlos.</p>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Daten
+ * Eine Beispielfamilie: Mama, Papa, Lena (7, ohne Handy), Tom (11, eigenes Gerät). */
+const FARBE = { blau: "var(--k-blau)", gruen: "var(--k-gruen)", rot: "var(--k-rot)", gelb: "var(--k-gelb)", lila: "var(--k-lila)", grau: "var(--k-grau)" };
+
+const QUESTS = [
+  { id: "tisch",   name: "Tisch decken",              icon: "🍽️", farbe: "gelb",  cl: 2,  fuer: "kinder" },
+  { id: "zimmer",  name: "Zimmer aufräumen",          icon: "🧸", farbe: "rot",   cl: 3,  fuer: "kinder" },
+  { id: "spuel",   name: "Spülmaschine ausräumen",    icon: "🥣", farbe: "gelb",  cl: 2,  fuer: "alle" },
+  { id: "waesche", name: "Wäsche zusammenlegen",      icon: "🧺", farbe: "blau",  cl: 2,  fuer: "alle" },
+  { id: "muell",   name: "Müll rausbringen",          icon: "🗑️", farbe: "grau",  cl: 1,  fuer: "alle" },
+  { id: "blumen",  name: "Blumen gießen",             icon: "🪴", farbe: "gruen", cl: 1,  fuer: "kinder" },
+  { id: "katze",   name: "Katze füttern",             icon: "🐱", farbe: "lila",  cl: 1,  fuer: "kinder" },
+  { id: "schuhe",  name: "Schuhe aufräumen",          icon: "👟", farbe: "blau",  cl: 1,  fuer: "kinder" },
+  { id: "sauger",  name: "Staubsaugen ganze Wohnung", icon: "🧹", farbe: "gruen", cl: 10, fuer: "erwachsene" },
+  { id: "bad",     name: "Bad reinigen",              icon: "🛁", farbe: "blau",  cl: 4,  fuer: "erwachsene" },
+  { id: "fenster", name: "1 gr. Fenster putzen (beide Seiten)", icon: "🪟", farbe: "blau", cl: 10, fuer: "erwachsene" }
+];
+const WUENSCHE = [
+  { id: "tablet", name: "30 Min. Tablet",           icon: "📱", cl: 8 },
+  { id: "essen",  name: "Lieblingsessen aussuchen", icon: "🍝", cl: 12 },
+  { id: "eis",    name: "Eis essen gehen",          icon: "🍦", cl: 20 },
+  { id: "freund", name: "Freund übernachtet",       icon: "🏕️", cl: 30 },
+  { id: "kino",   name: "Kino mit Papa",            icon: "🎬", cl: 40 }
+];
+const GROSSE = [["Film / Serie aussuchen", 3, "🎬"], ["Massage eine Region", 3, "💆"], ["Lieferdienst bestimmen", 2, "🍕"], ["Ausschlafen am Wochenende", 5, "🛌"]];
+const TIERE = "🦊 🐼 🐰 🦄 🐯 🐸 🐨 🦁 🐙 🐝 🐢 🐧".split(" ");
+const STUFEN = {
+  ohne:   { name: "Ohne Handy",     kurz: "ohne Handy",      text: "Ihr tragt ein. Die Kinderansicht läuft auf eurem Handy oder dem Familien-Tablet." },
+  geraet: { name: "Eigenes Gerät",  kurz: "eigenes Gerät",   text: "Meldet selbst in der Kinderansicht. Anmeldung per QR-Code, ohne Google." },
+  gross:  { name: "Wie die Großen", kurz: "Google-Konto",    text: "Normale App mit eigenem Google-Konto. Meldet, bestätigt und stimmt mit ab." }
+};
+const FUER = { alle: "Alle", kinder: "Kinder", erwachsene: "Erwachsene" };
+const NAECHSTES_FUER = { alle: "kinder", kinder: "erwachsene", erwachsene: "alle" };
+const ZLABEL = { wartet: "⏳ wartet", bestaetigt: "✓ geschafft", rueckfrage: "❓ nochmal?" };
+
+const S = {
+  kind: "lena",
+  tab: "start",
+  kurs: 10,                       // Cent je Cleanie
+  kinder: [
+    { id: "lena", name: "Lena", alter: 7,  tier: "🦊", stufe: "ohne",   konto: 12, wunsch: "eis",  taschengeld: true, farbe: "gelb" },
+    { id: "tom",  name: "Tom",  alter: 11, tier: "🐼", stufe: "geraet", konto: 31, wunsch: "kino", taschengeld: true, farbe: "gruen" }
+  ],
+  meldungen: [{ id: "m1", kind: "tom", quest: "muell", status: "wartet", zeit: "vor 5 Min." }],
+  erwachsene: [{ id: "e1", wer: "Papa", quest: "sauger", zeit: "vor 1 Std." }],
+  einloesungen: [],
+  verlauf: [
+    { text: "Lena · Blumen gießen · Papa hat bestätigt", n: 1 },
+    { text: "Tom · 2,00 € Taschengeld ausgezahlt", n: -20 },
+    { text: "Tom · Tisch decken · du hast bestätigt", n: 2 }
+  ],
+  jubel: null,
+  zaehler: 1
+};
+
+/* ---------------------------------------------------------------- Helfer */
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const kindVon = (id) => S.kinder.find((k) => k.id === id);
+const questVon = (id) => QUESTS.find((q) => q.id === id);
+const wunschVon = (id) => WUENSCHE.find((w) => w.id === id);
+const aktivesKind = () => kindVon(S.kind);
+const kinderQuests = () => QUESTS.filter((q) => q.fuer !== "erwachsene");
+const euro = (cl) => (cl * S.kurs / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+const gen = (n) => /[sßxz]$/i.test(n) ? n + "’" : n + "s";
+const neueId = () => "x" + (++S.zaehler);
+const stern = '<i class="stern" aria-hidden="true"></i>';
+const sym = (q, extra = "") => `<span class="sym ${extra}" style="--t:${FARBE[q.farbe] || FARBE.gelb}"><span>${q.icon}</span></span>`;
+const tierHtml = (k, extra = "") => `<i class="tier ${extra}" style="--t:${FARBE[k.farbe]}">${k.tier}</i>`;
+const anteil = (k) => Math.round(Math.min(1, k.konto / wunschVon(k.wunsch).cl) * 100) + "%";
+
+/** Der Stand einer Aufgabe für ein Kind, aus seiner letzten Meldung dazu. */
+function zustand(kind, quest) {
+  for (let i = S.meldungen.length - 1; i >= 0; i--) {
+    const m = S.meldungen[i];
+    if (m.kind === kind && m.quest === quest) return m.status;
+  }
+  return "offen";
+}
+
+/* ---------------------------------------------------------------- Kinderansicht */
+function kidKopf() {
+  const wahl = S.kinder.filter((k) => k.stufe !== "gross");
+  return `<div class="kidkopf"><span class="was">Kinderansicht</span>
+    <div class="tierwahl">${wahl.map((k) => `<button data-kindwahl="${k.id}" aria-pressed="${k.id === S.kind}" aria-label="${esc(k.name)}">${k.tier}</button>`).join("")}</div>
+    <button class="knopf" data-schloss aria-label="Zurück zu den Eltern">🔒</button></div>`;
+}
+
+const leereAufgaben = '<div class="leer">Gerade keine Aufgaben. Mama oder Papa geben dir welche.</div>';
+
+function kidA(k) {
+  const w = wunschVon(k.wunsch);
+  const rest = Math.max(0, w.cl - k.konto);
+  const liste = kinderQuests();
+  return `${kidKopf()}
+  <div class="inhalt">
+    <div class="hallo">${tierHtml(k, "gross")}
+      <span><b>Hallo ${esc(k.name)}!</b><small>Du hast <span data-konto>${k.konto}</span> Cleanies</small></span></div>
+    <button class="sparkarte ${rest ? "" : "voll"}" data-wunschblatt>
+      <span class="glaswrap"><span class="deckel"></span>
+        <span class="glas"><span class="fuellung" data-h="${anteil(k)}"></span><span class="etikett">${w.icon}</span></span></span>
+      <span class="text"><small>Dein Wunsch</small><b>${esc(w.name)}</b>
+        <span class="zahl">${Math.min(k.konto, w.cl)}<small> von ${w.cl}</small></span>
+        <span class="rest">${rest ? `Noch ${rest} Cleanies!` : "Du kannst ihn einlösen!"}</span></span>
+    </button>
+    <p class="kidlabel">Heute für dich</p>
+    ${liste.length ? `<div class="kacheln">${liste.map((q) => {
+      const z = zustand(k.id, q.id);
+      return `<button class="kk" data-kachel="${q.id}" data-zustand="${z}">
+        ${z !== "offen" ? `<span class="zmarke">${ZLABEL[z]}</span>` : ""}
+        ${sym(q)}<b>${esc(q.name)}</b><span class="lohn">+${q.cl}${stern}</span></button>`;
+    }).join("")}</div>` : leereAufgaben}
+  </div>`;
+}
+
+/* Der Weg: neun Steine in drei Reihen hin und her, oben der Wunsch. Gerechnet in
+ * einem 294 × 240 großen Feld, gesetzt in Prozent, damit er mit dem Telefon mitwächst. */
+const STEINE = 9;
+const WEG = [[52, 210], [147, 218], [242, 206], [240, 146], [147, 138], [54, 150], [56, 86], [150, 78], [240, 90], [147, 32]];
+const lage = ([x, y]) => `left:${(x / 294 * 100).toFixed(2)}%;top:${(y / 240 * 100).toFixed(2)}%`;
+
+function kidB(k) {
+  const w = wunschVon(k.wunsch);
+  const rest = Math.max(0, w.cl - k.konto);
+  const schritt = Math.min(STEINE, Math.floor(STEINE * Math.min(1, k.konto / w.cl)));
+  const liste = kinderQuests();
+  return `${kidKopf()}
+  <div class="inhalt">
+    <div class="pfadkopf">${tierHtml(k)}<b>${esc(k.name)}</b><span class="konto"><span data-konto>${k.konto}</span>${stern}</span></div>
+    <button class="pfadkarte" data-wunschblatt aria-label="Dein Wunsch: ${esc(w.name)}">
+      <svg viewBox="0 0 294 240" preserveAspectRatio="none" aria-hidden="true">
+        <polyline class="linie" vector-effect="non-scaling-stroke" points="${WEG.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")}"/></svg>
+      ${WEG.slice(0, STEINE).map((p, i) => `<span class="stein ${i < schritt ? "voll" : ""}" style="${lage(p)}"></span>`).join("")}
+      <span class="schatz ${rest ? "" : "da"}" style="${lage(WEG[STEINE])}">${w.icon}</span>
+      <span class="figur" style="${lage(WEG[schritt])}">${k.tier}</span>
+    </button>
+    <p class="pfadtext">${rest ? `Noch <b>${rest} Cleanies</b> bis: ${esc(w.name)}` : "<b>Angekommen!</b> Tipp aufs Ziel zum Einlösen."}</p>
+    ${liste.length ? `<div class="zeilen">${liste.map((q) => {
+      const z = zustand(k.id, q.id);
+      return `<button class="kz" data-kachel="${q.id}" data-zustand="${z}">${sym(q)}
+        <span class="n">${esc(q.name)}</span>${z !== "offen" ? `<span class="zmarke">${ZLABEL[z]}</span>` : `<span class="lohn">+${q.cl}${stern}</span>`}</button>`;
+    }).join("")}</div>` : leereAufgaben}
+  </div>`;
+}
+
+function kidC(k) {
+  const w = wunschVon(k.wunsch);
+  const rest = Math.max(0, w.cl - k.konto);
+  const liste = kinderQuests();
+  return `${kidKopf()}
+  <div class="inhalt">
+    <div class="pfadkopf">${tierHtml(k)}<b>${esc(k.name)}</b><span class="konto"><span data-konto>${k.konto}</span>${stern}</span></div>
+    <button class="wunschbalken" data-wunschblatt>
+      <span class="oben"><span>${w.icon}</span><b>${esc(w.name)}</b><span>${Math.min(k.konto, w.cl)} / ${w.cl}</span></span>
+      <span class="balken"><i data-h="${anteil(k)}"></i></span>
+      <small>${rest ? `Noch ${rest} Cleanies` : "Du kannst ihn einlösen"}</small>
+    </button>
+    <p class="plabel">Deine Aufgaben</p>
+    ${liste.length ? liste.map((q) => {
+      const z = zustand(k.id, q.id);
+      return `<button class="lz" data-kachel="${q.id}" data-zustand="${z}">${sym(q)}
+        <span class="n"><b>${esc(q.name)}</b><small>${q.cl} ${q.cl === 1 ? "Cleanie" : "Cleanies"}</small></span>
+        ${z === "offen" ? '<span class="tun">Fertig</span>' : `<span class="zmarke">${ZLABEL[z]}</span>`}</button>`;
+    }).join("") : leereAufgaben}
+    <p class="plabel">Deine Wünsche</p>
+    ${WUENSCHE.map((x) => `<button class="lz" data-wunsch="${x.id}" data-ziel="${x.id === k.wunsch ? "ja" : "nein"}">
+      <span class="sym" style="--t:var(--k-gelb)"><span>${x.icon}</span></span>
+      <span class="n"><b>${esc(x.name)}</b><small>${x.cl} Cleanies</small></span>
+      ${x.id === k.wunsch ? '<span class="zmarke">🎯 dein Ziel</span>' : ""}</button>`).join("")}
+  </div>`;
+}
+
+/* ---------------------------------------------------------------- Elternhandy */
+function eltern() {
+  const t = S.tab;
+  const kopf = {
+    start: ["Hallo Mama", `Dein Konto: 24 Cleanies · ${S.kinder.length} ${S.kinder.length === 1 ? "Kind" : "Kinder"}`],
+    quests: ["Quests", "Das Schild sagt, wer sie sieht"],
+    belohnung: ["Belohnungen", "Wünsche der Kinder und eure"],
+    wir: ["Wir", ["Mama", "Papa", ...S.kinder.map((k) => k.name)].map(esc).join(" · ")]
+  }[t];
+  const inhalt = { start: elternStart, quests: elternQuests, belohnung: elternBelohnung, wir: elternWir }[t]();
+  const tab = (id, zeichen, name) => `<button data-tab="${id}" ${S.tab === id ? "data-an" : ""}><b>${zeichen}</b>${name}</button>`;
+  return `<div class="kopf"><div><div class="titel">${kopf[0]}</div><div class="sub">${kopf[1]}</div></div></div>
+    <div class="inhalt">${inhalt}</div>
+    <nav class="leiste">${tab("start", "⌂", "Start")}${tab("quests", "🧹", "Quests")}
+      <button data-plus><span class="plus">+</span>Erledigt</button>
+      ${tab("belohnung", "🎁", "Belohnung")}${tab("wir", "≡", "Wir")}</nav>`;
+}
+
+function elternStart() {
+  const karten = [];
+  for (const e of S.einloesungen) {
+    const k = kindVon(e.kind), w = wunschVon(e.wunsch);
+    karten.push(`<div class="karte vonkind" data-karte="${e.id}">
+      <div class="wer">${tierHtml(k)}<span class="grow"><b>${esc(k.name)}</b> möchte einlösen<small>gerade eben</small></span><span class="chip kind">Kind</span></div>
+      <div class="was"><span class="sym" style="--t:var(--k-gelb)"><span>${w.icon}</span></span><b>${esc(w.name)}</b><span class="wert"><b>${w.cl}</b></span></div>
+      <div class="knoepfe"><button class="kn ja" data-einloesung-ja="${e.id}">Ja, einlösen</button><button class="kn" data-einloesung-spaeter="${e.id}">Später</button></div></div>`);
+  }
+  for (const m of S.meldungen.filter((m) => m.status === "wartet")) {
+    const k = kindVon(m.kind), q = questVon(m.quest);
+    karten.push(`<div class="karte vonkind" data-karte="${m.id}">
+      <div class="wer">${tierHtml(k)}<span class="grow"><b>${esc(k.name)}</b> meldet<small>${m.zeit}</small></span><span class="chip kind">Kind</span></div>
+      <div class="was">${sym(q)}<b>${esc(q.name)}</b><span class="wert"><b>${q.cl}</b></span></div>
+      <div class="knoepfe"><button class="kn ja" data-bestaetigen="${m.id}">Bestätigen</button><button class="kn" data-rueckfrage="${m.id}">Rückfrage</button></div></div>`);
+  }
+  for (const e of S.erwachsene) {
+    const q = questVon(e.quest);
+    karten.push(`<div class="karte" data-karte="${e.id}">
+      <div class="wer"><i class="tier ini" style="--t:var(--k-blau)">P</i><span class="grow"><b>${e.wer}</b> meldet<small>${e.zeit}</small></span></div>
+      <div class="was">${sym(q)}<b>${esc(q.name)}</b><span class="wert"><b>${q.cl}</b></span></div>
+      <div class="knoepfe"><button class="kn ja" data-bestaetigen-e="${e.id}">Bestätigen</button><button class="kn" data-bestaetigen-e="${e.id}" data-nur-weg>Rückfrage</button></div></div>`);
+  }
+  return `<p class="plabel">Eure Kinder</p>
+    <div class="kinderreihe">${S.kinder.map((k) => {
+      const w = wunschVon(k.wunsch);
+      return `<button class="kindkarte" data-kindmenue="${k.id}">
+        <span class="oben">${tierHtml(k)}<span><b>${esc(k.name)}</b><small>${STUFEN[k.stufe].kurz}</small></span></span>
+        <span class="stand" data-stand="${k.id}">${k.konto}${stern}</span>
+        <span class="minibalken"><i style="width:${anteil(k)}"></i></span>
+        <span class="ziel">${w.icon} ${esc(w.name)}</span></button>`;
+    }).join("")}</div>
+    <p class="plabel">Zu bestätigen · ${karten.length}</p>
+    ${karten.join("") || '<div class="leer">Nichts offen. Alle sind auf dem Laufenden.</div>'}`;
+}
+
+function elternQuests() {
+  return `<div class="hinweis">Tippe auf das Schild, um zu ändern, wer eine Quest sieht. Das gilt sofort für alle.</div>
+    ${QUESTS.map((q) => `<div class="rowlink" data-quest="${q.id}">${sym(q)}
+      <span class="grow"><span class="t">${esc(q.name)}</span></span>
+      <button class="fuer" data-fuer="${q.id}" data-wert="${q.fuer}" aria-label="Sichtbar für: ${FUER[q.fuer]}">${FUER[q.fuer]}</button>
+      <span class="wert"><b>${q.cl}</b></span></div>`).join("")}`;
+}
+
+function elternBelohnung() {
+  return `<p class="plabel">Wünsche der Kinder <span class="chip kind">Kinder</span></p>
+    ${WUENSCHE.map((w) => `<div class="rowlink"><span class="sym" style="--t:var(--k-gelb)"><span>${w.icon}</span></span>
+      <span class="grow"><span class="t">${esc(w.name)}</span>
+        <span class="m">${S.kinder.filter((k) => k.wunsch === w.id).map((k) => `Ziel von ${esc(k.name)}`).join(", ") || "&nbsp;"}</span></span>
+      <span class="wert"><b>${w.cl}</b></span></div>`).join("")}
+    <p class="plabel">Für die Großen</p>
+    ${GROSSE.map(([n, cl, icon]) => `<div class="rowlink"><span class="sym" style="--t:var(--k-rot)"><span>${icon}</span></span>
+      <span class="grow"><span class="t">${n}</span></span><span class="wert"><b>${cl}</b></span></div>`).join("")}
+    <div class="notiz">Neue Wünsche schlagt ihr wie heute über das Plus vor. Darüber stimmen nur die Erwachsenen ab.</div>`;
+}
+
+function elternWir() {
+  const kinder = S.kinder.map((k) => `<button class="rowlink" data-kindmenue="${k.id}">${tierHtml(k)}
+      <span class="grow"><span class="t">${esc(k.name)}</span>
+        <span class="m">${k.alter ? `${k.alter} Jahre · ` : ""}${STUFEN[k.stufe].name}</span></span><span class="pfeil">›</span></button>`).join("");
+  const tg = S.kinder.filter((k) => k.taschengeld);
+  return `<p class="plabel">Familie <span class="chip plus">Plus</span></p>
+    <div class="rowlink"><i class="tier ini" style="--t:var(--k-rot)">M</i><span class="grow"><span class="t">Mama</span><span class="m">Du · verwaltet</span></span></div>
+    <div class="rowlink"><i class="tier ini" style="--t:var(--k-blau)">P</i><span class="grow"><span class="t">Papa</span><span class="m">verwaltet</span></span></div>
+    ${kinder}
+    <button class="knopf-gross" data-kind-neu>+ Kind hinzufügen</button>
+    <p class="plabel">Taschengeld</p>
+    <div class="notiz">1 Cleanie = <b>${S.kurs} Cent</b>. Den Kurs ändert ihr gemeinsam, wie einen Cleanies-Wert.</div>
+    ${tg.length ? tg.map((k) => `<div class="rowlink">${tierHtml(k)}
+      <span class="grow"><span class="t">${esc(k.name)}</span><span class="m" data-tg-stand="${k.id}">${k.konto} Cleanies = ${euro(k.konto)}</span></span>
+      <button class="klein" data-auszahlen="${k.id}">Auszahlen</button></div>`).join("") : '<div class="leer">Bei keinem Kind eingeschaltet.</div>'}
+    <p class="plabel">Zuletzt</p>
+    <div>${S.verlauf.slice(0, 4).map((v) => `<div class="vzeile"><span>${esc(v.text)}</span>
+      <b class="${v.n > 0 ? "plus" : "minus"}">${v.n > 0 ? "+" : "−"}${Math.abs(v.n)}</b></div>`).join("")}</div>`;
+}
+
+/* ---------------------------------------------------------------- Zeichnen */
+const KINDERTELEFONE = { ka: kidA, kb: kidB, kc: kidC };
+const letzteHoehe = {};
+
+function zeichne(id) {
+  const t = document.getElementById(id);
+  const schirm = t.querySelector(".schirm");
+  const alt = schirm.querySelector(".inhalt");
+  const oben = alt ? alt.scrollTop : 0;
+  const k = aktivesKind();
+  schirm.innerHTML = id === "eltern" ? eltern() : KINDERTELEFONE[id](k);
+  schirm.querySelector(".inhalt").scrollTop = oben;
+  // Glas und Balken ziehen weich nach, solange dasselbe Kind zu sehen ist.
+  for (const el of schirm.querySelectorAll("[data-h]")) {
+    const schluessel = id + ":" + k.id;
+    const vorher = letzteHoehe[schluessel];
+    if (vorher !== undefined && vorher !== el.dataset.h) {
+      el.style.setProperty("--h", vorher);
+      requestAnimationFrame(() => requestAnimationFrame(() => el.style.setProperty("--h", el.dataset.h)));
+    } else el.style.setProperty("--h", el.dataset.h);
+    letzteHoehe[schluessel] = el.dataset.h;
+  }
+  if (id !== "eltern" && S.jubel && S.jubel.kind === k.id) {
+    const f = document.createElement("span");
+    f.className = "flug";
+    f.innerHTML = `+${S.jubel.n}${stern}`;
+    t.appendChild(f);
+    setTimeout(() => f.remove(), 1400);
+  }
+}
+
+function allesNeu() {
+  for (const id of Object.keys(KINDERTELEFONE)) zeichne(id);
+  zeichne("eltern");
+  S.jubel = null;
+}
+
+/* ---------------------------------------------------------------- Blätter */
+function blattAuf(t, html) {
+  const s = t.querySelector(".blatt-schleier");
+  const offen = s.hasAttribute("data-auf") && s.querySelector(".blatt");
+  if (offen) {
+    const oben = offen.scrollTop;
+    offen.innerHTML = `<div class="griff"></div>${html}`;
+    offen.scrollTop = oben;
+    return;
+  }
+  s.innerHTML = `<div class="blatt hoch" role="dialog"><div class="griff"></div>${html}</div>`;
+  s.setAttribute("data-auf", "");
+  t.querySelector(".toast").removeAttribute("data-an");
+}
+
+let eintrag = null, neu = null, auszahlung = null, pin = "";
+function zu(t) {
+  const s = t.querySelector(".blatt-schleier");
+  s.removeAttribute("data-auf");
+  s.innerHTML = "";
+  eintrag = neu = auszahlung = null;
+  pin = "";
+}
+
+function toast(t, text) {
+  const e = t.querySelector(".toast");
+  e.textContent = text; e.removeAttribute("data-an"); void e.offsetWidth; e.setAttribute("data-an", "");
+  clearTimeout(e._uhr); e._uhr = setTimeout(() => e.removeAttribute("data-an"), 2800);
+}
+
+function blattMelden(t, q) {
+  blattAuf(t, `<div class="meldebild">${sym(q, "riesig")}<h5>${esc(q.name)}</h5><p>Hast du das geschafft?</p></div>
+    <div class="notiz">Du bekommst <b>${q.cl} ${q.cl === 1 ? "Cleanie" : "Cleanies"}</b>, sobald Mama oder Papa es gesehen haben.</div>
+    <div class="knopfreihe"><button class="knopf-gross" data-zu>Noch nicht</button>
+      <button class="knopf-gross rot" data-fertig="${q.id}">Ja, fertig!</button></div>`);
+}
+
+function blattWunsch(t) {
+  const k = aktivesKind();
+  const w = wunschVon(k.wunsch);
+  const gefragt = S.einloesungen.some((e) => e.kind === k.id);
+  blattAuf(t, `<h5>Worauf sparst du?</h5>
+    ${WUENSCHE.map((x) => `<button class="wunschzeile" data-wunsch="${x.id}" aria-pressed="${x.id === k.wunsch}">
+      <span class="sym" style="--t:var(--k-gelb)"><span>${x.icon}</span></span>
+      <span class="n"><b>${esc(x.name)}</b><small>${x.cl} Cleanies</small></span>
+      ${k.konto >= x.cl ? "<em>geht schon!</em>" : ""}</button>`).join("")}
+    ${gefragt ? '<div class="notiz">Mama oder Papa schauen schon nach deinem Wunsch.</div>'
+      : k.konto >= w.cl ? `<button class="knopf-gross rot" data-einloesen>${esc(w.name)} einlösen</button>`
+      : '<div class="notiz">Die Wünsche legen Mama und Papa fest. Einlösen geht, sobald das Glas voll ist.</div>'}`);
+}
+
+function blattPin(t) {
+  blattAuf(t, `<h5>Zurück zu den Eltern</h5>
+    <p class="blattlabel" style="text-align:center">Eltern-PIN</p>
+    <div class="pinpunkte">${[0, 1, 2, 3].map((i) => `<i class="${i < pin.length ? "an" : ""}"></i>`).join("")}</div>
+    <div class="pinfeld">${["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((z) => z === "" ? "<span></span>"
+      : `<button data-ziffer="${z}" aria-label="${z === "⌫" ? "Löschen" : z}">${z}</button>`).join("")}</div>
+    <div class="notiz">Ohne PIN bleibt die Kinderansicht offen und nichts lässt sich bestätigen. Im Mockup passt jede PIN.</div>`);
+}
+
+function blattEintragen(t) {
+  eintrag ||= { wer: "ich", quest: null };
+  const k = eintrag.wer === "ich" ? null : kindVon(eintrag.wer);
+  const liste = k ? kinderQuests() : QUESTS.filter((q) => q.fuer !== "kinder");
+  if (eintrag.quest && !liste.some((q) => q.id === eintrag.quest)) eintrag.quest = null;
+  const q = eintrag.quest && questVon(eintrag.quest);
+  blattAuf(t, `<h5>Erledigt eintragen</h5>
+    <p class="blattlabel">Wer hat's gemacht?</p>
+    <div class="werwahl">
+      <button data-wer="ich" aria-pressed="${!k}"><i class="tier ini" style="--t:var(--k-rot)">M</i>Ich</button>
+      ${S.kinder.map((x) => `<button data-wer="${x.id}" aria-pressed="${eintrag.wer === x.id}">${tierHtml(x)}${esc(x.name)}</button>`).join("")}
+    </div>
+    <p class="blattlabel">Was?</p>
+    <div class="eqliste">${liste.map((x) => `<button data-eq="${x.id}" aria-pressed="${eintrag.quest === x.id}">${sym(x)}
+      <span class="n">${esc(x.name)}</span><span class="wert"><b>${x.cl}</b></span></button>`).join("")}</div>
+    <div class="blattfuss"><div class="notiz">${k ? `Du hast es gesehen. Darum zählt es gleich als bestätigt, und <b>${esc(k.name)}</b> bekommt die Cleanies sofort.`
+      : "Bestätigen kann Papa, oder Tom, wenn Kinder mit eigenem Gerät die Eltern bestätigen dürfen (Frage 3)."}</div>
+    <button class="knopf-gross ${q ? "rot" : ""}" data-eintragen-ok ${q ? "" : "disabled"}>${!q ? "Erst eine Aufgabe wählen"
+      : k ? `Für ${esc(k.name)} eintragen · +${q.cl}` : "Zur Bestätigung senden"}</button></div>`);
+}
+
+function blattKind(t, k) {
+  blattAuf(t, `<div class="vorschau">${tierHtml(k, "gross")}<span class="grow"><b>${esc(k.name)}</b>
+      <small>${k.alter ? `${k.alter} Jahre · ` : ""}${STUFEN[k.stufe].name} · ${k.konto} Cleanies</small></span></div>
+    <button class="wahl" data-eintragen-fuer="${k.id}">Für ${esc(k.name)} eintragen</button>
+    ${k.taschengeld ? `<button class="wahl" data-auszahlen="${k.id}">Taschengeld auszahlen<em>${euro(k.konto)}</em></button>` : ""}
+    ${k.stufe === "geraet" ? `<button class="wahl" data-qr="${k.id}">Neues Gerät anmelden<em>QR-Code</em></button>` : ""}
+    ${k.stufe !== "gross" ? `<button class="wahl" data-kinderansicht="${k.id}">Kinderansicht öffnen<em>auf diesem Handy</em></button>` : ""}
+    <div class="notiz">Im echten Menü stehen hier auch Stufe, Tier, Name und Löschen. Löschen entfernt das Profil mit allen Buchungen des Kindes.</div>`);
+}
+
+function knopfAnlegen(t) {
+  const b = t.querySelector("[data-anlegen]");
+  if (!b) return;
+  const name = neu.name.trim();
+  const bereit = !!name && neu.einwilligung;
+  b.disabled = !bereit;
+  b.classList.toggle("ja", bereit);
+  b.textContent = bereit ? `${name} anlegen` : !name ? "Erst einen Vornamen eingeben" : "Erst die Einwilligung bestätigen";
+}
+
+function blattNeu(t) {
+  neu ||= { name: "", tier: "🐰", stufe: "ohne", taschengeld: true, einwilligung: false };
+  blattAuf(t, `<h5>Kind hinzufügen</h5>
+    <label class="feld" for="kindname">Vorname
+      <input id="kindname" data-neu-name maxlength="20" value="${esc(neu.name)}" placeholder="z. B. Mia" autocomplete="off"></label>
+    <p class="blattlabel">Ein Tier statt Foto</p>
+    <div class="tiere">${TIERE.map((x) => `<button data-tier="${x}" aria-pressed="${neu.tier === x}">${x}</button>`).join("")}</div>
+    <p class="blattlabel">Wie macht es mit?</p>
+    ${Object.entries(STUFEN).map(([id, s]) => `<button class="wahl" data-stufe="${id}" aria-pressed="${neu.stufe === id}">
+      <span class="zwei"><b>${s.name}</b><small>${s.text}</small></span></button>`).join("")}
+    <button class="wahl" data-tg aria-pressed="${neu.taschengeld}"><span class="zwei"><b>Taschengeld</b>
+      <small>Cleanies lassen sich in Euro auszahlen</small></span><span class="toggle"></span></button>
+    <div class="blattfuss"><label class="einwilligung"><input type="checkbox" id="einwilligung" data-einwilligung ${neu.einwilligung ? "checked" : ""}>
+      <span>Ich bin sorgeberechtigt und willige ein, dass Haus-Quest den Vornamen und die Cleanies dieses Kindes
+      speichert. Keine E-Mail, kein Foto, keine Werbung.</span></label>
+    <button class="knopf-gross" data-anlegen disabled></button></div>`);
+  knopfAnlegen(t);
+}
+
+/* Ein QR-Code zum Ansehen, nicht zum Scannen: drei Ecken wie echt, der Rest
+ * aus einem festen Zufall, damit er bei jedem Laden gleich aussieht. */
+function qrSvg(saat) {
+  const n = 25;
+  let x = [...saat].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const zufall = () => (x = (x * 1103515245 + 12345) >>> 0) / 4294967296;
+  const ecke = (r, c) => {
+    for (const [er, ec] of [[0, 0], [0, n - 7], [n - 7, 0]]) {
+      const a = r - er, b = c - ec;
+      if (a >= -1 && a <= 7 && b >= -1 && b <= 7) {
+        if (a < 0 || b < 0 || a > 6 || b > 6) return 0;
+        return (a === 0 || a === 6 || b === 0 || b === 6 || (a >= 2 && a <= 4 && b >= 2 && b <= 4)) ? 1 : 0;
+      }
+    }
+    return -1;
+  };
+  let felder = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const e = ecke(r, c);
+    if (e === 1 || (e === -1 && zufall() < 0.47)) felder += `<rect x="${c}" y="${r}" width="1.02" height="1.02"/>`;
+  }
+  return `<svg viewBox="0 0 ${n} ${n}" role="img" aria-label="QR-Code zum Anmelden">${felder}</svg>`;
+}
+
+function blattQR(t, k) {
+  blattAuf(t, `<h5>${esc(gen(k.name))} Gerät anmelden</h5>
+    <div class="qr">${qrSvg(k.id + k.name)}</div>
+    <div class="notiz">Auf ${esc(gen(k.name))} Gerät haus-quest.com öffnen, „Ich bin ein Kind“ tippen und diesen Code
+      scannen. Er gilt 10 Minuten. ${esc(k.name)} braucht kein Google-Konto und keine E-Mail.</div>
+    <button class="knopf-gross ja" data-zu>Fertig</button>`);
+}
+
+function blattEinladung(t, k) {
+  blattAuf(t, `<h5>Einladung für ${esc(k.name)}</h5>
+    <div class="code">HQ-4821</div>
+    <div class="notiz">${esc(k.name)} meldet sich wie ihr mit dem eigenen Google-Konto an und gibt diesen Code ein.
+      Danach meldet, bestätigt und stimmt ${esc(k.name)} mit ab, verwalten bleibt bei euch.</div>
+    <button class="knopf-gross ja" data-zu>Fertig</button>`);
+}
+
+function blattAuszahlen(t, k) {
+  auszahlung ||= { kind: k.id, betrag: k.konto };
+  const wahl = [...new Set([k.konto, 20, 10].filter((n) => n > 0 && n <= k.konto))];
+  blattAuf(t, `<h5>Taschengeld für ${esc(k.name)}</h5>
+    <div class="vorschau">${tierHtml(k, "gross")}<span class="grow"><b>${k.konto} Cleanies</b>
+      <small>= ${euro(k.konto)} bei ${S.kurs} Cent je Cleanie</small></span></div>
+    ${k.konto ? `<p class="blattlabel">Wie viel?</p>
+    ${wahl.map((n) => `<button class="wahl" data-betrag="${n}" aria-pressed="${auszahlung.betrag === n}">
+      ${n === k.konto ? "Alles" : `${n} Cleanies`}<em>${euro(n)}</em></button>`).join("")}
+    <div class="notiz">Das Geld gebt ihr ${esc(k.name)} selbst. Die App bucht die Cleanies ab, damit der Stand stimmt.</div>
+    <button class="knopf-gross ja" data-auszahlen-ok>${euro(auszahlung.betrag)} ausgezahlt</button>`
+    : `<div class="notiz">${esc(k.name)} hat gerade keine Cleanies.</div>`}`);
+}
+
+/* ---------------------------------------------------------------- Bedienen */
+function bedienen(t) {
+  t.addEventListener("input", (e) => {
+    if (e.target.matches("[data-neu-name]") && neu) { neu.name = e.target.value; knopfAnlegen(t); }
+  });
+  t.addEventListener("change", (e) => {
+    if (e.target.matches("[data-einwilligung]") && neu) { neu.einwilligung = e.target.checked; knopfAnlegen(t); }
+  });
+
+  t.addEventListener("click", (e) => {
+    if (e.target.classList.contains("blatt-schleier")) { zu(t); return; }
+    const z = e.target.closest("button");
+    if (!z || !t.contains(z) || z.disabled) return;
+    const d = z.dataset;
+
+    /* --- Kinderansicht --- */
+    if (d.kindwahl) { S.kind = d.kindwahl; allesNeu(); return; }
+    if ("schloss" in d) { pin = ""; blattPin(t); return; }
+    if (d.ziffer) {
+      pin = d.ziffer === "⌫" ? pin.slice(0, -1) : (pin + d.ziffer).slice(0, 4);
+      if (pin.length < 4) { blattPin(t); return; }
+      zu(t);
+      toast(t, "Elternansicht offen. Im Mockup steht sie weiter unten.");
+      return;
+    }
+    if (d.kachel) {
+      const q = questVon(d.kachel), z2 = zustand(S.kind, q.id);
+      if (z2 === "bestaetigt") toast(t, "Das hast du heute schon geschafft!");
+      else if (z2 === "wartet") toast(t, "Mama oder Papa schauen gleich.");
+      else blattMelden(t, q);
+      return;
+    }
+    if (d.fertig) {
+      const k = aktivesKind();
+      S.meldungen = S.meldungen.filter((m) => !(m.kind === k.id && m.quest === d.fertig && m.status === "rueckfrage"));
+      S.meldungen.push({ id: neueId(), kind: k.id, quest: d.fertig, status: "wartet", zeit: "gerade eben" });
+      zu(t); allesNeu();
+      toast(t, "Super! Mama oder Papa schauen gleich.");
+      return;
+    }
+    if ("wunschblatt" in d) { blattWunsch(t); return; }
+    if (d.wunsch) {
+      const k = aktivesKind();
+      k.wunsch = d.wunsch;
+      allesNeu();
+      if (z.closest(".blatt")) blattWunsch(t);
+      toast(t, `Neues Ziel: ${wunschVon(d.wunsch).name}`);
+      return;
+    }
+    if ("einloesen" in d) {
+      const k = aktivesKind();
+      S.einloesungen.push({ id: neueId(), kind: k.id, wunsch: k.wunsch });
+      zu(t); allesNeu();
+      toast(t, "Gefragt! Mama oder Papa sagen gleich Bescheid.");
+      return;
+    }
+    if ("zu" in d) { zu(t); return; }
+
+    /* --- Elternhandy: Start --- */
+    if (d.tab) { S.tab = d.tab; zeichne("eltern"); t.querySelector(".inhalt").scrollTop = 0; return; }
+    if (d.bestaetigen) {
+      const m = S.meldungen.find((x) => x.id === d.bestaetigen);
+      const k = kindVon(m.kind), q = questVon(m.quest);
+      m.status = "bestaetigt";
+      k.konto += q.cl;
+      S.verlauf.unshift({ text: `${k.name} · ${q.name} · du hast bestätigt`, n: q.cl });
+      S.jubel = { kind: k.id, n: q.cl };
+      allesNeu();
+      toast(t, `${k.name} bekommt ${q.cl} ${q.cl === 1 ? "Cleanie" : "Cleanies"}.`);
+      return;
+    }
+    if (d.rueckfrage) {
+      const m = S.meldungen.find((x) => x.id === d.rueckfrage);
+      m.status = "rueckfrage";
+      allesNeu();
+      toast(t, `${kindVon(m.kind).name} sieht: noch mal schauen.`);
+      return;
+    }
+    if (d.bestaetigenE) {
+      S.erwachsene = S.erwachsene.filter((x) => x.id !== d.bestaetigenE);
+      allesNeu();
+      toast(t, "nurWeg" in d ? "Papa sieht deine Rückfrage." : "Bestätigt. Papa bekommt die Cleanies.");
+      return;
+    }
+    if (d.einloesungJa) {
+      const ein = S.einloesungen.find((x) => x.id === d.einloesungJa);
+      const k = kindVon(ein.kind), w = wunschVon(ein.wunsch);
+      k.konto -= w.cl;
+      S.einloesungen = S.einloesungen.filter((x) => x !== ein);
+      S.verlauf.unshift({ text: `${k.name} · ${w.name} eingelöst`, n: -w.cl });
+      allesNeu();
+      toast(t, `Eingelöst. Viel Spaß, ${k.name}!`);
+      return;
+    }
+    if (d.einloesungSpaeter) {
+      const ein = S.einloesungen.find((x) => x.id === d.einloesungSpaeter);
+      S.einloesungen = S.einloesungen.filter((x) => x !== ein);
+      allesNeu();
+      toast(t, `${kindVon(ein.kind).name} sieht: später.`);
+      return;
+    }
+    if (d.kindmenue) { blattKind(t, kindVon(d.kindmenue)); return; }
+    if (d.kinderansicht) {
+      S.kind = d.kinderansicht;
+      zu(t); allesNeu();
+      document.getElementById("kinder").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    /* --- Elternhandy: Eintragen --- */
+    if ("plus" in d) { eintrag = null; blattEintragen(t); return; }
+    if (d.eintragenFuer) { eintrag = { wer: d.eintragenFuer, quest: null }; blattEintragen(t); return; }
+    if (d.wer) { eintrag.wer = d.wer; blattEintragen(t); return; }
+    if (d.eq) { eintrag.quest = d.eq; blattEintragen(t); return; }
+    if ("eintragenOk" in d) {
+      const q = questVon(eintrag.quest);
+      if (eintrag.wer === "ich") {
+        zu(t);
+        toast(t, "Gemeldet. Papa bestätigt.");
+        return;
+      }
+      const k = kindVon(eintrag.wer);
+      S.meldungen = S.meldungen.filter((m) => !(m.kind === k.id && m.quest === q.id && m.status !== "bestaetigt"));
+      S.meldungen.push({ id: neueId(), kind: k.id, quest: q.id, status: "bestaetigt", zeit: "gerade eben" });
+      k.konto += q.cl;
+      S.verlauf.unshift({ text: `${k.name} · ${q.name} · von dir eingetragen`, n: q.cl });
+      S.jubel = { kind: k.id, n: q.cl };
+      zu(t); allesNeu();
+      toast(t, `Eingetragen. ${k.name} hat jetzt ${k.konto} Cleanies.`);
+      return;
+    }
+
+    /* --- Elternhandy: Quests --- */
+    if (d.fuer) {
+      const q = questVon(d.fuer);
+      q.fuer = NAECHSTES_FUER[q.fuer];
+      allesNeu();
+      toast(t, `„${q.name}“ sehen jetzt: ${FUER[q.fuer]}.`);
+      return;
+    }
+
+    /* --- Elternhandy: Kind anlegen --- */
+    if ("kindNeu" in d) { neu = null; blattNeu(t); return; }
+    if (d.tier) { neu.tier = d.tier; blattNeu(t); return; }
+    if (d.stufe) { neu.stufe = d.stufe; blattNeu(t); return; }
+    if ("tg" in d) { neu.taschengeld = !neu.taschengeld; blattNeu(t); return; }
+    if ("anlegen" in d) {
+      const farben = ["lila", "blau", "rot", "gruen", "gelb"];
+      const k = { id: neueId(), name: neu.name.trim(), alter: null, tier: neu.tier, stufe: neu.stufe, konto: 0,
+        wunsch: "tablet", taschengeld: neu.taschengeld, farbe: farben[S.kinder.length % farben.length] };
+      S.kinder.push(k);
+      neu = null;
+      allesNeu();
+      if (k.stufe === "geraet") blattQR(t, k);
+      else if (k.stufe === "gross") blattEinladung(t, k);
+      else { zu(t); toast(t, `${k.name} ist da. Oben in der Kinderansicht kannst du ${k.name} antippen.`); }
+      return;
+    }
+    if (d.qr) { blattQR(t, kindVon(d.qr)); return; }
+
+    /* --- Elternhandy: Taschengeld --- */
+    if (d.auszahlen) { auszahlung = null; blattAuszahlen(t, kindVon(d.auszahlen)); return; }
+    if (d.betrag) { auszahlung.betrag = Number(d.betrag); blattAuszahlen(t, kindVon(auszahlung.kind)); return; }
+    if ("auszahlenOk" in d) {
+      const k = kindVon(auszahlung.kind), n = auszahlung.betrag;
+      k.konto -= n;
+      S.verlauf.unshift({ text: `${k.name} · ${euro(n)} Taschengeld ausgezahlt`, n: -n });
+      zu(t); allesNeu();
+      toast(t, `Gebucht. ${k.name} hat noch ${k.konto} Cleanies.`);
+    }
+  });
+}
+
+for (const id of [...Object.keys(KINDERTELEFONE), "eltern"]) {
+  const t = document.getElementById(id);
+  t.innerHTML = '<div class="schirm"></div><div class="toast" role="status"></div><div class="blatt-schleier"></div>';
+  bedienen(t);
+}
+allesNeu();
+</script>
+</body>
+</html>
