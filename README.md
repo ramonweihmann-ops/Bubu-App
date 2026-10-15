@@ -31,6 +31,8 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Hörprobe „Klang zum Jubel":** [`web/mockup-klang/`](./web/mockup-klang) — live unter
   `haus-quest.com/mockup-klang/`. Vier Klangfamilien in allen drei Cleanies-Phasen, aus
   derselben Datei, die in der App läuft.
+- **Mockup „Startseite neu gedacht":** [`web/mockup-start/`](./web/mockup-start) — live unter
+  `haus-quest.com/mockup-start/`. Vorher-Bild und drei Vorschläge zum Anfassen.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.

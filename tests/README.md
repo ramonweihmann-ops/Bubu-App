@@ -70,4 +70,13 @@ genau so, wie er es soll.
 | `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt bis zum Beenden |
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
+| `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |
+
+## Helfer, die nicht im Gesamtlauf stecken
+
+| Datei | Wofür |
+| --- | --- |
+| `voller-tag.sh` | Stellt einen vollen, realistischen Tag in der Dreier-WG nach — für Bilder und Messungen. Überschreibt die Testdaten. |
+| `start-messen.mjs` | Misst die Startseite an so einem Tag: Höhe in Bildschirmen, Blöcke, rote Elemente. |
+| `start-bild.mjs` | Nimmt das Vorher-Bild für `web/mockup-start/` auf. |

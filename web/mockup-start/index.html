@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haus-Quest – Mockup: Startseite neu gedacht</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --bald:#c47a00; --bald-tint:#fdf1dc;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:26px 16px 80px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0}
+.lead{color:var(--ink-2);margin:0 0 20px;max-width:68ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);
+  border-radius:999px;padding:2px 9px}
+.bu{font-size:13px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+.plus-minus{font-size:12.5px;margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.plus-minus li{padding-left:18px;position:relative;color:var(--ink-2)}
+.plus-minus li::before{position:absolute;left:0;font-weight:800}
+.plus-minus li.p::before{content:"+";color:var(--frei)}
+.plus-minus li.m::before{content:"–";color:var(--accent)}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:736px;background:var(--bg);border:9px solid var(--ink);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);display:flex;flex-direction:column;margin:0 auto}
+.schirm{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0}
+.kopf{flex:none;padding:14px 14px 6px;display:flex;align-items:center;gap:8px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.1}
+.kopf .sub{font-size:11.5px;color:var(--ink-3)}
+.kopf .ic{margin-left:auto;width:32px;height:32px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;font-size:14px;color:var(--ink-2);flex:none}
+.kopf .ic + .ic{margin-left:0}
+.inhalt{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.inhalt>*{flex-shrink:0}
+
+/* Die Leiste unten — mit dem Plus in der Mitte. */
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;border-top:1px solid var(--line);
+  padding:6px 4px 10px;background:var(--bg);position:relative}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;font-weight:600;color:var(--ink-3);position:relative}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1}
+.leiste .badge{position:absolute;top:-4px;right:16px;background:var(--accent);color:#fff;font-size:9px;font-weight:800;
+  border-radius:999px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 4px}
+.leiste .plus{width:48px;height:48px;border-radius:16px;background:var(--accent);color:#fff;font-size:26px;font-weight:300;
+  display:grid;place-items:center;margin:-22px auto 0;box-shadow:0 8px 18px -8px rgba(236,15,6,.7);cursor:pointer;border:none}
+.leiste .plus + small{font-size:9.5px;font-weight:600;color:var(--ink-2);text-align:center;display:block;margin-top:2px}
+
+/* Kontostand als eine Leiste: deiner groß, die anderen klein. */
+.konto{display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:18px;padding:10px 14px}
+.konto .ich{flex:1;min-width:0}
+.konto .zahl{font-family:var(--font-display);font-weight:800;font-size:32px;letter-spacing:-.04em;line-height:1}
+.konto .zahl i{font-style:normal;font-size:20px;color:#7fb4ff;margin-left:2px}
+.konto .unter{display:block;font-size:11px;color:#a9bad4;margin-top:2px}
+.konto .andere{display:flex;gap:6px}
+.konto .mini{display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(255,255,255,.08);border-radius:12px;padding:5px 8px}
+.konto .mini .av{font-size:16px;line-height:1}
+.konto .mini b{font-family:var(--font-data);font-size:12px}
+
+/* Was gerade läuft: schmale Pillen, wischbar. */
+.laeuft{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+.laeuft::-webkit-scrollbar{display:none}
+.pille{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;border-radius:999px;padding:6px 11px;white-space:nowrap}
+.pille i{font-style:normal;font-family:var(--font-data);font-size:10.5px;opacity:.75}
+.pille.aktion{background:var(--accent-tint);color:var(--accent)}
+.pille.event{background:var(--ruhig-tint);color:var(--ruhig)}
+.pille.urlaub{background:var(--frei-tint);color:var(--frei)}
+
+.abschnitt{display:flex;align-items:center;gap:8px;margin:4px 0 -4px}
+.abschnitt h4{margin:0;font-family:var(--font-display);font-size:15px;font-weight:800;letter-spacing:-.01em}
+.abschnitt .zahl{font-family:var(--font-data);font-size:11px;font-weight:700;background:var(--accent);color:#fff;border-radius:999px;padding:1px 7px}
+.abschnitt .rechts{margin-left:auto;font-size:12px;font-weight:600;color:var(--ruhig);cursor:pointer;background:none;border:none;font:inherit;font-size:12px}
+
+/* ---------- A: Heute-Liste ---------- */
+.liste{border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden}
+.z{position:relative;overflow:hidden;transition:height .28s ease, opacity .28s ease}
+.z .vorne{position:relative;z-index:1;display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg);
+  border-top:1px solid var(--line);transition:transform .2s ease;touch-action:pan-y;cursor:grab}
+.z:first-child .vorne{border-top:none}
+.z .hinten{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  font-size:12px;font-weight:700;color:#fff}
+.z .hinten .ja{color:#fff}
+.z[data-richtung="ja"] .hinten{background:var(--frei)}
+.z[data-richtung="nein"] .hinten{background:var(--ink);justify-content:flex-end}
+.punkt{width:8px;height:8px;border-radius:50%;flex:none}
+.punkt.rot{background:var(--accent)}
+.punkt.gelb{background:var(--bald)}
+.punkt.blau{background:var(--ruhig)}
+.punkt.grau{background:var(--ink-3)}
+.z .n{flex:1;min-width:0}
+.z .n b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.z .n i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.z .wert{font-family:var(--font-data);font-size:12px;font-weight:700;color:var(--ink);flex:none}
+.rund{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--bg);display:grid;place-items:center;
+  font-size:14px;cursor:pointer;flex:none;color:var(--ink-2);font-weight:700}
+.rund.ja{background:var(--frei-tint);border-color:var(--frei-tint);color:var(--frei)}
+.knopfchen{font:inherit;font-size:12px;font-weight:700;border-radius:999px;padding:6px 11px;border:none;cursor:pointer;flex:none}
+.knopfchen.rot{background:var(--accent);color:#fff}
+.knopfchen.navy{background:var(--ink);color:#fff}
+.knopfchen.hell{background:var(--tint-2);color:var(--ink)}
+.mehr{width:100%;font:inherit;font-size:12.5px;font-weight:600;color:var(--ruhig);background:var(--tint);border:none;
+  border-top:1px solid var(--line);padding:9px;cursor:pointer}
+.zusatz[hidden]{display:none}
+
+.zuklapp{border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.zuklapp > button{width:100%;font:inherit;display:flex;align-items:center;gap:10px;background:none;border:none;padding:11px 12px;cursor:pointer;color:inherit;text-align:left}
+.zuklapp .t{flex:1;font-size:13.5px;font-weight:700}
+.zuklapp .t i{font-style:normal;font-weight:400;color:var(--ink-3)}
+.zuklapp .pfeil{transition:transform .2s;color:var(--ink-3)}
+.zuklapp[data-offen] .pfeil{transform:rotate(180deg)}
+.zuklapp .drin{border-top:1px solid var(--line);padding:6px 12px 10px;display:none;font-size:12.5px}
+.zuklapp[data-offen] .drin{display:block}
+.zuklapp .drin div{display:flex;justify-content:space-between;padding:4px 0;color:var(--ink-2)}
+.zuklapp .drin div b{color:var(--ink);font-family:var(--font-data)}
+
+.kacheln2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kachel{border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:10px 11px;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.kachel .k{font-size:11px;color:var(--ink-3);font-weight:600}
+.kachel .v{font-family:var(--font-display);font-weight:800;font-size:15px}
+.kachel .v.rot{color:var(--accent)}
+.zuletzt{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);padding:0 2px}
+.zuletzt b{color:var(--ink)}
+.zuletzt a{margin-left:auto;color:var(--ruhig);font-weight:600;text-decoration:none;white-space:nowrap}
+
+/* ---------- B: Stapel ---------- */
+.stapel{position:relative;height:312px;margin-top:4px}
+.karte{position:absolute;inset:0;border-radius:22px;background:var(--bg);border:1px solid var(--line);
+  box-shadow:0 18px 30px -22px rgba(21,44,79,.55);padding:16px;display:flex;flex-direction:column;gap:8px;
+  transition:transform .32s cubic-bezier(.2,.9,.3,1), opacity .32s ease;touch-action:pan-y;user-select:none;cursor:grab}
+.karte[data-platz="1"]{transform:translateY(12px) scale(.955);opacity:.9;z-index:2}
+.karte[data-platz="2"]{transform:translateY(24px) scale(.91);opacity:.65;z-index:1}
+.karte[data-platz="0"]{z-index:3}
+.karte .oben{display:flex;align-items:center;gap:8px}
+.karte .art{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border-radius:999px;padding:3px 9px}
+.karte .art.melden{background:var(--frei-tint);color:var(--frei)}
+.karte .art.frage{background:var(--ruhig-tint);color:var(--ruhig)}
+.karte .art.vote{background:var(--tint-2);color:var(--ink-2)}
+.karte .art.plan{background:var(--accent-tint);color:var(--accent)}
+.karte .art.schuld{background:var(--bald-tint);color:var(--bald)}
+.karte .zaehler{margin-left:auto;font-family:var(--font-data);font-size:11px;color:var(--ink-3)}
+.karte .wer{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.karte .wer .av{width:30px;height:30px;border-radius:50%;background:var(--tint);display:grid;place-items:center;font-size:16px}
+.karte .was{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.15}
+.karte .betrag{font-family:var(--font-display);font-weight:800;font-size:34px;letter-spacing:-.03em;color:var(--frei);line-height:1}
+.karte .betrag.neutral{color:var(--ink)}
+.karte .notiz{font-size:13px;color:var(--ink-2);background:var(--tint);border-radius:12px;padding:8px 10px}
+.karte .knoepfe{margin-top:auto;display:flex;gap:8px}
+.karte .knoepfe button{flex:1;font:inherit;font-size:14px;font-weight:700;border-radius:14px;padding:12px;border:1px solid var(--line);cursor:pointer;background:var(--bg);color:var(--ink)}
+.karte .knoepfe button.ja{background:var(--ink);color:#fff;border-color:var(--ink)}
+.karte .wisch{text-align:center;font-size:10.5px;color:var(--ink-3)}
+.fertig{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;
+  border-radius:22px;background:var(--frei-tint);color:var(--frei)}
+.fertig[data-an]{display:flex;animation:auf .45s cubic-bezier(.2,.9,.3,1)}
+.fertig .gross{font-size:46px;line-height:1}
+.fertig b{font-family:var(--font-display);font-size:20px;color:var(--ink)}
+.fertig span{font-size:12.5px;color:var(--ink-2);max-width:24ch}
+.fertig button{margin-top:6px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ruhig);background:none;border:none;cursor:pointer}
+@keyframes auf{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+.fortschritt{display:flex;gap:3px}
+.fortschritt i{flex:1;height:3px;border-radius:999px;background:var(--tint-2);transition:background .3s}
+.fortschritt i[data-ok]{background:var(--frei)}
+.zeile{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);font-size:13px}
+.zeile b{flex:1;font-weight:700}
+.zeile i{font-style:normal;color:var(--ink-3);font-size:12px}
+
+/* ---------- C: Widgets ---------- */
+.raster{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.w{border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:3px;cursor:pointer;min-height:104px;border:1px solid var(--line);background:var(--bg);
+  transition:transform .15s}
+.w:active{transform:scale(.97)}
+.w.breit{grid-column:1/-1;min-height:0}
+.w .k{font-size:11.5px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.w .v{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;line-height:1.05}
+.w .s{font-size:11px;color:var(--ink-3);line-height:1.35}
+.w.navy{background:var(--ink);border-color:var(--ink);color:#fff}
+.w.navy .k,.w.navy .s{color:#a9bad4}
+.w.rot{background:var(--accent-tint);border-color:var(--accent-tint)}
+.w.rot .v{color:var(--accent)}
+.w.blau{background:var(--ruhig-tint);border-color:var(--ruhig-tint)}
+.w.blau .v{color:var(--ruhig)}
+.balken{display:flex;align-items:flex-end;gap:3px;height:30px;margin-top:auto}
+.balken i{flex:1;background:var(--ruhig);border-radius:3px;opacity:.75}
+.blatt-schleier{position:absolute;inset:0;background:rgba(21,44,79,.45);display:none;z-index:20;align-items:flex-end}
+.blatt-schleier[data-auf]{display:flex}
+.blatt{width:100%;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 14px 16px;display:flex;flex-direction:column;gap:8px;
+  max-height:78%;overflow-y:auto;animation:hoch .3s cubic-bezier(.2,.9,.3,1)}
+.blatt .griff{width:38px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 4px}
+.blatt h5{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800}
+@keyframes hoch{from{transform:translateY(40%)}to{transform:none}}
+
+/* ---------- Vorher ---------- */
+.vorher{height:718px;overflow-y:auto;background:#fff}
+.vorher img{display:block;width:100%;height:auto}
+.zahlen{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.zahlkarte{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px}
+.zahlkarte .gross{font-family:var(--font-display);font-weight:800;font-size:34px;letter-spacing:-.03em;line-height:1}
+.zahlkarte .gross.rot{color:var(--accent)}
+.zahlkarte span{display:block;font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.doppelt{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:13px;color:var(--ink-2)}
+.doppelt b{color:var(--ink)}
+.doppelt ul{margin:6px 0 0;padding-left:18px}
+.doppelt li{margin:3px 0}
+
+/* ---------- Zusatz: gern wiederkommen ---------- */
+.anreiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.anreiz .karte2{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.anreiz .karte2 .t{font-weight:800;font-family:var(--font-display);font-size:15px}
+.anreiz .karte2 .m{font-size:12px;color:var(--ink-2)}
+.ring{flex:none}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td.vb{font-family:var(--font-data);font-size:11.5px;color:var(--ruhig);white-space:nowrap}
+.tabelle{overflow-x:auto}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+.empfehlung{background:var(--ink);color:#fff;border-radius:20px;padding:18px 20px}
+.empfehlung h3{color:#fff;margin-bottom:6px}
+.empfehlung p{margin:0;color:#c9d6ea;font-size:14px}
+.empfehlung b{color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Die Startseite, neu gedacht</h1>
+  <p class="lead">
+    Die Startseite ist mit jeder neuen Funktion ein Stück länger geworden: jede hat ihren
+    eigenen Kasten mitgebracht, mit eigener roter Umrandung und eigenem Knopf. Einzeln war das
+    jedes Mal richtig — zusammen ist es zu viel. Hier stehen <b>drei Vorschläge</b>, wie sie
+    aussehen könnte, jeweils angelehnt an Apps, die das schon gut lösen. Alle drei zeigen
+    <b>denselben vollen Tag</b> wie das Vorher-Bild, und <b>alle drei passen auf einen
+    Bildschirm</b>.
+  </p>
+  <p class="lead">Die Telefone sind keine Bilder — man kann sie anfassen. Abhaken, wischen,
+    aufklappen: genau das, was sich „lebendig“ statt „statisch“ anfühlen soll, lässt sich nur so
+    beurteilen.</p>
+
+  <!-- ================================================================ VORHER -->
+  <h2>Heute, an einem vollen Tag</h2>
+  <p class="lead">Das ist die echte App, aufgenommen in einer Dreier-WG mit dem, was an einem
+    normalen Tag zusammenkommt: drei Meldungen zum Prüfen, eine Rückfrage, eine überfällige
+    Aufgabe, eine eigene, zwei Abstimmungen, ein Event, eine Aktion. Im Telefon lässt sich
+    scrollen.</p>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="phone"><div class="vorher"><img src="vorher.jpg" alt="Die heutige Startseite an einem vollen Tag, in voller Länge"></div></div>
+      <p class="bu">Echte Aufnahme, 390 × 844 wie ein iPhone 14. Ganz unten, nach dreieinhalb
+        Bildschirmen, kommt „Letzte Aktivität“.</p>
+    </div>
+    <div class="spalte">
+      <div class="zahlen">
+        <div class="zahlkarte"><div class="gross">4,0</div><span>Bildschirmhöhen Scrollen</span></div>
+        <div class="zahlkarte"><div class="gross">24</div><span>Blöcke untereinander</span></div>
+        <div class="zahlkarte"><div class="gross rot">9</div><span>davon rot umrandet — wenn alles alarmiert, alarmiert nichts</span></div>
+        <div class="zahlkarte"><div class="gross rot">4</div><span>große rote Knöpfe, jeder will der wichtigste sein</span></div>
+      </div>
+      <div class="doppelt"><b>Was doppelt oder dreifach dasteht</b>
+        <ul>
+          <li>Die <b>zwei Abstimmungen</b> stecken in „5 Sachen warten auf dich“ — und stehen darunter
+            noch einmal als zwei große Karten.</li>
+          <li>Der <b>Haushaltsplan</b> erscheint dreimal: als rote Überfällig-Karte, als „Gehört dir“-Zeile
+            und als Plan-Zeile weiter unten.</li>
+          <li>„<b>Aktion starten</b>“ und „<b>Event konfigurieren</b>“ tauchen nur auf, weil gerade
+            Abstimmungen offen sind — und stehen ohnehin unter „Wir“.</li>
+          <li>„<b>Letzte Aktivität</b>“ zeigt sechs Buchungen, die das Uhr-Symbol oben rechts schon
+            vollständig zeigt.</li>
+          <li>„<b>Benachrichtigungen einschalten</b>“ und „<b>Es fehlen noch 1</b>“ stehen jeden Tag
+            wieder da, auch nachdem man sie gelesen hat.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ VARIANTEN -->
+  <h2>Drei Vorschläge</h2>
+  <p class="lead">Unten in der Leiste sitzt bei allen dreien ein <b>Plus</b> — „Quest erledigt“ ist
+    das, was man am häufigsten tut, und es soll von jedem Schirm aus ein Tipp sein. Der Reiter
+    „Prüfen“ geht dafür in der Startseite auf: was dort stand, steht jetzt hier, nur kompakter.</p>
+
+  <div class="reihe">
+
+    <!-- ------------------------------------------------ A -->
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Heute-Liste</h3><span class="vorbild">wie Things, Todoist</span></div>
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div><div class="titel">Hallo Anna</div><div class="sub">Donnerstag, 15. Oktober</div></div>
+          <span class="ic">🕑</span><span class="ic">⚙</span></div>
+        <div class="inhalt">
+          <div class="konto">
+            <div class="ich"><span class="zahl">82<i>★</i></span><span class="unter">dein Konto · +23 diese Woche</span></div>
+            <div class="andere"><span class="mini"><span class="av">🐺</span><b>53</b></span><span class="mini"><span class="av">🐨</span><b>45</b></span></div>
+          </div>
+
+          <div class="laeuft">
+            <span class="pille aktion">⚖ +50 % auf alles <i>2 T</i></span>
+            <span class="pille event">🗓 Pizza-Abend · 15★ <i>3 T</i></span>
+          </div>
+
+          <div class="abschnitt"><h4>Für dich</h4><span class="zahl" id="a-zahl">9</span></div>
+          <div class="liste" id="a-liste">
+            <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Erledigt</span><span>Später</span></div>
+              <div class="vorne"><span class="punkt rot"></span><span class="n"><b>Küche reinigen nach Kochen</b><i>gehört dir · heute fällig</i></span>
+                <button class="knopfchen rot" data-weg>Erledigt</button></div></div>
+            <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Erledigt</span><span>Später</span></div>
+              <div class="vorne"><span class="punkt rot"></span><span class="n"><b>Großen Raum wischen</b><i>seit 3 Tagen überfällig</i></span>
+                <span class="wert">+8★</span></div></div>
+            <div class="z" data-swipe><div class="hinten"><span class="ja">Antworten</span><span>Später</span></div>
+              <div class="vorne"><span class="punkt blau"></span><span class="n"><b>Jonas fragt: „Herd auch?“</b><i>zu deinem Fenster putzen</i></span>
+                <button class="knopfchen navy" data-weg>Antworten</button></div></div>
+            <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Zustimmen</span><span>Nachfragen</span></div>
+              <div class="vorne"><span class="punkt gelb"></span><span class="n"><b>Jonas: Fenster putzen</b><i>„Auch die Fensterbänke“</i></span>
+                <span class="wert">+4★</span><button class="rund ja" data-weg aria-label="Zustimmen">✓</button></div></div>
+            <div class="zusatz" hidden>
+            <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Zustimmen</span><span>Nachfragen</span></div>
+              <div class="vorne"><span class="punkt gelb"></span><span class="n"><b>Mika: Staub wischen</b><i>vor 20 Min.</i></span>
+                <span class="wert">+6★</span><button class="rund ja" data-weg aria-label="Zustimmen">✓</button></div></div>
+              <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Zustimmen</span><span>Nachfragen</span></div>
+                <div class="vorne"><span class="punkt gelb"></span><span class="n"><b>Jonas: Wohnung saugen 2×</b><i>vor 1 Std.</i></span>
+                  <span class="wert">+12★</span><button class="rund ja" data-weg aria-label="Zustimmen">✓</button></div></div>
+              <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Ja</span><span>Nein</span></div>
+                <div class="vorne"><span class="punkt grau"></span><span class="n"><b>Abstimmung: Altglas wegbringen</b><i>neue Quest · 6★ · von Jonas</i></span>
+                  <button class="rund ja" data-weg aria-label="Ja">✓</button></div></div>
+              <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Ja</span><span>Nein</span></div>
+                <div class="vorne"><span class="punkt grau"></span><span class="n"><b>Abstimmung: Staub wischen</b><i>6 → 9★ · von Mika</i></span>
+                  <button class="rund ja" data-weg aria-label="Ja">✓</button></div></div>
+              <div class="z" data-swipe><div class="hinten"><span class="ja">✓ Geliefert</span><span>Später</span></div>
+                <div class="vorne"><span class="punkt grau"></span><span class="n"><b>Du schuldest: Freizeit bestimmen</b><i>für Jonas · Samstag</i></span>
+                  <button class="knopfchen hell" data-weg>Erledigt</button></div></div>
+            </div>
+            <button class="mehr" data-mehr>5 weitere ▾</button>
+          </div>
+
+          <div class="zuklapp"><button data-klapp><span class="t">Wartet auf die anderen <i>· 2</i></span><span class="pfeil">▾</span></button>
+            <div class="drin"><div>Fenster putzen · Rückfrage offen<b>+4★</b></div><div>Bad putzen · seit 2 Std.<b>+12★</b></div></div></div>
+
+          <div class="kacheln2">
+            <div class="kachel"><span class="k">Haushaltsplan</span><span class="v rot">1 überfällig</span></div>
+            <div class="kachel"><span class="k">Diese Woche</span><span class="v">+64★ alle</span></div>
+          </div>
+          <div class="zuletzt"><span>Zuletzt: <b>Jonas</b> +4 · vor 3 Std.</span><a href="#">Verlauf ›</a></div>
+        </div>
+        <div class="leiste">
+          <span data-an><b>⌂</b>Start<em class="badge" id="a-badge">9</em></span><span><b>🧹</b>Quests</span>
+          <span><button class="plus">+</button><small>Erledigt</small></span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu"><b>Alles, was auf dich wartet, in einer Liste</b> — nach Dringlichkeit, eine Zeile
+        pro Sache. Abhaken direkt in der Zeile oder <b>wischen</b>: nach rechts zustimmen, nach links
+        nachfragen. Was nicht dringend ist, klappt zu.</p>
+      <ul class="plus-minus">
+        <li class="p">Am meisten auf einen Blick, am wenigsten Tippen</li>
+        <li class="p">Fühlt sich an wie eine Mail-App — jeder kennt das</li>
+        <li class="m">Bei sehr vielen Sachen bleibt es eine Liste</li>
+      </ul>
+    </div>
+
+    <!-- ------------------------------------------------ B -->
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Stapel</h3><span class="vorbild">wie Tinder, Duolingo-Wiederholung</span></div>
+      <div class="phone"><div class="schirm">
+        <div class="kopf"><div><div class="titel">Hallo Anna</div><div class="sub">Donnerstag, 15. Oktober</div></div>
+          <span class="ic">🕑</span><span class="ic">⚙</span></div>
+        <div class="inhalt">
+          <div class="konto">
+            <div class="ich"><span class="zahl">82<i>★</i></span><span class="unter">dein Konto · +23 diese Woche</span></div>
+            <div class="andere"><span class="mini"><span class="av">🐺</span><b>53</b></span><span class="mini"><span class="av">🐨</span><b>45</b></span></div>
+          </div>
+          <div class="laeuft">
+            <span class="pille aktion">⚖ +50 % auf alles <i>2 T</i></span>
+            <span class="pille event">🗓 Pizza-Abend · 15★ <i>3 T</i></span>
+          </div>
+          <div class="fortschritt" id="b-fort"></div>
+          <div class="stapel" id="b-stapel">
+            <div class="fertig" id="b-fertig"><div class="gross">✓</div><b>Alles erledigt</b>
+              <span>Nichts wartet mehr auf dich. Die anderen sehen es gleich.</span>
+              <button data-neu>Noch einmal zeigen</button></div>
+          </div>
+          <div class="zeile" style="margin-top:20px"><b>Wartet auf die anderen</b><i>2 ›</i></div>
+          <div class="zeile"><b>Haushaltsplan</b><i style="color:var(--accent)">1 überfällig ›</i></div>
+        </div>
+        <div class="leiste">
+          <span data-an><b>⌂</b>Start<em class="badge" id="b-badge">9</em></span><span><b>🧹</b>Quests</span>
+          <span><button class="plus">+</button><small>Erledigt</small></span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+      </div></div>
+      <p class="bu"><b>Eine Sache nach der anderen</b>, groß und mit zwei klaren Knöpfen. Wischen
+        geht auch: rechts heißt ja, links heißt nachfragen. Am Ende steht „Alles erledigt“ — das ist
+        ein kleiner Moment, auf den man hinarbeitet.</p>
+      <ul class="plus-minus">
+        <li class="p">Am schnellsten, wenn sich viel angesammelt hat</li>
+        <li class="p">Am lebendigsten — die Karten bewegen sich wirklich</li>
+        <li class="m">Man sieht nicht alles gleichzeitig</li>
+      </ul>
+    </div>
+
+    <!-- ------------------------------------------------ C -->
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Kacheln</h3><span class="vorbild">wie iOS-Widgets, Revolut</span></div>
+      <div class="phone"><div class="schirm" id="c-schirm">
+        <div class="kopf"><div><div class="titel">Hallo Anna</div><div class="sub">Donnerstag, 15. Oktober</div></div>
+          <span class="ic">🕑</span><span class="ic">⚙</span></div>
+        <div class="inhalt">
+          <div class="raster">
+            <div class="w navy breit" data-blatt="konto">
+              <span class="k">Dein Konto</span>
+              <div style="display:flex;align-items:flex-end;gap:12px">
+                <span class="v">82<span style="color:#7fb4ff;font-size:20px">★</span></span>
+                <span class="s" style="margin-bottom:4px">+23 diese Woche<br>Jonas 53 · Mika 45</span>
+              </div>
+            </div>
+            <div class="w rot" data-blatt="fuerdich"><span class="k">Für dich</span><span class="v">9</span>
+              <span class="s">3 Meldungen · 2 Abstimmungen · 1 Rückfrage …</span></div>
+            <div class="w" data-blatt="plan"><span class="k">Haushaltsplan</span><span class="v" style="color:var(--accent)">1</span>
+              <span class="s">überfällig · 1 gehört dir heute</span></div>
+            <div class="w blau" data-blatt="laeuft"><span class="k">Läuft gerade</span><span class="v">2</span>
+              <span class="s">+50 % auf alles · Pizza-Abend</span></div>
+            <div class="w" data-blatt="wartet"><span class="k">Wartet</span><span class="v">2</span>
+              <span class="s">auf Jonas und Mika</span></div>
+            <div class="w breit" data-blatt="woche"><span class="k">Diese Woche</span>
+              <div class="balken"><i style="height:40%"></i><i style="height:65%"></i><i style="height:30%"></i><i style="height:90%"></i><i style="height:55%"></i><i style="height:75%"></i><i style="height:100%"></i></div>
+              <span class="s">+64★ zusammen · Donnerstag der stärkste Tag</span></div>
+          </div>
+        </div>
+        <div class="leiste">
+          <span data-an><b>⌂</b>Start<em class="badge">9</em></span><span><b>🧹</b>Quests</span>
+          <span><button class="plus">+</button><small>Erledigt</small></span>
+          <span><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+        </div>
+        <div class="blatt-schleier" id="c-schleier"><div class="blatt" id="c-blatt"></div></div>
+      </div></div>
+      <p class="bu"><b>Ein Raster aus Kacheln</b>, jede eine Zahl und ein Satz. Tippen öffnet das
+        Blatt mit den Einzelheiten. Alles passt auf einen Blick, nichts drängelt.</p>
+      <ul class="plus-minus">
+        <li class="p">Am ruhigsten, am aufgeräumtesten</li>
+        <li class="p">Sieht auch mit sehr viel los noch gleich aus</li>
+        <li class="m">Für alles ein Tipp mehr — zum Abhaken erst hinein</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ================================================================ BAUKASTEN -->
+  <h2>Was bei allen dreien gleich wäre</h2>
+  <p class="lead">Unabhängig von der Variante: Diese Bausteine machen den größten Teil des Unterschieds
+    aus, und jeder ist von einer App abgeschaut, die man vermutlich schon benutzt.</p>
+  <div class="tabelle"><table>
+    <tr><th style="width:20%">Baustein</th><th>Heute</th><th>Neu</th><th>Vorbild</th></tr>
+    <tr><td><b>Kontostand</b></td><td>große Karte, eine Zeile pro Person</td><td>eine dunkle Leiste: deiner groß, die anderen klein daneben</td><td class="vb">Revolut, Apple Wallet</td></tr>
+    <tr><td><b>Quest erledigt</b></td><td>Kachel mitten auf der Startseite</td><td>Plus in der Mitte der Leiste — von jedem Schirm aus ein Tipp</td><td class="vb">Instagram, Things</td></tr>
+    <tr><td><b>Was zu tun ist</b></td><td>bis zu neun eigene Kästen, jeder mit Knopf</td><td>eine Sammlung, nach Dringlichkeit geordnet</td><td class="vb">Todoist „Heute“</td></tr>
+    <tr><td><b>Entscheiden</b></td><td>Karte öffnen, dann Knopf</td><td>direkt abhaken oder wischen: rechts ja, links nachfragen</td><td class="vb">Apple Mail, Gmail</td></tr>
+    <tr><td><b>Läuft gerade</b></td><td>je eine große Karte für Aktion, Event, Urlaub</td><td>schmale Pillen in einer Reihe, seitlich wischbar</td><td class="vb">Instagram-Stories</td></tr>
+    <tr><td><b>Abstimmungen</b></td><td>doppelt: im Zähler und als große Karten</td><td>einmal, zwischen den anderen Sachen</td><td class="vb">—</td></tr>
+    <tr><td><b>Haushaltsplan</b></td><td>dreimal an drei Stellen</td><td>einmal</td><td class="vb">—</td></tr>
+    <tr><td><b>Letzte Aktivität</b></td><td>sechs Einträge, 385 px, ganz unten</td><td>eine Zeile „Zuletzt …“, der Rest hinter dem Uhr-Symbol</td><td class="vb">Banking-Apps</td></tr>
+    <tr><td><b>Rot</b></td><td>neun rote Elemente</td><td>nur noch, was wirklich brennt: überfällig, nicht geliefert</td><td class="vb">iOS: Rot heißt dringend</td></tr>
+    <tr><td><b>Einmal-Hinweise</b></td><td>„Benachrichtigungen“, „Es fehlen noch“ — jeden Tag wieder</td><td>einmal zeigen, wegwischen, weg</td><td class="vb">Tipps in iOS</td></tr>
+    <tr><td><b>Nichts zu tun</b></td><td>der Kasten verschwindet einfach</td><td>„Alles erledigt“ mit kleinem Jubel</td><td class="vb">Inbox Zero, Things</td></tr>
+  </table></div>
+
+  <!-- ================================================================ ANREIZ -->
+  <h2>Damit man gern wiederkommt — auf Wunsch</h2>
+  <p class="lead">Moderne Apps holen sich ihre Nutzungszeit oft über kleine Ziele und Serien, am
+    bekanntesten Duolingo. Für einen Haushalt kann das gut wirken — gerade bei Kindern —, es kann
+    sich aber auch nach Druck anfühlen. Deshalb <b>getrennt</b> von den drei Vorschlägen und
+    <b>abschaltbar</b>. So sähe es oben auf der Startseite aus:</p>
+  <div class="anreiz">
+    <div class="karte2">
+      <span style="font-size:30px;line-height:1">🔥</span>
+      <span><span class="t">5 Tage in Folge</span><br><span class="m">Jeden Tag mindestens eine Quest. Morgen wäre der sechste.</span></span>
+    </div>
+    <div class="karte2">
+      <svg class="ring" width="54" height="54" viewBox="0 0 54 54" aria-hidden="true">
+        <circle cx="27" cy="27" r="22" fill="none" stroke="#e9eff8" stroke-width="7"/>
+        <circle cx="27" cy="27" r="22" fill="none" stroke="#0f8a6a" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="138.2" stroke-dashoffset="27.6" transform="rotate(-90 27 27)"/>
+      </svg>
+      <span><span class="t">12 von 15 diese Woche</span><br><span class="m">Haushaltsziel — gemeinsam, nicht gegeneinander.</span></span>
+    </div>
+    <div class="karte2">
+      <span style="font-size:30px;line-height:1">🏆</span>
+      <span><span class="t">Jonas liegt vorn</span><br><span class="m">Wochenwertung · 4 Cleanies vor dir. Neue Woche ab Montag.</span></span>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:14px">Mein Rat: wenn, dann das <b>gemeinsame Wochenziel</b>. Es zieht
+    alle in dieselbe Richtung. Die Serie belohnt den Einzelnen, die Wertung stellt Leute
+    gegeneinander — beides kann in einer WG schnell kippen.</p>
+
+  <!-- ================================================================ EMPFEHLUNG -->
+  <h2>Meine Empfehlung</h2>
+  <div class="empfehlung">
+    <h3>A als Startseite — und der Stapel aus B als „Alle durchgehen“</h3>
+    <p><b>A</b> ist für den Alltag am praktischsten: man sieht alles, und eine einzelne Sache ist mit
+      einem Tipp oder Wisch erledigt. Wenn sich viel angesammelt hat, öffnet <b>„Alle durchgehen“</b>
+      den Stapel aus <b>B</b> — dann geht es Karte für Karte, groß und schnell. <b>C</b> sieht am
+      ordentlichsten aus, kostet aber für jede Kleinigkeit einen Tipp mehr; für „einfach und
+      praktisch“ ist das der falsche Tausch.</p>
+  </div>
+
+  <h2>Was ich von dir brauche</h2>
+  <div class="frage"><b>1. Welche Variante?</b> A, B, C — oder A mit dem Stapel aus B, wie empfohlen.</div>
+  <div class="frage"><b>2. Prüfen-Reiter aufgeben?</b> In allen drei Vorschlägen geht er in der
+    Startseite auf, und das Plus bekommt seinen Platz. Wer lieber einen eigenen Reiter behält,
+    bekommt das Plus stattdessen als runden Knopf unten rechts.</div>
+  <div class="frage"><b>3. Wochenziel, Serie, Wertung?</b> Gar nichts, nur das Wochenziel, oder mehr.</div>
+  <div class="frage"><b>4. Letzte Aktivität?</b> Eine Zeile „Zuletzt …“ wie gezeigt, oder ganz weg
+    und nur noch hinter dem Uhr-Symbol.</div>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Wischen
+ * Ein kleines Helferlein für Zeilen und Karten: nach rechts heißt ja, nach
+ * links heißt nein/nachfragen. Über die Schwelle hinaus fliegt es weg, darunter
+ * federt es zurück. */
+function wischbar(el, griff, fertig) {
+  let start = null, dx = 0;
+  griff.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button")) return;
+    start = e.clientX; dx = 0; griff.setPointerCapture(e.pointerId);
+    griff.style.transition = "none";
+  });
+  griff.addEventListener("pointermove", (e) => {
+    if (start === null) return;
+    dx = e.clientX - start;
+    el.dataset.richtung = dx >= 0 ? "ja" : "nein";
+    griff.style.transform = `translateX(${dx}px)` + (griff.classList.contains("karte") ? ` rotate(${dx / 22}deg)` : "");
+  });
+  const los = () => {
+    if (start === null) return;
+    griff.style.transition = "";
+    if (Math.abs(dx) > 80) fertig(dx > 0 ? "ja" : "nein");
+    else griff.style.transform = "";
+    start = null;
+  };
+  griff.addEventListener("pointerup", los);
+  griff.addEventListener("pointercancel", los);
+}
+
+/* ---------------------------------------------------------------- A */
+(function () {
+  const liste = document.getElementById("a-liste");
+  const zahl = document.getElementById("a-zahl");
+  const badge = document.getElementById("a-badge");
+  let offen = 9;
+  const weg = (z, richtung = "ja") => {
+    if (z.dataset.weg) return;
+    z.dataset.weg = "1";
+    const vorne = z.querySelector(".vorne");
+    z.dataset.richtung = richtung;
+    vorne.style.transform = `translateX(${richtung === "ja" ? 110 : -110}%)`;
+    z.style.height = z.offsetHeight + "px";
+    setTimeout(() => { z.style.height = "0px"; z.style.opacity = "0"; }, 180);
+    setTimeout(() => z.remove(), 480);
+    offen -= 1;
+    zahl.textContent = offen; badge.textContent = offen;
+    if (!offen) { zahl.style.background = "var(--frei)"; zahl.textContent = "✓"; badge.remove(); }
+  };
+  liste.querySelectorAll(".z[data-swipe]").forEach((z) =>
+    wischbar(z, z.querySelector(".vorne"), (r) => weg(z, r)));
+  liste.addEventListener("click", (e) => {
+    const k = e.target.closest("[data-weg]");
+    if (k) weg(k.closest(".z"));
+    const m = e.target.closest("[data-mehr]");
+    if (m) { const zu = liste.querySelector(".zusatz"); zu.hidden = !zu.hidden; m.textContent = zu.hidden ? "5 weitere ▾" : "weniger ▴"; }
+  });
+  document.querySelectorAll("[data-klapp]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.closest(".zuklapp"); k.toggleAttribute("data-offen");
+  }));
+})();
+
+/* ---------------------------------------------------------------- B */
+(function () {
+  const KARTEN = [
+    { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "1 gr. Fenster putzen", betrag: "+4★", notiz: "„Auch die Fensterbänke“", ja: "Zustimmen", nein: "Nachfragen" },
+    { art: "plan", name: "Gehört dir", av: "🧽", wer: "Haushaltsplan · heute fällig", was: "Küche reinigen nach Kochen", betrag: "+5★", ja: "Erledigt", nein: "Später" },
+    { art: "frage", name: "Rückfrage", av: "🐺", wer: "Jonas fragt nach", was: "„Hast du auch den Herd gemacht?“", betrag: "", notiz: "zu deiner Meldung: Fenster putzen", ja: "Antworten", nein: "Später" },
+    { art: "melden", name: "Meldung", av: "🐨", wer: "Mika hat gemeldet", was: "Staub wischen", betrag: "+6★", ja: "Zustimmen", nein: "Nachfragen" },
+    { art: "vote", name: "Abstimmung", av: "🐺", wer: "Jonas schlägt vor", was: "Neue Quest: Altglas wegbringen", betrag: "6★", neutral: true, notiz: "„Stapelt sich“", ja: "Ja", nein: "Nein" },
+    { art: "vote", name: "Abstimmung", av: "🐨", wer: "Mika schlägt vor", was: "Staub wischen wird teurer", betrag: "6 → 9★", neutral: true, notiz: "„Dauert länger als gedacht“", ja: "Ja", nein: "Nein" },
+    { art: "melden", name: "Meldung", av: "🐺", wer: "Jonas hat gemeldet", was: "Wohnung saugen · 2×", betrag: "+12★", ja: "Zustimmen", nein: "Nachfragen" },
+    { art: "plan", name: "Überfällig", av: "🧹", wer: "Haushaltsplan · seit 3 Tagen", was: "Großen Raum wischen", betrag: "+8★", ja: "Erledigt", nein: "Später" },
+    { art: "schuld", name: "Du schuldest", av: "🎁", wer: "für Jonas · Samstag", was: "Freizeitaktivität bestimmen", betrag: "", ja: "Geliefert", nein: "Später" }
+  ];
+  const stapel = document.getElementById("b-stapel");
+  const fertig = document.getElementById("b-fertig");
+  const fort = document.getElementById("b-fort");
+  const badge = document.getElementById("b-badge");
+  let i = 0;
+
+  fort.innerHTML = KARTEN.map(() => "<i></i>").join("");
+
+  function karte(k, n) {
+    const d = document.createElement("div");
+    d.className = "karte";
+    d.innerHTML = `
+      <div class="oben"><span class="art ${k.art}">${k.name}</span><span class="zaehler">${n + 1} von ${KARTEN.length}</span></div>
+      <div class="wer"><span class="av">${k.av}</span>${k.wer}</div>
+      <div class="was">${k.was}</div>
+      ${k.betrag ? `<div class="betrag ${k.neutral ? "neutral" : ""}">${k.betrag}</div>` : ""}
+      ${k.notiz ? `<div class="notiz">${k.notiz}</div>` : ""}
+      <div class="knoepfe"><button data-b="nein">${k.nein}</button><button class="ja" data-b="ja">${k.ja}</button></div>
+      <div class="wisch">← wischen geht auch →</div>`;
+    return d;
+  }
+
+  function zeichnen() {
+    stapel.querySelectorAll(".karte").forEach((k) => k.remove());
+    const sichtbar = KARTEN.slice(i, i + 3);
+    sichtbar.slice().reverse().forEach((k, r) => {
+      const platz = sichtbar.length - 1 - r;
+      const d = karte(k, i + platz);
+      d.dataset.platz = platz;
+      stapel.insertBefore(d, fertig);
+      if (platz === 0) wischbar(d, d, (rt) => weiter(d, rt));
+    });
+    fertig.toggleAttribute("data-an", i >= KARTEN.length);
+    [...fort.children].forEach((b, n) => b.toggleAttribute("data-ok", n < i));
+    const rest = KARTEN.length - i;
+    badge.textContent = rest; badge.style.display = rest ? "" : "none";
+  }
+
+  function weiter(d, richtung) {
+    d.style.transform = `translateX(${richtung === "ja" ? 420 : -420}px) rotate(${richtung === "ja" ? 18 : -18}deg)`;
+    d.style.opacity = "0";
+    setTimeout(() => { i += 1; zeichnen(); }, 260);
+  }
+
+  stapel.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-b]");
+    if (b) weiter(b.closest(".karte"), b.dataset.b);
+    if (e.target.closest("[data-neu]")) { i = 0; zeichnen(); }
+  });
+  zeichnen();
+})();
+
+/* ---------------------------------------------------------------- C */
+(function () {
+  const INHALT = {
+    konto: ["Dein Konto", ["Anna · 82★", "Jonas · 53★", "Mika · 45★", "Diese Woche · +23★"]],
+    fuerdich: ["Für dich · 9", ["Jonas: Fenster putzen · +4★", "Mika: Staub wischen · +6★", "Jonas: Wohnung saugen 2× · +12★",
+      "Jonas fragt: „Herd auch?“", "Abstimmung: Altglas wegbringen", "Abstimmung: Staub wischen 6 → 9★",
+      "Küche reinigen · gehört dir", "Großen Raum wischen · überfällig", "Du schuldest: Freizeit bestimmen"]],
+    plan: ["Haushaltsplan", ["Großen Raum wischen · seit 3 Tagen überfällig", "Küche reinigen · gehört dir, heute", "Bad putzen · in 4 Tagen"]],
+    laeuft: ["Läuft gerade", ["+50 % auf alles · noch 2 Tage", "Event: Pizza-Abend aussuchen · 15★ · noch 3 Tage"]],
+    wartet: ["Wartet auf die anderen", ["Fenster putzen · Rückfrage offen · +4★", "Bad putzen · seit 2 Std. · +12★"]],
+    woche: ["Diese Woche", ["Anna · +23★", "Jonas · +27★", "Mika · +14★", "Zusammen · +64★"]]
+  };
+  const schleier = document.getElementById("c-schleier");
+  const blatt = document.getElementById("c-blatt");
+  document.querySelectorAll("[data-blatt]").forEach((w) => w.addEventListener("click", () => {
+    const [titel, zeilen] = INHALT[w.dataset.blatt];
+    blatt.innerHTML = `<div class="griff"></div><h5>${titel}</h5>` +
+      zeilen.map((z) => `<div class="zeile"><b style="font-weight:600">${z}</b><i>›</i></div>`).join("");
+    schleier.setAttribute("data-auf", "");
+  }));
+  schleier.addEventListener("click", (e) => { if (e.target === schleier) schleier.removeAttribute("data-auf"); });
+})();
+</script>
+</body>
+</html>
