@@ -715,18 +715,19 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .fortschritt b { display: block; height: 100%; background: var(--urlaub); border-radius: 999px; transition: width .3s; }
 @keyframes hupf { 0% { transform: scaleY(1); } 40% { transform: scaleY(2.4); } 100% { transform: scaleY(1); } }
 
-.stapel { position: relative; height: 266px; margin-top: 4px; }
+/* Eine Nummer kleiner als im Mockup — auf dem Handy wirkte die Karte zu wuchtig. */
+.stapel { position: relative; height: 232px; margin-top: 4px; }
 .karte {
   position: absolute; inset: 0; border-radius: 22px; background: var(--bg); border: 1px solid var(--line);
-  box-shadow: 0 18px 30px -22px rgba(21, 44, 79, .55); padding: 12px 14px; display: flex; flex-direction: column; gap: 5px;
+  box-shadow: 0 16px 26px -20px rgba(21, 44, 79, .55); padding: 10px 13px; display: flex; flex-direction: column; gap: 4px;
   transition: transform .32s cubic-bezier(.2, .9, .3, 1), opacity .32s ease;
   touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; overflow: hidden;
 }
 .karte[data-platz="0"] { z-index: 3; }
-.karte[data-platz="1"] { transform: translateY(12px) scale(.955); opacity: .9; z-index: 2; }
-.karte[data-platz="2"] { transform: translateY(24px) scale(.91); opacity: .65; z-index: 1; }
+.karte[data-platz="1"] { transform: translateY(10px) scale(.96); opacity: .9; z-index: 2; }
+.karte[data-platz="2"] { transform: translateY(20px) scale(.92); opacity: .65; z-index: 1; }
 .karte .oben { display: flex; align-items: center; gap: 8px; }
-.karte .art { font-family: var(--font-data); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; border-radius: 999px; padding: 3px 9px; }
+.karte .art { font-family: var(--font-data); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; }
 .karte .art.melden { background: var(--urlaub-tint); color: var(--urlaub); }
 .karte .art.antrag { background: var(--urlaub-tint); color: var(--urlaub); }
 .karte .art.frage { background: var(--event-tint); color: var(--ruhig); }
@@ -734,27 +735,29 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .karte .art.plan { background: var(--accent-tint); color: var(--accent); }
 .karte .art.schuld { background: var(--bald-tint); color: var(--bald); }
 .karte .zaehler { margin-left: auto; font-family: var(--font-data); font-size: 11px; color: var(--ink-3); }
-.karte .wer { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.karte .wer { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); min-width: 0; }
 .karte .wer > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.karte .wer .avatar.xs { width: 28px; height: 28px; }
+.karte .wer .avatar.xs { width: 24px; height: 24px; }
 .karte .was {
-  font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -.02em; line-height: 1.15;
+  font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -.02em; line-height: 1.15;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.karte .betrag { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -.03em; color: var(--urlaub); line-height: 1; }
+.karte .betrag { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -.03em; color: var(--urlaub); line-height: 1; }
 .karte .betrag.neutral { color: var(--ink); }
-.karte .change { font-size: 13px; }
+.karte .change { font-size: 12.5px; }
 .karte .notiz {
-  font-size: 13px; color: var(--ink-2); background: var(--tint); border-radius: 12px; padding: 6px 10px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 12.5px; color: var(--ink-2); background: var(--tint); border-radius: 11px; padding: 5px 9px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 0;
 }
-.karte .knoepfe { margin-top: auto; display: flex; gap: 8px; }
+.karte .knoepfe { margin-top: auto; display: flex; gap: 8px; flex-shrink: 0; }
 .karte .knoepfe button {
-  flex: 1; font: inherit; font-size: 14px; font-weight: 700; border-radius: 14px; padding: 11px;
+  flex: 1; font: inherit; font-size: 13.5px; font-weight: 700; border-radius: 13px; padding: 9px;
   border: 1px solid var(--line); cursor: pointer; background: var(--bg); color: var(--ink);
 }
 .karte .knoepfe button.ja { background: var(--kontrast-bg); color: var(--kontrast-ink); border-color: var(--kontrast-bg); }
-.karte .wisch { text-align: center; font-size: 10.5px; color: var(--ink-3); }
+.karte .wisch { text-align: center; font-size: 10px; color: var(--ink-3); flex-shrink: 0; }
+/* Wird es eng, gibt die Notiz nach — nie die Knöpfe. Ganz steht sie unter „Alle ›“. */
+.karte .oben, .karte .wer, .karte .betrag { flex-shrink: 0; }
 .karte[data-richtung="ja"] { border-color: var(--urlaub); }
 .karte[data-richtung="nein"] { border-color: var(--ink-3); }
 
@@ -769,7 +772,7 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 @keyframes auf { from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Die Karten dahinter schauen 24px heraus — die Kacheln rücken nach. */
-.startkacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.startkacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .startkachel {
   border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 10px 11px; font: inherit; color: inherit;
   display: flex; flex-direction: column; gap: 2px; cursor: pointer; text-align: left; min-width: 0; transition: transform .15s;

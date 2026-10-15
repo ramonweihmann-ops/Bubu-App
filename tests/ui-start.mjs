@@ -118,7 +118,9 @@ await laden(a);
 pruefe("Auch nach dem Neuladen nicht", await a.locator(".body.start .zuletzt.hinweis").count(), 0);
 
 console.log("== Drei Sachen kommen herein");
-pruefe("C meldet die erste", (await post(c, "claims", { questId: Q1.id, anzahl: 1, notiz: "Auch die Fensterbänke" })).ok, true);
+// Eine lange Notiz: sie darf die Karte nicht sprengen.
+pruefe("C meldet die erste", (await post(c, "claims", { questId: Q1.id, anzahl: 1,
+  notiz: "Auch die Fensterbänke, die Rahmen und die Griffe — und im Bad das Fensterbrett gleich mit, weil es so staubig war" })).ok, true);
 pruefe("C meldet die zweite", (await post(c, "claims", { questId: Q2.id, anzahl: 1 })).ok, true);
 pruefe("B schickt ein Geschenk", (await post(b, "transfers", { betrag: 2, an: "u-a", nachricht: "Danke fürs Kochen" })).ok, true);
 const wocheVorher = (await zustand(a)).woche;
@@ -131,6 +133,11 @@ pruefe("Oben liegt eine Meldung", await oben(a).locator(".art").innerText(), "ME
 enthaelt("Mit Zähler", await oben(a).locator(".zaehler").innerText(), "1 von 3");
 enthaelt("Wer gemeldet hat", await oben(a).locator(".wer").innerText(), `${namen["u-c"]} hat gemeldet`);
 enthaelt("Mit Notiz", await oben(a).innerText(), "Auch die Fensterbänke");
+pruefe("Die Knöpfe bleiben ganz in der Karte", await oben(a).evaluate((k) => {
+  const r = k.getBoundingClientRect();
+  const w = k.querySelector(".wisch").getBoundingClientRect();
+  return w.bottom <= r.bottom - 4;
+}), true);
 pruefe("Die Karten dahinter sind nicht anfassbar",
   await a.locator('.stapel .karte[data-platz="1"]').getAttribute("inert"), "");
 
