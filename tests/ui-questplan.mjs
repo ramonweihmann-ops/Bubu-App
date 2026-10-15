@@ -121,7 +121,7 @@ pruefe("B ist nicht gesperrt", await beiB.isDisabled(), false);
 
 console.log("== B entscheidet beide einzeln");
 const vorB = await a.evaluate(async () => (await (await fetch("/api/state")).json()).ich.punkte);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 for (let i = 0; i < 2; i++) {
   await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
   await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');

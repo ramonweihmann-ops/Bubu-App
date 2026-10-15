@@ -49,7 +49,7 @@ const laden = async (s) => {
 };
 const zustimmen = async (s) => {
   await laden(s);
-  await s.click('.navbar [data-go="pruefen"]');
+  await s.click('.navbar [data-go="start"]'); await s.click('.abschnitt [data-go="pruefen"]');
   await s.waitForSelector(".card.vote [data-stimme]", { timeout: 8000 });
   await s.click('.card.vote [data-stimme][data-antwort="ja"]');
   await s.waitForTimeout(1500);
@@ -92,7 +92,7 @@ pruefe("Noch kein Urlaub aktiv", await a.evaluate(async () =>
   (await (await fetch("/api/state")).json()).urlaube.length), 0);
 
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const karte = await b.locator(".card.vote").first().innerText();
 enthaelt("Sagt, wessen Urlaub", karte, "macht Urlaub");
@@ -155,7 +155,9 @@ await laden(b);
 const planNach = await b.evaluate(async () => (await (await fetch("/api/state")).json()).plan[0]?.faellig_am);
 const soll = (() => { const d = new Date(planVor + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 10); return d.toISOString().slice(0, 10); })();
 pruefe("Fälligkeit um 10 Tage gerückt", planNach, soll);
-enthaelt("Banner sagt es", await b.evaluate(() => document.body.innerText), "nach hinten gerückt");
+enthaelt("Die Pille sagt es", await b.locator(".pille.urlaub").innerText(), "im Urlaub");
+await b.click(".pille.urlaub");
+enthaelt("Ihr Schirm sagt, was es bedeutet", await b.evaluate(() => document.body.innerText), "nach hinten gerückt");
 await b.click('.navbar [data-go="start"]');
 await b.waitForTimeout(400);
 await b.screenshot({ path: `${AUS}/ur4-haushalt.png` });

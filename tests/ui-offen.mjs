@@ -31,6 +31,20 @@ const momenteWeg = async () => {
 const laden = async () => { await s.goto(URL, { waitUntil: "networkidle" });
   await s.waitForSelector(".navbar", { timeout: 12000 }); await momenteWeg(); };
 
+// Der Wartekasten ist auf der Startseite eine dünne Zeile; was drinsteht,
+// zeigt ihr Blatt. Gelesen wird beides zusammen.
+const startText = async () => {
+  let t = await s.locator(".body").innerText();
+  if (await s.locator("[data-wartet]").count()) {
+    await s.click("[data-wartet]");
+    await s.waitForSelector(".sheet");
+    t += "\n" + await s.locator(".sheet").innerText();
+    await s.click("#scrim", { position: { x: 10, y: 10 } });
+    await s.waitForTimeout(150);
+  }
+  return t;
+};
+
 console.log("== Nichts offen: kein Kasten");
 await laden();
 pruefe("Kein Wartet-auf-Kasten", /wartet auf/i.test(await s.locator(".body").innerText()), false);
@@ -45,7 +59,7 @@ await s.click('[data-senden="melden"]');
 await s.waitForTimeout(1200);
 await s.click('.navbar [data-go="start"]');
 await s.waitForTimeout(500);
-let text = await s.locator(".body").innerText();
+let text = await startText();
 pruefe("Kasten erscheint", /wartet auf/i.test(text), true);
 pruefe("Quest steht drin", text.includes(questName), true);
 pruefe("Als Quest gekennzeichnet", text.includes("Quest gemeldet"), true);
@@ -61,7 +75,7 @@ await s.click('[data-senden="antrag"]');
 await s.waitForTimeout(1200);
 await s.click('.navbar [data-go="start"]');
 await s.waitForTimeout(500);
-text = await s.locator(".body").innerText();
+text = await startText();
 pruefe("Belohnung steht drin", text.includes(belName), true);
 pruefe("Als Antrag gekennzeichnet", text.includes("Belohnung beantragt"), true);
 pruefe("Termin dabei", text.includes("Samstag"), true);
@@ -75,7 +89,7 @@ await s.click('[data-senden="transfer"]');
 await s.waitForTimeout(1200);
 await s.click('.navbar [data-go="start"]');
 await s.waitForTimeout(500);
-text = await s.locator(".body").innerText();
+text = await startText();
 pruefe("Übertragung steht drin", text.includes("Übertragung angeboten"), true);
 await s.screenshot({ path: `${AUS}/o1-offene-sachen.png`, fullPage: true });
 
@@ -88,13 +102,13 @@ await b.waitForSelector(".navbar");
 for (let i = 0; i < 10 && (await b.locator("#celebrate[data-open]").count()); i++) {
   await b.click("#celebrate [data-schliessen]"); await b.waitForTimeout(300);
 }
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]');
 await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
 await b.waitForTimeout(1500);
 
 await laden();
-text = await s.locator(".body").innerText();
+text = await startText();
 pruefe("Quest ist raus", text.includes("Quest gemeldet"), false);
 pruefe("Belohnung steht noch", text.includes("Belohnung beantragt"), true);
 
@@ -104,7 +118,7 @@ await b.waitForSelector(".navbar");
 for (let i = 0; i < 10 && (await b.locator("#celebrate[data-open]").count()); i++) {
   await b.click("#celebrate [data-schliessen]"); await b.waitForTimeout(300);
 }
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-sheet="rueckfrage"][data-bereich="requests"]');
 await b.click('[data-sheet="rueckfrage"][data-bereich="requests"]');
 await b.waitForSelector("#rtext");
@@ -113,7 +127,7 @@ await b.click('[data-senden="rueckfrage"]');
 await b.waitForTimeout(1300);
 
 await laden();
-text = await s.locator(".body").innerText();
+text = await startText();
 pruefe("Rückfrage sichtbar", text.includes("Sonntag besser?"), true);
 await s.screenshot({ path: `${AUS}/o2-mit-rueckfrage.png`, fullPage: true });
 

@@ -47,7 +47,7 @@ const laden = async (s) => {
 };
 const zustimmen = async (s) => {
   await laden(s);
-  await s.click('.navbar [data-go="pruefen"]');
+  await s.click('.navbar [data-go="start"]'); await s.click('.abschnitt [data-go="pruefen"]');
   await s.waitForSelector("[data-stimme]", { timeout: 8000 });
   await s.locator("[data-stimme][data-antwort='ja']").first().click();
   await s.waitForTimeout(1400);
@@ -134,7 +134,7 @@ pruefe("Noch kein Event", await a.evaluate(async () =>
 
 console.log("== Die Karte bei „Prüfen“ sagt, worum es geht");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const karte = await b.locator(".card.vote").first().innerText();
 enthaelt("Der Name", karte, "1 Stunde Zockzeit");
@@ -151,16 +151,18 @@ await zustimmen(c);
 console.log("== Jetzt läuft es");
 await laden(c);
 const start = await c.evaluate(() => document.body.innerText);
-enthaelt("Die Karte steht auf der Startseite", start, "1 Stunde Zockzeit");
+enthaelt("Die Pille steht auf der Startseite", start, "1 Stunde Zockzeit");
 enthaelt("Mit Restzeit", start, "noch 2 Tage");
-pruefe("Und einem Knopf", await c.locator("[data-eventtun]").count(), 1);
+await c.click(".pille.event");
+pruefe("Ihr Blatt hat einen Knopf", await c.locator("[data-eventtun]").count(), 1);
 enthaelt("Der etwas tut", await c.locator("[data-eventtun]").innerText(), "Einlösen");
 await c.screenshot({ path: `${AUS}/e4-laeuft.png`, fullPage: true });
 
 console.log("== Wer nicht gemeint ist, sieht es ohne Knopf");
 await laden(b);
 enthaelt("B sieht das Event", await b.evaluate(() => document.body.innerText), "1 Stunde Zockzeit");
-enthaelt("… aber nicht für sich", await b.evaluate(() => document.body.innerText), "für andere gedacht");
+await b.click(".pille.event");
+enthaelt("… aber nicht für sich", await b.locator(".sheet").innerText(), "für andere gedacht");
 pruefe("Kein Knopf für B", await b.locator("[data-eventtun]").count(), 0);
 
 console.log("== In der Belohnungsliste steht es über der festen");
@@ -177,6 +179,7 @@ pruefe("Das Event ist die einzige Zeitbelohnung", await c.evaluate(async () => {
 
 console.log("== Einlösen ist der Antrag, den es längst gibt");
 await laden(c);
+await c.click(".pille.event");
 await c.click("[data-eventtun]");
 await c.waitForSelector('[data-senden="antrag"]', { timeout: 8000 });
 enthaelt("Das Blatt weist auf das Event hin", await c.locator(".sheet").innerText(), "Event — noch 2 Tage");
@@ -189,7 +192,7 @@ await c.waitForTimeout(1600);
 await momenteWeg(c);
 
 await laden(a);
-await a.click('.navbar [data-go="pruefen"]');
+await a.click('.navbar [data-go="start"]'); await a.click('.abschnitt [data-go="pruefen"]');
 await a.waitForSelector('[data-entscheiden="requests"][data-status="bestaetigt"]', { timeout: 8000 });
 await a.click('[data-entscheiden="requests"][data-status="bestaetigt"]');
 await a.waitForTimeout(1800);
@@ -198,7 +201,8 @@ await momenteWeg(a);
 await laden(c);
 pruefe("C hat bezahlt", await c.evaluate(async () =>
   (await (await fetch("/api/state")).json()).ich.punkte), vorC - 20);
-enthaelt("Und hat noch einen frei", await c.evaluate(() => document.body.innerText), "noch 1× für dich");
+await c.click(".pille.event");
+enthaelt("Und hat noch einen frei", await c.locator(".sheet").innerText(), "noch 1× für dich");
 
 console.log("== Beenden geht über die Abstimmung");
 await laden(a);

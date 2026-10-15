@@ -108,7 +108,7 @@ enthaelt("Absender sieht es auf der Startseite", await a.evaluate(() => document
 
 console.log("== Der Empfänger sieht es beim Prüfen");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".gutschein", { timeout: 8000 });
 enthaelt("Hinweis auf der Karte", await b.locator(".gutschein").innerText(), "gehen an");
 await b.screenshot({ path: `${AUS}/g3-pruefen.png`, fullPage: true });

@@ -657,3 +657,175 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 /* Ein Feld, ohne das es nicht weitergeht. Der Hinweis steht an der
  * Beschriftung, nicht erst in der Fehlermeldung. */
 .pflicht { color: var(--accent); font-weight: 700; }
+
+/* ---------- Startseite: Stapel und Kacheln ---------- */
+/* Eine Seite, ein Bildschirm. Was wartet, liegt als Stapel da — eine Karte
+ * nach der anderen, zwei Knöpfe oder ein Wisch. Rechts erledigt die Sache,
+ * links ist das Sichere. Die Farben der Kartenarten kommen aus den Tönen,
+ * die es schon gibt: Grün für Lohn, Blau für Fragen, Rot für den Plan. */
+:root { --bald-tint: #fdf1dc; --konto-bg: #152c4f; --konto-unter: #a9bad4; --konto-stern: #7fb4ff; }
+:root[data-theme="dunkel"] { --bald-tint: #3a2a0c; --konto-bg: #1f3252; --konto-unter: #a9bad4; --konto-stern: #8fbcff; }
+
+.body.start { gap: 8px; }
+
+.kontoleiste {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; cursor: pointer;
+  background: var(--konto-bg); color: #fff; border: none; border-radius: 18px; padding: 9px 14px;
+}
+.kontoleiste .ich { flex: 1; min-width: 0; }
+.kontoleiste .stand { display: block; font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -.04em; line-height: 1.05; }
+.kontoleiste .stand .cleanie { filter: brightness(1.9) saturate(.6); }
+.kontoleiste .unter { display: block; font-size: 11px; color: var(--konto-unter); margin-top: 2px; }
+.kontoleiste .andere { display: flex; gap: 6px; flex: none; }
+.kontoleiste .mini {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(255, 255, 255, .08); border-radius: 12px; padding: 5px 8px; min-width: 38px;
+}
+.kontoleiste .mini b { font-family: var(--font-data); font-size: 12px; }
+.avatar.xs { width: 22px; height: 22px; font-size: 13px; }
+.kontoleiste .avatar.xs { background: rgba(255, 255, 255, .14); }
+
+.laeuft { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.laeuft::-webkit-scrollbar { display: none; }
+.pille {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 600;
+  border: none; border-radius: 999px; padding: 6px 11px; white-space: nowrap; cursor: pointer;
+}
+.pille i { font-style: normal; font-size: 11px; font-weight: 500; opacity: .75; }
+.pille.aktion { background: var(--accent-tint); color: var(--accent); cursor: default; }
+.pille.event { background: var(--event-tint); color: var(--ruhig); }
+.pille.urlaub { background: var(--urlaub-tint); color: var(--urlaub); }
+
+.abschnitt { display: flex; align-items: center; gap: 8px; margin: 4px 0 -4px; }
+.abschnitt h4 { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.abschnitt .anzahl {
+  font-family: var(--font-data); font-size: 11px; font-weight: 700; background: var(--akzent-flaeche); color: #fff;
+  border-radius: 999px; padding: 1px 7px;
+}
+.abschnitt .anzahl[data-fertig] { background: var(--urlaub); }
+.abschnitt .rechts {
+  margin-left: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--ruhig);
+  background: none; border: none; cursor: pointer; padding: 6px 0 6px 4px;
+}
+.fortschritt { flex: 1; display: flex; gap: 3px; margin: 0 6px; min-width: 0; }
+.fortschritt i { flex: 1; height: 3px; border-radius: 999px; background: var(--tint-2); transition: background .3s; }
+.fortschritt i[data-ok] { background: var(--urlaub); }
+.fortschritt i.pop { animation: hupf .35s ease; }
+.fortschritt:has(b) { height: 3px; border-radius: 999px; background: var(--tint-2); overflow: hidden; }
+.fortschritt b { display: block; height: 100%; background: var(--urlaub); border-radius: 999px; transition: width .3s; }
+@keyframes hupf { 0% { transform: scaleY(1); } 40% { transform: scaleY(2.4); } 100% { transform: scaleY(1); } }
+
+.stapel { position: relative; height: 266px; margin-top: 4px; }
+.karte {
+  position: absolute; inset: 0; border-radius: 22px; background: var(--bg); border: 1px solid var(--line);
+  box-shadow: 0 18px 30px -22px rgba(21, 44, 79, .55); padding: 12px 14px; display: flex; flex-direction: column; gap: 5px;
+  transition: transform .32s cubic-bezier(.2, .9, .3, 1), opacity .32s ease;
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; overflow: hidden;
+}
+.karte[data-platz="0"] { z-index: 3; }
+.karte[data-platz="1"] { transform: translateY(12px) scale(.955); opacity: .9; z-index: 2; }
+.karte[data-platz="2"] { transform: translateY(24px) scale(.91); opacity: .65; z-index: 1; }
+.karte .oben { display: flex; align-items: center; gap: 8px; }
+.karte .art { font-family: var(--font-data); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; border-radius: 999px; padding: 3px 9px; }
+.karte .art.melden { background: var(--urlaub-tint); color: var(--urlaub); }
+.karte .art.antrag { background: var(--urlaub-tint); color: var(--urlaub); }
+.karte .art.frage { background: var(--event-tint); color: var(--ruhig); }
+.karte .art.vote { background: var(--tint-2); color: var(--ink-2); }
+.karte .art.plan { background: var(--accent-tint); color: var(--accent); }
+.karte .art.schuld { background: var(--bald-tint); color: var(--bald); }
+.karte .zaehler { margin-left: auto; font-family: var(--font-data); font-size: 11px; color: var(--ink-3); }
+.karte .wer { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.karte .wer > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.karte .wer .avatar.xs { width: 28px; height: 28px; }
+.karte .was {
+  font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -.02em; line-height: 1.15;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.karte .betrag { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -.03em; color: var(--urlaub); line-height: 1; }
+.karte .betrag.neutral { color: var(--ink); }
+.karte .change { font-size: 13px; }
+.karte .notiz {
+  font-size: 13px; color: var(--ink-2); background: var(--tint); border-radius: 12px; padding: 6px 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.karte .knoepfe { margin-top: auto; display: flex; gap: 8px; }
+.karte .knoepfe button {
+  flex: 1; font: inherit; font-size: 14px; font-weight: 700; border-radius: 14px; padding: 11px;
+  border: 1px solid var(--line); cursor: pointer; background: var(--bg); color: var(--ink);
+}
+.karte .knoepfe button.ja { background: var(--kontrast-bg); color: var(--kontrast-ink); border-color: var(--kontrast-bg); }
+.karte .wisch { text-align: center; font-size: 10.5px; color: var(--ink-3); }
+.karte[data-richtung="ja"] { border-color: var(--urlaub); }
+.karte[data-richtung="nein"] { border-color: var(--ink-3); }
+
+.fertig {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; border-radius: 22px; background: var(--urlaub-tint); color: var(--urlaub);
+  animation: auf .45s cubic-bezier(.2, .9, .3, 1); padding: 16px;
+}
+.fertig b { font-family: var(--font-display); font-size: 20px; color: var(--ink); }
+.fertig span { font-size: 12.5px; color: var(--ink-2); max-width: 26ch; }
+.fertig button { margin-top: 6px; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ruhig); background: none; border: none; cursor: pointer; }
+@keyframes auf { from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Die Karten dahinter schauen 24px heraus — die Kacheln rücken nach. */
+.startkacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.startkachel {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 10px 11px; font: inherit; color: inherit;
+  display: flex; flex-direction: column; gap: 2px; cursor: pointer; text-align: left; min-width: 0; transition: transform .15s;
+}
+.startkachel:active { transform: scale(.97); }
+.startkachel .k { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.startkachel .v { font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+.startkachel .v.rot { color: var(--accent); }
+.startkachel .v small { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.startkachel .zielfehlt { font-size: 11px; font-weight: 600; color: var(--bald); line-height: 1.3; margin-top: 1px; }
+.zielbalken { display: block; height: 5px; border-radius: 999px; background: var(--tint-2); margin-top: 4px; overflow: hidden; }
+.zielbalken i { display: block; height: 100%; background: var(--urlaub); border-radius: 999px; }
+
+.zuletzt {
+  display: flex; align-items: center; gap: 8px; font: inherit; font-size: 12px; color: var(--ink-2);
+  background: none; border: none; padding: 4px 2px; cursor: pointer; text-align: left; width: 100%;
+}
+.zuletzt b { color: var(--ink); }
+.zuletzt > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zuletzt .mehr { margin-left: auto; color: var(--ruhig); font-weight: 600; white-space: nowrap; flex: none; }
+.zuletzt.hinweis { padding: 0; cursor: default; }
+.zuletzt.hinweis .los {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font: inherit; font-size: 12px; color: var(--ink-2);
+  background: var(--tint); border: none; border-radius: 12px; padding: 8px 10px; cursor: pointer; text-align: left;
+}
+.zuletzt.hinweis .los svg { color: var(--accent); flex: none; }
+.zuletzt.hinweis .zu { flex: none; font: inherit; font-size: 16px; color: var(--ink-3); background: none; border: none; padding: 4px 8px; cursor: pointer; }
+
+/* Das Blatt „Diese Woche“. */
+.wochenzeile { display: flex; align-items: center; gap: 9px; font-size: 13.5px; }
+.wochenzeile .n { flex: 1; min-width: 0; }
+.wochenzeile b { font-family: var(--font-data); font-size: 13px; }
+.wochenzeile.summe { border-top: 1px solid var(--line); padding-top: 8px; font-weight: 700; }
+
+/* Das Plus in der Mitte der Leiste: der häufigste Weg — eine Quest melden. */
+.navbar .plusknopf { color: var(--ink-2); }
+.navbar .plusknopf .plus {
+  width: 48px; height: 48px; border-radius: 16px; background: var(--akzent-flaeche); color: #fff;
+  display: grid; place-items: center; margin: -24px auto -2px; box-shadow: 0 8px 18px -8px rgba(236, 15, 6, .7);
+}
+.navbar .plusknopf:active .plus { transform: scale(.94); }
+
+/* Was man ausgelöst hat, steigt auf. Der Jubel nach der letzten Karte liegt
+ * über allem, fängt aber keine Finger. */
+.stapeljubel { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+.flieg {
+  position: fixed; left: 50%; top: 42%; z-index: 16; pointer-events: none; transform: translate(-50%, 0); opacity: 0;
+  font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--urlaub); background: var(--urlaub-tint);
+  border-radius: 999px; padding: 6px 14px; white-space: nowrap;
+}
+.flieg[data-an] { animation: steigen .9s cubic-bezier(.2, .9, .3, 1); }
+@keyframes steigen {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(.8); }
+  25% { opacity: 1; transform: translate(-50%, -10px) scale(1.06); }
+  100% { opacity: 0; transform: translate(-50%, -70px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .karte, .fortschritt i, .fortschritt i.pop, .fertig { transition: none; animation: none; }
+}

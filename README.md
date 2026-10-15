@@ -163,6 +163,33 @@ beide Figuren nebeneinander.
 Der Name **Haus-Quest** ist beschreibend und übersteht einen Verkauf; privat heißt die App
 weiterhin Bubu App.
 
+## Startseite
+
+Die Startseite passt auf einen Bildschirm. Von oben nach unten:
+
+- **Das Konto** als eine Leiste: der eigene Stand groß, dazu „+N diese Woche“, die anderen
+  klein daneben. Antippen führt in den Verlauf.
+- **Was gerade läuft** als schmale Pillen: Aktion, Event, Urlaub. Ein Event öffnet sein
+  Blatt mit *Einlösen*, *Ändern* und *Beenden*.
+- **Für dich** — ein Stapel aus Karten. Darin liegt alles, was auf mich wartet: Meldungen,
+  Anträge und Geschenke zum Entscheiden, Rückfragen an mich, meine Aufgaben aus dem Plan,
+  Abstimmungen ohne meine Stimme, Empfangsbestätigungen und Zusagen. Jede Karte hat zwei
+  Knöpfe, und wischen geht auch: **rechts erledigt die Sache**, links ist das Sichere —
+  *Nachfragen*, *Später*, *Weiterreichen*. Endgültig Nein sagt man im Stapel nur bei
+  Abstimmungen; *Ablehnen* und alle anderen Feinheiten liegen hinter **Alle ›**.
+  Zustimmen lässt die ausgelösten Cleanies aufsteigen, die letzte Karte bringt den Jubel.
+  *Später* gilt, bis die App neu geladen wird.
+- **Zwei Kacheln**: der Haushaltsplan (was überfällig ist, was mir gehört) und **Diese
+  Woche** — was der Haushalt seit Montag zusammen gesammelt hat. Ein **Wochenziel** gibt
+  es nur, wenn die Verwaltung eins eingetragen hat; bis dahin steht genau das dort.
+  Es ist ein gemeinsames Ziel, keine Rangliste.
+- **Zwei dünne Zeilen**: was auf die anderen wartet, und die letzte Buchung mit dem Weg
+  in den Verlauf.
+
+„Prüfen“ hat keinen eigenen Reiter mehr. In der Mitte der Leiste sitzt stattdessen das
+**Plus**: die meistgenutzten Quests zuerst, darüber eine Suche, und von dort geht es weiter
+wie immer.
+
 ## Listen bedienen
 
 Quests und Belohnungen haben oben ein Suchfeld (Groß- und Kleinschreibung sowie Umlaute egal),
@@ -280,17 +307,18 @@ Meldungen kommen. Wer zurückkommt, steht also nicht schlechter da als vorher.
 
 ## Was von mir noch offen ist
 
-Auf der Startseite steht unter **Wartet auf …** alles, was ich losgeschickt habe und was noch
-niemand entschieden hat: gemeldete Quests, beantragte Belohnungen samt Terminwunsch und
+Auf der Startseite führt die Zeile **Wartet auf …** zu allem, was ich losgeschickt habe und
+was noch niemand entschieden hat: gemeldete Quests, beantragte Belohnungen samt Terminwunsch und
 angebotene Übertragungen. Steht dazu eine Rückfrage, sagt die Zeile das ebenfalls.
 
 ## Rückfragen
 
 Auf eine Meldung oder einen Antrag gab es lange nur Ja oder Nein. Passt bloß der Termin
-nicht, ist beides falsch. Deshalb steht im Prüfen-Stapel ein dritter Weg: **Nachfragen**.
+nicht, ist beides falsch. Deshalb gibt es einen dritten Weg: **Nachfragen** — im Stapel
+auf der Startseite der linke Knopf.
 
 Der Antrag bleibt dabei offen — er wird weder genehmigt noch abgelehnt. Die Frage hängt
-daran, samt Terminvorschlag; wer den Antrag gestellt hat, sieht sie auf der Startseite,
+daran, samt Terminvorschlag; wer den Antrag gestellt hat, findet sie als Karte im Stapel,
 antwortet und schickt ihn erneut. Danach steht er wieder zur Entscheidung.
 
 ## Belohnungen: zugesagt ist noch nicht erhalten
@@ -413,9 +441,10 @@ Jede Entscheidung erreicht die andere Person auf zwei Wegen:
 - **Ein gemerktes Ereignis** in der Datenbank. Beim nächsten Öffnen zeigt die App den
   Vollbild-Moment nach — auch wenn die Push-Nachricht nie ankam oder weggewischt wurde.
 
-Der Vollbild-Moment erscheint dadurch bei **beiden**: beim Prüfenden sofort nach dem Tippen,
-beim Melder, sobald er die App das nächste Mal öffnet. Zustimmung feiert mit Konfetti und
-hochzählenden Punkten, eine Ablehnung wird ruhig gezeigt.
+Der Moment erscheint dadurch bei **beiden**: beim Prüfenden sofort — im Stapel als
+aufsteigende Cleanies, unter „Alle ›“ als Vollbild —, beim Melder als Vollbild, sobald er die
+App das nächste Mal öffnet. Zustimmung feiert mit Konfetti und hochzählenden Cleanies, eine
+Ablehnung wird ruhig gezeigt.
 
 ## Aufbau des Codes
 

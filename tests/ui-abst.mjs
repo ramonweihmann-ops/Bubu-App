@@ -55,7 +55,7 @@ const c = await seiteFuer("tok-c");
 async function cStimmtAllemZu() {
   for (let i = 0; i < 4; i++) {
     await laden(c);
-    await c.click('.navbar [data-go="pruefen"]');
+    await c.click('.navbar [data-go="start"]'); await c.click('.abschnitt [data-go="pruefen"]');
     await c.waitForTimeout(500);
     if (!(await c.locator(".card.vote [data-stimme]").count())) return;
     await c.click('.card.vote [data-stimme][data-antwort="ja"]');
@@ -78,9 +78,12 @@ await a.evaluate(async ([q1, q2]) => {
 
 console.log("== B sieht sie bei „Prüfen“, nicht nur unter „Wir“");
 await laden(b);
-const badge = await b.locator('.navbar [data-go="pruefen"] .badge, .navbar [data-go="pruefen"] [class*="badge"]').first().innerText().catch(() => "");
-pruefe("Zähler in der Leiste", badge.trim(), "2");
-await b.click('.navbar [data-go="pruefen"]');
+// „Prüfen“ hat keinen Reiter mehr: die Zahl steht an „Start“ und zählt den
+// ganzen Stapel — die zwei Abstimmungen sind darin.
+const badge = Number(await b.locator('.navbar [data-go="start"] .badge-n').innerText().catch(() => "0"));
+pruefe("Zähler in der Leiste zählt beide mit", badge >= 2, true);
+pruefe("Dieselbe Zahl steht am Stapel", String(badge), (await b.locator(".abschnitt .anzahl").innerText()).trim());
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 pruefe("Zwei Abstimmungskarten bei Prüfen", await b.locator(".card.vote").count(), 2);
 
@@ -106,7 +109,7 @@ pruefe("Eine Karte weniger", await b.locator(".card.vote").count(), 1);
 
 console.log("== A sieht nichts bei „Prüfen“ — A hat schon zugestimmt");
 await laden(a);
-await a.click('.navbar [data-go="pruefen"]');
+await a.click('.navbar [data-go="start"]'); await a.click('.abschnitt [data-go="pruefen"]');
 await a.waitForTimeout(600);
 pruefe("Keine Abstimmung für den Absender", await a.locator(".card.vote").count(), 0);
 enthaelt("Beim Absender steht sie auf der Startseite", await a.evaluate(() => document.body.innerText), "Alles geprüft");
@@ -130,7 +133,7 @@ await a.evaluate(async (qid) => fetch("/api/proposals", {
   body: JSON.stringify({ art: "aufgabe_aendern", zielId: qid, wiederkehrend: true, rhythmus: "1× im Quartal" })
 }), ziele[0].id);
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const wechsel = await b.locator(".card.vote").first().innerText();
 enthaelt("Erkennt den reinen Rhythmuswechsel", wechsel, "der Rhythmus soll sich ändern");
@@ -144,7 +147,7 @@ await a.evaluate(async (qid) => fetch("/api/proposals", {
   body: JSON.stringify({ art: "aufgabe_aendern", zielId: qid, wiederkehrend: false })
 }), ziele[1].id);
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const zurueck = (await b.locator(".card.vote").allInnerTexts()).join("\n---\n");
 enthaelt("Sagt, dass sie wieder normal wird", zurueck, "soll wieder eine normale Quest werden");

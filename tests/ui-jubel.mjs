@@ -62,7 +62,7 @@ await a.evaluate(async (q) => fetch("/api/claims", {
 }), quest);
 
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
 await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
 await b.waitForSelector("#celebrate[data-open]", { timeout: 8000 });

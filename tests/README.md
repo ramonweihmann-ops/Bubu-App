@@ -58,8 +58,8 @@ genau so, wie er es soll.
 | `ui-questplan.mjs` | Eine Aufgabe aus dem Plan bleibt eine Quest — melden, gesperrt, fremde Runde |
 | `ui-rueck.mjs` | Rückfragen und Belohnungen auf dem Schirm |
 | `ui-wieder.mjs` | Eine Quest zur wiederkehrenden Aufgabe machen |
-| `ui-offen.mjs` | Der Wartekasten auf der Startseite |
-| `ui-abst.mjs` | Abstimmungen bei „Prüfen“, mit allem, was draufsteht |
+| `ui-offen.mjs` | „Wartet auf …“ — die Zeile auf der Startseite und ihr Blatt |
+| `ui-abst.mjs` | Abstimmungen unter „Für dich“, mit allem, was draufsteht |
 | `ui-storno.mjs` | Nachbessern und Zurückziehen auf dem Schirm |
 | `ui-urlaub.mjs` | Urlaubsmodus auf dem Schirm |
 | `ui-gutschrift.mjs` | Der Haken „Cleanies an Empfänger senden“ |
@@ -67,7 +67,8 @@ genau so, wie er es soll.
 | `jubel-api.sh` | Cleanies-Phasen verschieben, eigene GIFs hochladen und löschen |
 | `ui-jubel.mjs` | Der Jubel in der App, die Einstellungen der Verwaltung |
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
-| `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt bis zum Beenden |
+| `ui-event.mjs` | Events auf dem Schirm, zu dritt — vom Blatt über die Pille bis zum Beenden |
+| `ui-start.mjs` | Die Startseite: Stapel per Knopf und Wisch, Später, Jubel, Kacheln, Wochenziel, das Plus — alles auf einem Bildschirm |
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
 | `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |
@@ -80,3 +81,4 @@ genau so, wie er es soll.
 | `voller-tag.sh` | Stellt einen vollen, realistischen Tag in der Dreier-WG nach — für Bilder und Messungen. Überschreibt die Testdaten. |
 | `start-messen.mjs` | Misst die Startseite an so einem Tag: Höhe in Bildschirmen, Blöcke, rote Elemente. |
 | `start-bild.mjs` | Nimmt das Vorher-Bild für `web/mockup-start/` auf. |
+| `start-schauen.mjs` | Ein Bild der Startseite für eine Person, hell oder dunkel — zum Hinschauen, ohne Prüfung. |

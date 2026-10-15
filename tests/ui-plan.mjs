@@ -33,7 +33,7 @@ pruefe("Haushaltsplan verlinkt", await a.locator('[data-go="plan"]').count() > 0
 await a.screenshot({ path: `${AUS}/q1-start.png` });
 
 console.log("== Aufgabe vorschlagen");
-await a.click('.rowlink[data-go="plan"]');
+await a.click('.startkachel[data-go="plan"]');
 await a.waitForSelector(".appbar .title");
 pruefe("Plan geöffnet", await a.locator(".appbar .title").innerText(), "Haushaltsplan");
 await a.click('[data-sheet="neue-aufgabe"]');
@@ -56,7 +56,7 @@ for (const [s, name] of [[b, "B"], [c, "C"]]) {
 }
 
 await laden(a);
-await a.click('.rowlink[data-go="plan"]');
+await a.click('.startkachel[data-go="plan"]');
 await a.waitForSelector(".aufgabe");
 pruefe("Aufgabe steht im Plan", await a.locator(".aufgabe").count(), 1);
 pruefe("Fälligkeit angezeigt", (await a.locator(".frist .w").first().innerText()).includes("7"), true);
@@ -93,7 +93,7 @@ await a.screenshot({ path: `${AUS}/q5-gemeldet.png` });
 
 console.log("== B prüft und bestätigt");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-entscheiden="claims"]');
 pruefe("Vorzeitig-Hinweis sichtbar", (await b.locator(".body").innerText()).includes("Besuch kommt"), true);
 await b.screenshot({ path: `${AUS}/q6-pruefen.png` });
@@ -113,7 +113,7 @@ setzeFrist("+3 days");
 
 for (const s of [a, b]) {
   await laden(s);
-  await s.click('.rowlink[data-go="plan"]');
+  await s.click('.startkachel[data-go="plan"]');
   await s.waitForSelector(".aufgabe");
   await s.click(".aufgabe");
   await s.waitForSelector('[data-bewerbung="ja"]', { timeout: 8000 });
@@ -129,7 +129,7 @@ execSync(
   `"update bewerbungen set runde = date('now','+1 day')" > /dev/null 2>&1`);
 
 await laden(a);
-await a.click('.rowlink[data-go="plan"]');
+await a.click('.startkachel[data-go="plan"]');
 await a.waitForSelector(".aufgabe");
 await a.click(".aufgabe");
 await a.waitForSelector(".rang[data-erster]", { timeout: 8000 });
@@ -140,7 +140,7 @@ await a.screenshot({ path: `${AUS}/q8-rangliste.png`, fullPage: true });
 
 console.log("== B steht oben und reicht weiter");
 await laden(b);
-await b.click('.rowlink[data-go="plan"]');
+await b.click('.startkachel[data-go="plan"]');
 await b.waitForSelector(".aufgabe");
 await b.click(".aufgabe");
 await b.waitForSelector("[data-vergabe]", { timeout: 8000 });
@@ -149,7 +149,7 @@ await b.click('[data-vergabe][data-annehmen="nein"]');
 await b.waitForTimeout(1500);
 
 await laden(a);
-await a.click('.rowlink[data-go="plan"]');
+await a.click('.startkachel[data-go="plan"]');
 await a.waitForSelector(".aufgabe");
 await a.click(".aufgabe");
 await a.waitForSelector("[data-vergabe]", { timeout: 8000 });

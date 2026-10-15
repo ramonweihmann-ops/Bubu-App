@@ -66,29 +66,6 @@ const nameVon = (id) => id === S?.ich?.id ? "Du"
   : vorname((S?.mitglieder || []).find((m) => m.id === id)?.name) || "jemand";
 const mitglied = (id) => (S?.mitglieder || []).find((m) => m.id === id) || { id };
 
-/** Zu zweit nebeneinander wie bisher, zu dritt und mehr als Liste — sonst
- *  schrumpfen die Cleanies-Stände auf dem Handy zu Briefmarken. */
-function kontenTafel() {
-  const alle = S.mitglieder || [];
-  if (alle.length <= 2) {
-    return `<div class="accounts">
-      ${alle.map((m) => `
-        <div class="account ${m.id === S.ich.id ? "me" : ""}">
-          ${bild(m)}<span class="who">${esc(vorname(m.name))}</span>
-          <span class="pts">${cl(m.punkte)}</span><span class="unit">Cleanies</span>
-        </div>`).join("")}
-    </div>`;
-  }
-  return `<div class="card konten">
-    ${[...alle].sort((a, b) => b.punkte - a.punkte).map((m) => `
-      <div class="konto">
-        ${bild(m, "sm")}
-        <span class="who">${esc(vorname(m.name))}${m.id === S.ich.id ? ' <span class="chip wait">du</span>' : ""}</span>
-        <span class="pts">${cl(m.punkte)}</span>
-      </div>`).join("")}
-  </div>`;
-}
-
 const FIGUREN = { "fuchs": "/fox.webp", "wolf": "/wolf.webp" };
 
 function bild(person, groesse = "") {
@@ -236,7 +213,8 @@ celebrate.addEventListener("click", (ev) => {
 
 async function laden(still = false) {
   try {
-    S = await api("state");
+    // Die Woche fängt am Montag an — dort, wo man wohnt, nicht in Greenwich.
+    S = await api(`state?versatz=${-new Date().getTimezoneOffset()}`);
     zeichne();
     await ereignisseZeigen();
   } catch (fehler) {
@@ -292,10 +270,27 @@ function zeichne() {
   if (!S.eingerichtet) return einrichtung();
   if (ansicht === "einladen") return einladen();
 
+  // Liegt ein Finger auf einer Karte, wartet das neue Bild, bis er loslässt —
+  // sonst risse die Abfrage im Hintergrund die Karte unter ihm weg.
+  if (stapel.wischt) { stapel.nachWisch = true; return; }
+
+  // Eine Karte, deren Blatt offen war, ist jetzt weg: dann hat das Blatt sie
+  // erledigt. War es die letzte, gibt es den Jubel wie beim Wischen.
+  if (stapel.blatt && !alleKarten().some((k) => k.schluessel === stapel.blatt)) {
+    stapel.blatt = null;
+    stapel.meine += 1;
+    stapel.pop = true;
+    if (ansicht === "start" && !stapelSichtbar().length
+        && !alleKarten().some((k) => stapel.spaeter.has(k.schluessel))) stapelJubel();
+  }
+
+  // „Prüfen“ hat keinen eigenen Reiter mehr: was auf mich wartet, liegt als
+  // Stapel auf der Startseite, und die Zahl daran sagt, wie viel. In der Mitte
+  // sitzt dafür das Plus — der häufigste Weg überhaupt, eine Quest melden.
   const nav = [
-    { id: "start", label: "Start", icon: "i-home" },
+    { id: "start", label: "Start", icon: "i-home", badge: stapelSichtbar().length },
     { id: "quests", label: "Quests", icon: "i-broom" },
-    { id: "pruefen", label: "Prüfen", icon: "i-shield", badge: zuPruefen().length },
+    { plus: true },
     { id: "belohnungen", label: "Belohnung", icon: "i-gift" },
     { id: "wir", label: "Wir", icon: "i-vote" }
   ];
@@ -310,12 +305,15 @@ function zeichne() {
 
   // Unterseiten haben keinen eigenen Knopf in der Leiste. Damit trotzdem immer
   // ein Reiter leuchtet, zeigen sie auf den, aus dem sie hervorgehen.
-  const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start",
+  const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start", pruefen: "start",
                   raeume: "start", haushalt: "start", plan: "start", aufgabe: "start" }[ansicht] || ansicht;
 
   const bild = inhalt() + `
     <nav class="navbar">
-      ${nav.map((n) => `
+      ${nav.map((n) => n.plus ? `
+        <button class="plusknopf" data-plus aria-label="Erledigt melden">
+          <span class="plus">${icon("i-plus", 24)}</span>Erledigt
+        </button>` : `
         <button data-go="${n.id}" aria-current="${aktiv === n.id}">
           ${n.badge ? `<span class="badge-n">${n.badge}</span>` : ""}
           ${icon(n.icon, 21)}${n.label}
@@ -917,11 +915,479 @@ const aktionenBlock = () => `
   </button>`;
 
 /* ------------------------------------------------------------------ Start */
+//
+// Die Startseite passt auf einen Bildschirm. Oben das Konto, darunter als
+// schmale Pillen, was gerade läuft, dann der Stapel „Für dich“: eine Karte
+// nach der anderen, mit zwei Knöpfen oder per Wisch. Darunter zwei Kacheln
+// und zwei dünne Zeilen. Alles Weitere liegt eine Berührung tiefer.
+
+/* ---------- Der Stapel ---------- */
+
+/* Was in dieser Sitzung mit dem Stapel passiert ist. Er lebt so lange wie die
+ * Seite: „Später“ heißt später, nicht nie. */
+const stapel = {
+  gesehen: new Set(),   // jede Karte, die in dieser Runde schon dalag
+  weg: new Set(),       // was ich abgearbeitet habe — bis der Server es auch weiß
+  spaeter: new Set(),   // übersprungen
+  meine: 0,             // wie viele ich selbst abgearbeitet habe
+  blatt: null,          // die Karte, deren Blatt gerade offen ist
+  leer: false,          // stand zuletzt „Alles erledigt“ da?
+  pop: false,           // der Fortschritt hüpft beim nächsten Bild
+  wischt: false,        // ein Finger liegt auf der Karte — nicht neu zeichnen
+  nachWisch: false
+};
+
+/** Alles, was auf mich wartet, als Karten. Rechts liegt immer das, was die
+ *  Sache erledigt; links das Sichere — nachfragen, später, weiterreichen.
+ *  Endgültig Nein sagen geht nur bei Abstimmungen, sonst über „Alle“. */
+function alleKarten() {
+  const k = [];
+
+  for (const e of zuPruefen()) {
+    if (e.art === "meldung") {
+      const n = e.quantity * e.points_each;
+      k.push({
+        schluessel: `claims:${e.id}`, art: "melden", name: "Meldung", stufe: 1,
+        av: bild(mitglied(e.claimed_by), "xs"),
+        wer: `${esc(nameVon(e.claimed_by))} hat gemeldet · ${zeitpunkt(e.created_at)}`,
+        was: esc(e.quest) + (e.quantity > 1 ? ` · ${e.quantity}×` : ""),
+        betrag: `+${cl(n)}`,
+        notiz: e.note ? `„${esc(e.note)}“` : "",
+        ja: { text: "Zustimmen", tun: { entscheiden: "claims", id: e.id } },
+        nein: { text: "Nachfragen", blatt: () => sheetRueckfrage("claims", e.id) },
+        lohn: `+${cl(n)} für ${esc(nameVon(e.claimed_by))}`
+      });
+    } else if (e.art === "antrag") {
+      k.push({
+        schluessel: `requests:${e.id}`, art: "antrag", name: "Belohnung", stufe: 1,
+        av: bild(mitglied(e.requested_by), "xs"),
+        wer: `${esc(nameVon(e.requested_by))} möchte einlösen · ${zeitpunkt(e.created_at)}`,
+        was: esc(e.belohnung), betrag: `−${cl(e.cost)}`, neutral: true,
+        notiz: [e.wish_date ? `<b>${esc(e.wish_date)}</b>` : "", e.message ? `„${esc(e.message)}“` : "",
+          e.gutschrift_an ? `geht an ${e.gutschrift_an === S.ich.id ? "dich" : esc(nameVon(e.gutschrift_an))}` : ""]
+          .filter(Boolean).join(" · "),
+        ja: { text: "Genehmigen", tun: { entscheiden: "requests", id: e.id } },
+        nein: { text: "Nachfragen", blatt: () => sheetRueckfrage("requests", e.id, e.wish_date || "") },
+        lohn: "Genehmigt"
+      });
+    } else if (e.art === "uebertragung") {
+      k.push({
+        schluessel: `transfers:${e.id}`, art: "melden", name: "Geschenk", stufe: 1,
+        av: bild(mitglied(e.from_member), "xs"),
+        wer: `${esc(nameVon(e.from_member))} schickt dir Cleanies · ${zeitpunkt(e.created_at)}`,
+        was: "Cleanies für dich", betrag: `+${cl(e.amount)}`,
+        notiz: e.message ? `„${esc(e.message)}“` : "",
+        ja: { text: "Annehmen", tun: { entscheiden: "transfers", id: e.id } },
+        nein: { text: "Später", spaeter: true },
+        lohn: `+${cl(e.amount)} für dich`
+      });
+    } else if (e.art === "abstimmung") {
+      const a = { ...e, art: e.vorschlag };
+      const mehrheit = (e.noetig || 0) < (e.koepfe || 0);
+      k.push({
+        schluessel: `vote:${e.id}`, art: "vote", name: "Abstimmung", stufe: 4,
+        av: bild(mitglied(e.von), "xs"),
+        wer: `${esc(nameVon(e.von))} schlägt vor · ${zeitpunkt(e.created_at)}`,
+        was: esc(e.titel || "Vorschlag"),
+        wandel: abstimmungWandel(a),
+        notiz: e.grund ? `„${esc(e.grund)}“` : esc(abstimmungWorum(a)),
+        ja: { text: "Ja", tun: { stimme: e.id, antwort: true } },
+        nein: mehrheit ? { text: "Nein", blatt: () => sheetAblehnen(e.id, e.titel || "") }
+                       : { text: "Nein", tun: { stimme: e.id, antwort: false } }
+      });
+    } else if (e.art === "empfang") {
+      k.push({
+        schluessel: `empfang:${e.id}`, art: "frage", name: "Bekommen?", stufe: 5,
+        av: bild(mitglied(e.decided_by), "xs"),
+        wer: `${esc(nameVon(e.decided_by))} hat zugesagt · ${zeitpunkt(e.decided_at)}`,
+        was: esc(e.belohnung),
+        notiz: `${e.wish_date ? `<b>${esc(e.wish_date)}</b> · ` : ""}Hast du sie bekommen?`,
+        ja: { text: "Bekommen", tun: { empfang: e.id } },
+        nein: { text: "Später", spaeter: true },
+        lohn: "Bestätigt"
+      });
+    } else if (e.art === "nachhol") {
+      k.push({
+        schluessel: `nachhol:${e.id}`, art: "frage", name: "Nachgeholt?", stufe: 5,
+        av: bild(mitglied(e.nachhol_von), "xs"),
+        wer: `${esc(nameVon(e.nachhol_von))} hat nachgeholt · ${zeitpunkt(e.nachhol_am)}`,
+        was: esc(e.belohnung), betrag: `+${cl(e.cost)}`,
+        notiz: `Stimmt das? Dann bekommt ${esc(nameVon(e.nachhol_von))} die Cleanies zurück.`,
+        ja: { text: "Stimmt", tun: { nachhol: e.id } },
+        nein: { text: "Später", spaeter: true },
+        lohn: `+${cl(e.cost)} für ${esc(nameVon(e.nachhol_von))}`
+      });
+    }
+  }
+
+  for (const r of meineRueckfragen()) {
+    k.push({
+      schluessel: `frage:${r.bereich}:${r.id}`, art: "frage", name: "Rückfrage", stufe: 2,
+      av: bild(mitglied(r.rueckfrage_von), "xs"),
+      wer: `${esc(nameVon(r.rueckfrage_von))} fragt nach · ${zeitpunkt(r.rueckfrage_am)}`,
+      was: `„${esc(r.rueckfrage)}“`,
+      notiz: `zu ${r.bereich === "claims" ? "deiner Meldung" : "deinem Antrag"}: ${esc(r.titel)}${
+        r.vorschlag_datum ? ` · Vorschlag: <b>${esc(r.vorschlag_datum)}</b>` : ""}`,
+      ja: { text: "Antworten", blatt: () => sheetAntwort(r.bereich, r) },
+      nein: { text: "Später", spaeter: true }
+    });
+  }
+
+  // Aus dem Plan: was mir gehört, wofür ich dran bin, und was überfällig ist
+  // und noch niemandem gehört. Fremde Runden stehen nur in der Kachel.
+  const schonDa = new Set();
+  for (const a of [...meinePlanSachen(), ...ueberfaellig().filter((x) => !x.zugewiesen && !x.dran)]) {
+    if (schonDa.has(a.id)) continue;
+    schonDa.add(a.id);
+    const dran = a.dran === S.ich.id;
+    k.push({
+      schluessel: `plan:${a.id}`, art: "plan", stufe: 3,
+      name: dran ? "Du bist dran" : a.offen < 0 ? "Überfällig" : "Gehört dir",
+      av: `<span class="avatar xs" style="color:var(--accent)">${icon("i-broom", 15)}</span>`,
+      wer: `Haushaltsplan · ${dran ? "die Rangliste nennt dich" : esc(fristText(a.offen).text)}`,
+      was: esc(a.name), betrag: `+${cl(a.punkte)}`,
+      ja: dran ? { text: "Annehmen", tun: { vergabe: a.id, annehmen: true } }
+               : { text: "Erledigt", tun: { melden: a.id } },
+      nein: dran ? { text: "Weiterreichen", tun: { vergabe: a.id, annehmen: false } }
+                 : { text: "Später", spaeter: true },
+      lohn: dran ? "Gehört dir" : "Gemeldet"
+    });
+  }
+
+  for (const r of meineZusagen()) {
+    const nach = r.erfuellt === "nicht_erhalten";
+    k.push({
+      schluessel: `zusage:${r.id}`, art: "schuld", stufe: 6,
+      name: nach ? "Nachholen?" : "Du schuldest",
+      av: bild(mitglied(r.requested_by), "xs"),
+      wer: `für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · ${esc(r.wish_date)}` : ""}`,
+      was: esc(r.belohnung),
+      betrag: nach ? `−${cl(r.cost)}` : "", neutral: true,
+      notiz: nach ? "Die Cleanies sind ab — holst du es nach, kommen sie zurück."
+                  : (r.message ? `„${esc(r.message)}“` : ""),
+      ja: nach ? { text: "Nachgeholt", tun: { nachholen: r.id } }
+               : { text: "Ansehen", blatt: () => sheetZusage(r) },
+      nein: { text: "Später", spaeter: true },
+      lohn: nach ? "Gemeldet" : ""
+    });
+  }
+
+  return k.map((x, i) => ({ ...x, i })).sort((a, b) => a.stufe - b.stufe || a.i - b.i);
+}
+
+/** Was oben auf dem Stapel liegt — ohne das gerade Erledigte und Übersprungene. */
+const stapelSichtbar = (alle = alleKarten()) =>
+  alle.filter((k) => !stapel.weg.has(k.schluessel) && !stapel.spaeter.has(k.schluessel));
+
+/** Der Stand für den Fortschritt: wie viele in dieser Runde dalagen und wie
+ *  viele davon weg sind — egal, wer sie erledigt hat. Kommt nach „Alles
+ *  erledigt“ etwas Neues, fängt eine neue Runde an. */
+function stapelStand() {
+  const alle = alleKarten();
+  const sichtbar = stapelSichtbar(alle);
+  if (stapel.leer && sichtbar.length) {
+    stapel.gesehen = new Set();
+    stapel.weg.clear();
+  }
+  for (const k of alle) stapel.gesehen.add(k.schluessel);
+  stapel.leer = sichtbar.length === 0;
+  const gesamt = stapel.gesehen.size;
+  return { alle, sichtbar, gesamt, fertig: gesamt - sichtbar.length,
+           uebersprungen: alle.filter((k) => stapel.spaeter.has(k.schluessel)).length };
+}
+
+function karteHtml(k, platz, nr, gesamt) {
+  return `
+    <div class="karte" data-platz="${platz}" data-karte="${esc(k.schluessel)}" ${platz ? "inert" : ""}>
+      <div class="oben"><span class="art ${k.art}">${k.name}</span>
+        <span class="zaehler">${nr} von ${gesamt}</span></div>
+      <div class="wer">${k.av}<span>${k.wer}</span></div>
+      <div class="was">${k.was}</div>
+      ${k.betrag ? `<div class="betrag ${k.neutral ? "neutral" : ""}">${k.betrag}</div>` : ""}
+      ${k.wandel ? `<div class="change">${k.wandel}</div>` : ""}
+      ${k.notiz ? `<div class="notiz">${k.notiz}</div>` : ""}
+      <div class="knoepfe">
+        <button data-kartentun="nein">${k.nein.text}</button>
+        <button class="ja" data-kartentun="ja">${k.ja.text}</button>
+      </div>
+      <div class="wisch">← wischen geht auch →</div>
+    </div>`;
+}
+
+function stapelBlock(st) {
+  const { sichtbar, gesamt, fertig, uebersprungen } = st;
+  const pop = stapel.pop ? fertig - 1 : -1;
+  stapel.pop = false;
+  const fortschritt = !gesamt ? '<span style="flex:1"></span>'
+    : gesamt <= 12
+      ? `<span class="fortschritt">${Array.from({ length: gesamt }, (_, n) =>
+          `<i ${n < fertig ? "data-ok" : ""} ${n === pop ? 'class="pop"' : ""}></i>`).join("")}</span>`
+      : `<span class="fortschritt"><b style="width:${Math.round(fertig / gesamt * 100)}%"></b></span>`;
+
+  return `
+    <div class="abschnitt"><h4>Für dich</h4>
+      <span class="anzahl" ${sichtbar.length ? "" : "data-fertig"}>${sichtbar.length || "✓"}</span>
+      ${fortschritt}
+      <button class="rechts" data-go="pruefen">Alle ›</button></div>
+    <div class="stapel">
+      ${sichtbar.slice(0, 3).map((k, i) => karteHtml(k, i, fertig + 1 + i, gesamt)).reverse().join("")}
+      ${sichtbar.length ? "" : `
+      <div class="fertig">
+        <div class="gross">${icon("i-check", 40)}</div>
+        <b>Alles erledigt</b>
+        <span>${stapel.meine ? "Nichts wartet mehr auf dich. Die anderen sehen es gleich."
+                             : "Gerade wartet nichts auf dich."}</span>
+        ${uebersprungen ? `<button data-nochmal>Noch einmal zeigen · ${uebersprungen}</button>` : ""}
+      </div>`}
+    </div>`;
+}
+
+const warte = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+/** Was man ausgelöst hat, steigt kurz auf. */
+function fliegen(html) {
+  const f = document.getElementById("flieg");
+  if (!f) return;
+  f.innerHTML = html;
+  f.removeAttribute("data-an");
+  void f.offsetWidth;
+  f.setAttribute("data-an", "");
+}
+
+/** Die letzte Karte bekommt den echten Jubel der App. */
+function stapelJubel() {
+  if (navigator.vibrate) navigator.vibrate([18, 60, 30]);
+  spielen(document.getElementById("stapeljubel"), { phase: "mittel" });
+}
+
+/** Eine Karte abarbeiten — per Knopf oder per Wisch. Was ein Blatt braucht,
+ *  öffnet es, und die Karte bleibt liegen. Alles andere fliegt weg, und der
+ *  Server erfährt es danach. */
+async function karteTun(schluessel, richtung, dom = null) {
+  const k = alleKarten().find((x) => x.schluessel === schluessel);
+  if (!k || stapel.weg.has(schluessel)) return;
+  const wahl = richtung === "ja" ? k.ja : k.nein;
+
+  if (wahl.blatt) {
+    if (dom) dom.style.transform = "";
+    stapel.blatt = schluessel;
+    wahl.blatt();
+    return;
+  }
+
+  if (dom) {
+    dom.style.transition = "";
+    dom.style.transform = `translateX(${richtung === "ja" ? 420 : -420}px) rotate(${richtung === "ja" ? 18 : -18}deg)`;
+    dom.style.opacity = "0";
+  }
+  if (navigator.vibrate) navigator.vibrate(richtung === "ja" ? 18 : 8);
+  if (richtung === "ja" && k.lohn) fliegen(k.lohn);
+
+  if (wahl.spaeter) stapel.spaeter.add(schluessel);
+  else { stapel.weg.add(schluessel); stapel.meine += 1; }
+  stapel.pop = true;
+  const allesWeg = !stapelSichtbar().length && !wahl.spaeter
+    && !alleKarten().some((x) => stapel.spaeter.has(x.schluessel));
+
+  await warte(260);
+  zeichne();
+  if (allesWeg) stapelJubel();
+  if (wahl.spaeter) return;
+
+  try {
+    const t = wahl.tun;
+    if (t.entscheiden) await api(`${t.entscheiden}/${t.id}/decide`, { status: "bestaetigt" });
+    else if (t.stimme) {
+      const e = await api(`proposals/${t.stimme}/vote`, { antwort: t.antwort });
+      if (e.status === "bestaetigt") toast("Angenommen — gilt ab sofort.");
+      else if (e.status === "abgelehnt") toast("Abgelehnt — der alte Stand gilt weiter.");
+    }
+    else if (t.empfang) await api(`requests/${t.empfang}/empfang`, { erhalten: true });
+    else if (t.nachhol) await api(`requests/${t.nachhol}/nachhol-pruefen`, { ja: true });
+    else if (t.nachholen) await api(`requests/${t.nachholen}/nachholen`, {});
+    else if (t.vergabe) await api(`plan/${t.vergabe}/vergabe`, { annehmen: t.annehmen });
+    else if (t.melden) await api("claims", { questId: t.melden, anzahl: 1 });
+    await laden(true);
+  } catch (fehler) {
+    stapel.weg.delete(schluessel);
+    stapel.meine = Math.max(0, stapel.meine - 1);
+    toast(fehler.message, true);
+    zeichne();
+  }
+}
+
+/* Wischen. Die Karten werden mit jedem Bild neu gebaut, deshalb hört das
+ * Dokument zu und nicht die Karte. Erst eine klare Bewegung zur Seite macht
+ * daraus einen Wisch — nach oben und unten bleibt der Schirm scrollbar. */
+let wisch = null;
+
+document.addEventListener("pointerdown", (ev) => {
+  const k = ev.target.closest('.karte[data-platz="0"]');
+  if (!k || ev.target.closest("button") || ev.button > 0) return;
+  wisch = { k, x: ev.clientX, y: ev.clientY, dx: 0, id: ev.pointerId, an: false };
+});
+
+document.addEventListener("pointermove", (ev) => {
+  if (!wisch || ev.pointerId !== wisch.id) return;
+  const dx = ev.clientX - wisch.x;
+  const dy = ev.clientY - wisch.y;
+  if (!wisch.an) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    if (Math.abs(dy) > Math.abs(dx)) { wisch = null; return; }
+    wisch.an = true;
+    stapel.wischt = true;
+    try { wisch.k.setPointerCapture(ev.pointerId); } catch { /* dann eben ohne */ }
+    wisch.k.style.transition = "none";
+  }
+  wisch.dx = dx;
+  wisch.k.style.transform = `translateX(${dx}px) rotate(${dx / 22}deg)`;
+  wisch.k.dataset.richtung = dx >= 0 ? "ja" : "nein";
+});
+
+function wischEnde(ev) {
+  if (!wisch || ev.pointerId !== wisch.id) return;
+  const { k, dx, an } = wisch;
+  wisch = null;
+  if (!an) return;
+  stapel.wischt = false;
+  k.style.transition = "";
+  delete k.dataset.richtung;
+  const weit = Math.abs(dx) > 80;
+  if (weit) karteTun(k.dataset.karte, dx > 0 ? "ja" : "nein", k);
+  else k.style.transform = "";
+  if (stapel.nachWisch) {
+    stapel.nachWisch = false;
+    if (!weit) setTimeout(zeichne, 340);
+  }
+}
+document.addEventListener("pointerup", wischEnde);
+document.addEventListener("pointercancel", wischEnde);
+
+/* ---------- Konto, Pillen, Kacheln, Zeilen ---------- */
+
+const wochenStand = () => S.woche || { je: [], zusammen: 0, ziel: null };
+
+/** Dein Stand groß, die anderen klein daneben. Antippen führt in den Verlauf. */
+function kontoLeiste() {
+  const plus = wochenStand().je.find((z) => z.id === S.ich.id)?.punkte || 0;
+  const leute = [...andere()].sort((a, b) => b.punkte - a.punkte);
+  return `
+    <button class="kontoleiste" data-go="verlauf" aria-label="Dein Konto und der Verlauf">
+      <span class="ich"><span class="stand">${cl(S.ich.punkte)}</span>
+        <span class="unter">dein Konto${plus ? ` · +${plus} diese Woche` : ""}</span></span>
+      ${leute.length ? `<span class="andere">${leute.slice(0, 3).map((m) => `
+        <span class="mini" title="${esc(vorname(m.name))}">${bild(m, "xs")}<b>${m.punkte}</b></span>`).join("")}${
+        leute.length > 3 ? `<span class="mini"><b>+${leute.length - 3}</b></span>` : ""}</span>` : ""}
+    </button>`;
+}
+
+/** Was gerade läuft: Aktion, Event, Urlaub — je eine schmale Pille. */
+function pillen() {
+  const teile = [];
+  for (const a of laufendeAktionen()) {
+    teile.push(`<span class="pille aktion">${icon("i-waage", 14)}${a.art === "quest_bonus"
+      ? `+${a.prozent} % ${a.kategorie ? `auf ${esc(a.kategorie)}` : "auf alles"}`
+      : `${a.prozent} % Rabatt`} <i>${restzeit(a.ende)}</i></span>`);
+  }
+  for (const e of laufendeEvents()) {
+    teile.push(`<button class="pille event" data-eventmenue="${e.id}">${icon("i-kalender", 14)}${esc(e.titel)} ·
+      ${e.richtung === "verdienen" ? "+" : ""}${cl(e.cleanies)} <i>${eventZeit(e)}</i></button>`);
+  }
+  const h = hausUrlaub();
+  if (h) {
+    teile.push(`<button class="pille urlaub" data-go="urlaub">${icon("i-home", 14)}${
+      hausWort() === "Wir" ? "Wir sind" : `${esc(hausWort())} ist`} im Urlaub <i>noch ${nochTage(h)} ${nochTage(h) === 1 ? "Tag" : "Tage"}</i></button>`);
+  } else {
+    for (const u of abwesende()) {
+      teile.push(`<button class="pille urlaub" data-go="urlaub">${icon("i-koffer", 14)}${
+        u.member_id === S.ich.id ? "Du bist im Urlaub" : `${esc(nameVon(u.member_id))} ist im Urlaub`}
+        <i>noch ${nochTage(u)} ${nochTage(u) === 1 ? "Tag" : "Tage"}</i></button>`);
+    }
+  }
+  return teile.length ? `<div class="laeuft">${teile.join("")}</div>` : "";
+}
+
+function planKachel() {
+  const p = plan();
+  const ueber = ueberfaellig().length;
+  const heuteFaellig = p.filter((a) => a.offen === 0 && !a.pruefung).length;
+  const meins = meinePlanSachen().length;
+  return `
+    <button class="startkachel" data-go="plan">
+      <span class="k">Haushaltsplan</span>
+      ${!p.length ? '<span class="v">Noch leer</span>'
+        : ueber ? `<span class="v rot">${ueber} überfällig</span>`
+        : heuteFaellig ? `<span class="v">${heuteFaellig} heute fällig</span>`
+        : '<span class="v">Alles im Lot</span>'}
+      <span class="k">${!p.length ? "Erste Aufgabe vorschlagen"
+        : meins ? `${meins} ${meins === 1 ? "gehört" : "gehören"} dir heute`
+        : `${p.length} ${p.length === 1 ? "Aufgabe" : "Aufgaben"}`}</span>
+    </button>`;
+}
+
+const zielBalken = (w) =>
+  `<span class="zielbalken"><i style="width:${Math.min(100, Math.round(w.zusammen / w.ziel * 100))}%"></i></span>`;
+
+/** Ein gemeinsames Ziel, nicht gegeneinander. Ohne Ziel sagt die Kachel das. */
+function wocheKachel() {
+  const w = wochenStand();
+  return `
+    <button class="startkachel" data-woche>
+      <span class="k">Diese Woche</span>
+      <span class="v">+${cl(w.zusammen)}${w.ziel ? ` <small>von ${w.ziel}</small>` : ""}</span>
+      ${w.ziel ? `${zielBalken(w)}<span class="k">Ziel ${cl(w.ziel)}</span>`
+               : '<span class="zielfehlt">Ziel muss noch eingetragen werden</span>'}
+    </button>`;
+}
+
+function wartetZeile() {
+  const n = meineOffenenSachen().length;
+  if (!n) return "";
+  return `
+    <button class="zuletzt" data-wartet>
+      <span>Wartet auf ${esc(andereName())} · <b>${n}</b></span><span class="mehr">ansehen ›</span>
+    </button>`;
+}
+
+function zuletztZeile() {
+  const b = S.verlauf[0];
+  return `
+    <button class="zuletzt" data-go="verlauf">
+      ${b ? `<span>Zuletzt: <b>${esc(nameVon(b.member_id))}</b> ${b.delta > 0 ? "+" : ""}${b.delta} ·
+          ${zeitpunkt(b.created_at)}</span>`
+        : "<span>Noch nichts passiert — meldet eure erste Quest.</span>"}
+      <span class="mehr">Verlauf ›</span>
+    </button>`;
+}
+
+/* Zwei Hinweise, die man einmal wegtippen kann. Wer allein im Haushalt ist,
+ * behält den zum Einladen — ohne zweite Person lässt sich nichts bestätigen. */
+const hinweisWeg = (id) => { try { return localStorage.getItem(`hq-hinweis-${id}`) === "weg"; } catch { return false; } };
+
+function hinweisZeilen() {
+  const z = [];
+  const fehlen = S.haushalt.groesse - S.haushalt.belegt;
+  if (fehlen > 0 && (allein() || !hinweisWeg("einladen"))) {
+    z.push(`
+    <div class="zuletzt hinweis">
+      <button class="los" data-go="einladen">${icon("i-plus", 15)}<span>Es fehlen noch ${fehlen} —
+        ${allein() ? "allein lässt sich nichts bestätigen" : "Code teilen"}</span><span class="mehr">›</span></button>
+      ${allein() ? "" : `<button class="zu" data-hinweis-weg="einladen" aria-label="Hinweis ausblenden">×</button>`}
+    </div>`);
+  }
+  if (pushOffen() && !hinweisWeg("push")) {
+    z.push(`
+    <div class="zuletzt hinweis">
+      <button class="los" data-push>${icon("i-bell", 15)}<span>Benachrichtigungen einschalten</span>
+        <span class="mehr">›</span></button>
+      <button class="zu" data-hinweis-weg="push" aria-label="Hinweis ausblenden">×</button>
+    </div>`);
+  }
+  return z.join("");
+}
 
 function schirmStart() {
-  const offen = zuPruefen();
-  const abst = offeneAbstimmungen();
-
+  const st = stapelStand();
   return `
     <div class="appbar">
       <div>
@@ -931,149 +1397,113 @@ function schirmStart() {
       <button class="iconbtn" data-go="verlauf" aria-label="Verlauf">${icon("i-clock", 18)}</button>
       <button class="iconbtn" data-go="einstellungen" aria-label="Einstellungen">${icon("i-zahnrad", 18)}</button>
     </div>
-    <div class="body">
-      ${kontenTafel()}
-
-      ${urlaubBanner()}
-
-      ${aktionsBanner()}
-
-      ${laufendeEvents().map(eventKarte).join("")}
-
-      ${offen.length ? `
-      <div class="card alert">
-        <div style="display:flex;gap:11px;align-items:center">
-          <span style="color:var(--accent);flex:none">${icon("i-shield", 22)}</span>
-          <div style="flex:1">
-            <div style="font-size:14.5px;font-weight:700">${offen.length} ${offen.length === 1 ? "Sache wartet" : "Sachen warten"} auf dich</div>
-            <div style="font-size:12.5px;color:var(--ink-2)">Ohne dein OK gibt es keine Cleanies.</div>
-          </div>
-        </div>
-        <button class="btn primary block" data-go="pruefen">Jetzt prüfen</button>
-      </div>` : ""}
-
-      ${meineRueckfragen().map((r) => `
-      <div class="card alert">
-        <div style="display:flex;gap:11px;align-items:center">
-          ${bild(mitglied(r.rueckfrage_von), "sm")}
-          <span style="flex:1">
-            <span style="font-size:12px;color:var(--ink-3);display:block">
-              ${esc(nameVon(r.rueckfrage_von))} fragt nach · ${zeitpunkt(r.rueckfrage_am)}</span>
-            <span style="font-size:14.5px;font-weight:700;display:block">${esc(r.titel)}</span>
-          </span>
-        </div>
-        <div style="font-size:12.5px;color:var(--ink-2)">„${esc(r.rueckfrage)}“${
-          r.vorschlag_datum ? ` · Vorschlag: <b>${esc(r.vorschlag_datum)}</b>` : ""}</div>
-        <button class="btn primary block" data-sheet="antwort" data-bereich="${r.bereich}" data-id="${r.id}">Antworten</button>
-      </div>`).join("")}
-
-      ${meineZusagen().map((r) => `
-      <button class="rowlink" data-sheet="zusage" data-id="${r.id}"
-        style="border-color:${r.erfuellt === "nicht_erhalten" ? "var(--accent)" : "var(--line)"}">
-        <span class="avatar sm" style="background:var(--tint);color:var(--accent)">${icon("i-gift", 18)}</span>
-        <span class="grow"><span class="t">${r.erfuellt === "nicht_erhalten"
-            ? `${esc(r.belohnung)} — nachholen?` : `Du schuldest: ${esc(r.belohnung)}`}</span>
-          <span class="m">${r.erfuellt === "nicht_erhalten"
-            ? `${r.cost} Cleanies ab · noch rückholbar`
-            : `für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · ${esc(r.wish_date)}` : ""}`}</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>`).join("")}
-
-      ${ueberfaellig().length ? `
-      <div class="card alert">
-        <div style="font-size:14.5px;font-weight:700">
-          ${ueberfaellig().length} ${ueberfaellig().length === 1 ? "Aufgabe ist" : "Aufgaben sind"} überfällig</div>
-        <div style="font-size:12.5px;color:var(--ink-2)">
-          ${ueberfaellig().slice(0, 3).map((a) => `${esc(a.name)} seit ${-a.offen} ${-a.offen === 1 ? "Tag" : "Tagen"}`).join(", ")}.
-          ${ueberfaellig().some((a) => a.offen <= -5) ? "Ab sieben Tagen kostet es die ganze Gruppe Cleanies." : ""}</div>
-        <button class="btn primary block" data-go="plan">Zum Haushaltsplan</button>
-      </div>` : ""}
-
-      ${meinePlanSachen().map((a) => `
-      <button class="rowlink" data-plan="${a.id}" style="border-color:var(--accent)">
-        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-shield", 18)}</span>
-        <span class="grow"><span class="t">${a.dran === S.ich.id ? "Du bist dran" : "Gehört dir"}: ${esc(a.name)}</span>
-          <span class="m">${a.dran === S.ich.id ? "Annehmen oder weiterreichen" : "Erledigt melden"}</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>`).join("")}
-
-
-      ${S.haushalt.belegt < S.haushalt.groesse ? `
-      <button class="rowlink" data-go="einladen" style="border-color:var(--accent)">
-        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-plus", 18)}</span>
-        <span class="grow"><span class="t">Es fehlen noch ${S.haushalt.groesse - S.haushalt.belegt}</span>
-          <span class="m">${allein() ? "Allein geht hier wenig: Bestätigen braucht zwei."
-            : "Code teilen, damit alle dabei sind"}</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>` : ""}
-
-      ${pushOffen() ? `
-      <button class="rowlink" data-push style="border-color:var(--accent)">
-        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-bell", 18)}</span>
-        <span class="grow"><span class="t">Benachrichtigungen einschalten</span>
-          <span class="m">Damit du merkst, wenn ${esc(andereName())} etwas ${beugung("meldet", "melden")}</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>` : ""}
-
-      <div class="quick">
-        <button data-go="quests">${icon("i-broom", 21)}Quest erledigt</button>
-        <button data-go="belohnungen">${icon("i-gift", 21)}Belohnung</button>
-        <button data-sheet="transfer">${icon("i-swap", 21)}Cleanies senden</button>
-      </div>
-
-      ${meineOffenenSachen().length ? `
-      <p class="section-label">Wartet auf ${esc(andereName())}</p>
-      <div class="card" style="gap:9px">
-        ${meineOffenenSachen().map((o) => `
-          <button class="offene-zeile" data-sheet="meins" data-bereich="${o.bereich}" data-id="${o.id}">
-            <span style="flex:1;min-width:0;text-align:left">
-              <span style="font-size:13.5px;display:block">${esc(o.titel)}</span>
-              <span style="font-size:11.5px;color:var(--ink-3)">${esc(o.was)}${
-                o.zusatz ? ` · ${esc(o.zusatz)}` : ""} · ${zeitpunkt(o.created_at)}</span>
-              ${o.nachricht ? `<span style="font-size:11.5px;color:var(--ink-2);display:block">„${esc(o.nachricht)}“</span>` : ""}
-            </span>
-            <span class="pts-pill">${o.punkte}</span>
-            <span style="color:var(--ink-3);flex:none">›</span>
-          </button>`).join("")}
-      </div>
-      <div style="font-size:11.5px;color:var(--ink-3);margin-top:-6px">
-        Offen, bis ${esc(andereName())} ${beugung("entscheidet", "entscheiden")}.
-        Solange kannst du nachbessern oder zurückziehen.</div>` : ""}
-
-      ${abst.length ? `
-      ${aktionenBlock()}
-
-      <p class="section-label">Offene Abstimmungen</p>
-      ${abst.slice(0, 2).map(abstimmungKarte).join("")}` : ""}
-
-      <button class="rowlink" data-go="plan">
-        <span class="avatar sm" style="background:var(--tint);color:var(--ruhig)">${icon("i-broom", 18)}</span>
-        <span class="grow"><span class="t">Haushaltsplan</span>
-          <span class="m">${plan().length} wiederkehrende ${plan().length === 1 ? "Aufgabe" : "Aufgaben"}${
-            ueberfaellig().length ? ` · ${ueberfaellig().length} überfällig` : ""}</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>
-
-      <button class="rowlink" data-go="statistik">
-        <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
-        <span class="grow"><span class="t">Auswertung</span>
-          <span class="m">Cleanies je Tag, Wochen- und Monatsprognose</span></span>
-        <span style="color:var(--ink-3)">›</span>
-      </button>
-
-      <p class="section-label">Letzte Aktivität</p>
-      ${S.verlauf.length ? `
-      <ul class="card feed">
-        ${S.verlauf.slice(0, 6).map((b) => `
-          <li><span class="dot ${b.delta < 0 ? "red" : ""}"></span>
-            <span class="txt"><b>${esc(nameVon(b.member_id))}</b> ·
-              ${esc(b.reason)} <b>${b.delta > 0 ? "+" : ""}${cl(b.delta)}</b>
-              <div class="when">${zeitpunkt(b.created_at)}</div></span></li>`).join("")}
-      </ul>` : `
-      <div class="card flat leer"><img src="/logo.webp" alt="">
-        <div class="h">Noch nichts passiert</div>
-        <div class="t">Meldet eure erste Quest — dann füllt sich das hier.</div></div>`}
+    <div class="body start">
+      ${kontoLeiste()}
+      ${pillen()}
+      ${stapelBlock(st)}
+      <div class="startkacheln">${planKachel()}${wocheKachel()}</div>
+      ${wartetZeile()}
+      ${zuletztZeile()}
+      ${hinweisZeilen()}
     </div>`;
+}
+
+/* ---------- Die Blätter hinter Start ---------- */
+
+function sheetWoche() {
+  const w = wochenStand();
+  const verwalte = S.haushalt.ichVerwalte;
+  const vorschlag = w.ziel || Math.max(10, Math.ceil(((w.zusammen || 64) * 1.25) / 10) * 10);
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Diese Woche</h3>
+    <div class="card" style="gap:9px">
+      ${w.je.map((z) => {
+        const m = mitglied(z.id);
+        return `<div class="wochenzeile">${bild(m, "xs")}
+          <span class="n">${esc(vorname(m.name))}${m.id === S.ich.id ? " (du)" : ""}</span>
+          <b>+${cl(z.punkte)}</b></div>`;
+      }).join("")}
+      <div class="wochenzeile summe"><span class="n">Zusammen</span><b>+${cl(w.zusammen)}</b></div>
+    </div>
+    ${w.ziel ? `
+    <div class="card flat" style="gap:7px">
+      <div class="wochenzeile"><span class="n"><b>Wochenziel</b></span><span>${w.zusammen} von ${cl(w.ziel)}</span></div>
+      ${zielBalken(w)}
+      <div style="font-size:12.5px;color:var(--ink-2)">${w.zusammen >= w.ziel
+        ? "Geschafft — zusammen." : `Noch ${w.ziel - w.zusammen} bis Sonntag.`}</div>
+    </div>` : `
+    <div class="note">${icon("i-info", 16)}<span><b>Wochenziel muss noch eingetragen werden.</b>
+      Ein gemeinsames Ziel für alle — nicht gegeneinander.</span></div>`}
+    ${verwalte ? `
+    <div class="field"><label>${w.ziel ? "Ziel ändern" : "Ziel eintragen"}</label>
+      <div class="stepper">
+        <button data-zielschritt="-10" aria-label="weniger">−</button>
+        <span class="val" id="zielwahl">${vorschlag}</span>
+        <button data-zielschritt="10" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--ink-3)">Cleanies, alle zusammen</span>
+      </div>
+    </div>
+    <button class="btn dark block" data-ziel-setzen>${w.ziel ? "Ziel ändern" : "Eintragen"}</button>
+    ${w.ziel ? '<button class="btn text block" data-ziel-weg>Ziel entfernen</button>' : ""}`
+    : `<div style="font-size:12px;color:var(--ink-3)">${w.ziel ? "Ändern" : "Eintragen"} kann, wer den Haushalt verwaltet.</div>`}
+    <button class="rowlink" data-go="statistik">
+      <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
+      <span class="grow"><span class="t">Auswertung</span>
+        <span class="m">Cleanies je Tag, Wochen- und Monatsprognose</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </button>`);
+}
+
+/** Alles, was ich losgeschickt habe und worauf ich noch warte. */
+function sheetWartet() {
+  const liste = meineOffenenSachen();
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Wartet auf ${esc(andereName())}</h3>
+    ${liste.length ? `
+    <div class="card" style="gap:9px">
+      ${liste.map((o) => `
+        <button class="offene-zeile" data-sheet="meins" data-bereich="${o.bereich}" data-id="${o.id}">
+          <span style="flex:1;min-width:0;text-align:left">
+            <span style="font-size:13.5px;display:block">${esc(o.titel)}</span>
+            <span style="font-size:11.5px;color:var(--ink-3)">${esc(o.was)}${
+              o.zusatz ? ` · ${esc(o.zusatz)}` : ""} · ${zeitpunkt(o.created_at)}</span>
+            ${o.nachricht ? `<span style="font-size:11.5px;color:var(--ink-2);display:block">„${esc(o.nachricht)}“</span>` : ""}
+          </span>
+          <span class="pts-pill">${o.punkte}</span>
+          <span style="color:var(--ink-3);flex:none">›</span>
+        </button>`).join("")}
+    </div>
+    <div class="note">${icon("i-info", 16)}<span>Offen, bis ${esc(andereName())}
+      ${beugung("entscheidet", "entscheiden")}. Solange kannst du nachbessern oder zurückziehen.</span></div>`
+    : '<div class="card flat" style="font-size:13px;color:var(--ink-2)">Nichts offen.</div>'}`);
+}
+
+/** Das Plus in der Leiste: die meistgenutzten Quests zuerst, darüber die Suche. */
+function plusListe(text = "") {
+  const s = schlicht(text.trim());
+  const liste = S.quests
+    .filter((q) => !s || schlicht(q.name).includes(s) || schlicht(q.category).includes(s))
+    .sort((a, b) => (b.genutzt || 0) - (a.genutzt || 0) || a.name.localeCompare(b.name, "de"));
+  if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
+  return liste.slice(0, s ? 30 : 8).map((q) => `
+    <button class="rowlink" data-melden-aus="${q.id}">
+      <span class="grow"><span class="t">${esc(q.name)}</span>
+        <span class="m">${esc(q.category)}${q.genutzt ? ` · ${q.genutzt}× erledigt` : ""}</span></span>
+      <span class="pts-pill">${cl(q.punkte_jetzt ?? q.points)}</span>
+    </button>`).join("");
+}
+
+function sheetPlus() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Was hast du erledigt?</h3>
+    <div class="suchzeile">${icon("i-search", 18)}
+      <input id="plussuche" type="search" inputmode="search" autocomplete="off" placeholder="Quest suchen …"></div>
+    <p class="section-label" id="pluslabel">Am häufigsten</p>
+    <div id="plusliste" style="display:flex;flex-direction:column;gap:8px">${plusListe()}</div>
+    <button class="btn text block" data-go="quests">Alle Quests ansehen</button>`);
 }
 
 /* ------------------------------------------------------------------ Suchen & Sortieren */
@@ -1202,11 +1632,56 @@ function schirmQuests() {
 function schirmPruefen() {
   const offen = zuPruefen();
   const wer = (id) => nameVon(id);
+  // Der Plan in derselben Auswahl wie im Stapel: meins, und was überfällig
+  // ist und noch niemandem gehört.
+  const planSachen = [...new Map([...meinePlanSachen(), ...ueberfaellig().filter((x) => !x.zugewiesen && !x.dran)]
+    .map((a) => [a.id, a])).values()];
+  const sonst = meineRueckfragen().length + planSachen.length + meineZusagen().length;
 
   return `
-    <div class="appbar"><div><div class="title">Prüfen</div>
-      <div class="sub">Alles, was auf deine Entscheidung wartet</div></div></div>
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Für dich</div>
+        <div class="sub">Alles, was auf dich wartet — mit allen Möglichkeiten</div></div></div>
     <div class="body">
+      ${meineRueckfragen().map((r) => `
+      <div class="card alert">
+        <div style="display:flex;gap:11px;align-items:center">
+          ${bild(mitglied(r.rueckfrage_von), "sm")}
+          <span style="flex:1">
+            <span style="font-size:12px;color:var(--ink-3);display:block">
+              ${esc(nameVon(r.rueckfrage_von))} fragt nach · ${zeitpunkt(r.rueckfrage_am)}</span>
+            <span style="font-size:14.5px;font-weight:700;display:block">${esc(r.titel)}</span>
+          </span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2)">„${esc(r.rueckfrage)}“${
+          r.vorschlag_datum ? ` · Vorschlag: <b>${esc(r.vorschlag_datum)}</b>` : ""}</div>
+        <button class="btn primary block" data-sheet="antwort" data-bereich="${r.bereich}" data-id="${r.id}">Antworten</button>
+      </div>`).join("")}
+
+      ${planSachen.map((a) => `
+      <button class="rowlink" data-plan="${a.id}" style="border-color:var(--accent)">
+        <span class="avatar sm" style="background:var(--accent-tint);color:var(--accent)">${icon("i-broom", 18)}</span>
+        <span class="grow"><span class="t">${a.dran === S.ich.id ? "Du bist dran"
+            : a.zugewiesen === S.ich.id ? "Gehört dir" : "Überfällig"}: ${esc(a.name)}</span>
+          <span class="m">${a.dran === S.ich.id ? "Annehmen oder weiterreichen"
+            : `${esc(fristText(a.offen).text)} · erledigt melden`}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>`).join("")}
+
+      ${meineZusagen().map((r) => `
+      <button class="rowlink" data-sheet="zusage" data-id="${r.id}"
+        style="border-color:${r.erfuellt === "nicht_erhalten" ? "var(--accent)" : "var(--line)"}">
+        <span class="avatar sm" style="background:var(--tint);color:var(--accent)">${icon("i-gift", 18)}</span>
+        <span class="grow"><span class="t">${r.erfuellt === "nicht_erhalten"
+            ? `${esc(r.belohnung)} — nachholen?` : `Du schuldest: ${esc(r.belohnung)}`}</span>
+          <span class="m">${r.erfuellt === "nicht_erhalten"
+            ? `${r.cost} Cleanies ab · noch rückholbar`
+            : `für ${esc(nameVon(r.requested_by))}${r.wish_date ? ` · ${esc(r.wish_date)}` : ""}`}</span></span>
+        <span style="color:var(--ink-3)">›</span>
+      </button>`).join("")}
+
+      ${offen.length && sonst ? '<p class="section-label">Zu entscheiden</p>' : ""}
       ${offen.length ? offen.map((e) => {
         if (e.art === "meldung") return `
           <div class="card">
@@ -1306,7 +1781,7 @@ function schirmPruefen() {
               <button class="btn ghost" data-entscheiden="transfers" data-id="${e.id}" data-status="abgelehnt">Ablehnen</button>
             </div>
           </div>`;
-      }).join("") : `
+      }).join("") : sonst ? "" : `
         <div class="card flat leer">
           <img src="/logo.webp" alt="">
           <div class="h">Alles geprüft</div>
@@ -1800,7 +2275,7 @@ function sheetMeins(o) {
     </div>
     ${o.zusatz === "Rückfrage offen" ? `
     <div class="note">${icon("i-info", 16)}<span>Dazu steht eine Rückfrage offen —
-      die beantwortest du oben auf der Startseite.</span></div>` : ""}
+      die beantwortest du auf der Startseite unter „Für dich“.</span></div>` : ""}
     ${belohnung ? `
     <div class="field"><label>Terminwunsch</label>
       <input id="mtermin" value="${esc(o.termin || "")}" placeholder="z. B. heute Abend"></div>` : ""}
@@ -3016,6 +3491,18 @@ function sheetEvent(vorlage = null) {
 
 /** Was man mit einem bestehenden Event tun kann. Beides geht nur gemeinsam —
  *  eine gemeinsame Regel schafft nicht eine Person allein wieder ab. */
+/** Was man mit einem laufenden Event tun kann — oder warum gerade nichts.
+ *  Steht im Blatt hinter der Pille auf der Startseite. */
+function eventKnopf(e) {
+  if (!e.laeuft) return "";
+  const raus = e.richtung === "ausgeben";
+  const zuTeuer = raus && e.cleanies > S.ich.punkte;
+  if (!e.dabei) return '<div class="note">' + icon("i-info", 16) + "<span>Dieses Event ist für andere gedacht.</span></div>";
+  if (!eventOffenFuerMich(e)) return '<div class="note">' + icon("i-info", 16) + "<span>Für diesen Zeitraum ausgeschöpft.</span></div>";
+  return `<button class="btn ${zuTeuer ? "ghost" : "primary"} block" data-eventtun="${e.id}" ${zuTeuer ? "disabled" : ""}>${
+    zuTeuer ? `Dir fehlen noch ${e.cleanies - S.ich.punkte} Cleanies` : raus ? "Einlösen" : "Erledigt melden"}</button>`;
+}
+
 function sheetEventMenue(e) {
   sheet(`
     <div class="grabber"></div>
@@ -3029,9 +3516,7 @@ function sheetEventMenue(e) {
         ${e.naechste.map((d) => datumKurz(d)).join(" · ")}</div>` : ""}
     </div>
     ${e.beschreibung ? `<div class="note">${icon("i-info", 16)}<span>${esc(e.beschreibung)}</span></div>` : ""}
-    ${eventOffenFuerMich(e) ? `
-    <button class="btn primary block" data-eventtun="${e.id}">${
-      e.richtung === "ausgeben" ? "Einlösen" : "Erledigt melden"}</button>` : ""}
+    ${eventKnopf(e)}
     <button class="btn ghost block" data-eventaendern="${e.id}">Ändern</button>
     <button class="btn ghost block" data-eventende="${e.id}">Beenden</button>
     <div class="note">${icon("i-vote", 16)}<span>Ändern und Beenden gehen über die Abstimmung —
@@ -3254,7 +3739,7 @@ function schirmHaushalt() {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg]");
   if (!el) return;
 
   // Navigation & Anzeige
@@ -3268,6 +3753,33 @@ document.addEventListener("click", async (ev) => {
     return;
   }
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
+
+  /* ---------- Startseite ---------- */
+  if (el.dataset.kartentun) {
+    const karte = el.closest(".karte");
+    if (karte) karteTun(karte.dataset.karte, el.dataset.kartentun, karte);
+    return;
+  }
+  if (el.hasAttribute("data-nochmal")) { stapel.spaeter.clear(); zeichne(); return; }
+  if (el.hasAttribute("data-woche")) { sheetWoche(); return; }
+  if (el.hasAttribute("data-wartet")) { sheetWartet(); return; }
+  if (el.hasAttribute("data-plus")) { sheetPlus(); return; }
+  if (el.dataset.meldenAus) {
+    const quest = S.quests.find((q) => q.id === el.dataset.meldenAus);
+    sheetZu();
+    if (quest) sheetMelden(quest);
+    return;
+  }
+  if (el.dataset.hinweisWeg) {
+    try { localStorage.setItem(`hq-hinweis-${el.dataset.hinweisWeg}`, "weg"); } catch { /* dann nur bis zum nächsten Laden */ }
+    el.closest(".hinweis")?.remove();
+    return;
+  }
+  if (el.dataset.zielschritt) {
+    const feld = document.getElementById("zielwahl");
+    feld.textContent = Math.max(10, Math.min(9990, Number(feld.textContent) + Number(el.dataset.zielschritt)));
+    return;
+  }
 
   if (el.dataset.sort) {
     const bereich = el.dataset.bereich;
@@ -3689,6 +4201,15 @@ document.addEventListener("click", async (ev) => {
       await api(`${el.dataset.bereich}/${el.dataset.id}/aendern`, körper);
       sheetZu(); await laden();
       toast(`${andereName()} ${beugung("sieht", "sehen")} deine Ergänzung.`);
+      return;
+    }
+
+    if (el.hasAttribute("data-ziel-setzen") || el.hasAttribute("data-ziel-weg")) {
+      const weg = el.hasAttribute("data-ziel-weg");
+      const ergebnis = await api("wochenziel", { ziel: weg ? 0 : zahl("zielwahl") });
+      await laden();
+      sheetWoche();
+      toast(ergebnis.ziel ? `Wochenziel: ${ergebnis.ziel} Cleanies — für alle zusammen.` : "Wochenziel entfernt.");
       return;
     }
 
@@ -4133,6 +4654,13 @@ document.addEventListener("input", (ev) => {
   hinweis.innerHTML = tage < 1
     ? "Das Ende liegt vor dem Anfang."
     : `<b>${tage} ${tage === 1 ? "Tag" : "Tage"}.</b> Der letzte Tag zählt mit.`;
+});
+
+document.addEventListener("input", (ev) => {
+  const feld = ev.target.closest("#plussuche");
+  if (!feld) return;
+  document.getElementById("plusliste").innerHTML = plusListe(feld.value);
+  document.getElementById("pluslabel").textContent = feld.value.trim() ? "Treffer" : "Am häufigsten";
 });
 
 document.addEventListener("input", (ev) => {

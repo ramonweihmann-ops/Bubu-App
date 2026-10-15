@@ -63,6 +63,8 @@ await momenteWeg(a);
 
 console.log("== Die Zeile auf der Startseite lässt sich antippen");
 await laden(a);
+pruefe("Die Zeile Wartet steht da", await a.locator("[data-wartet]").count(), 1);
+await a.click("[data-wartet]");
 pruefe("Wartekasten da", await a.locator('.offene-zeile[data-sheet="meins"]').count(), 1);
 await a.screenshot({ path: `${AUS}/st1-startseite.png` });
 await a.click('.offene-zeile[data-sheet="meins"]');
@@ -78,10 +80,11 @@ await a.fill("#mtext", "Die Fenster waren auch dran");
 await a.click('[data-senden="meins-aendern"]');
 await a.waitForTimeout(1500);
 await momenteWeg(a);
-enthaelt("Ergänzung steht auf der Startseite", await a.evaluate(() => document.body.innerText), "Die Fenster waren auch dran");
+await a.click("[data-wartet]");
+enthaelt("Ergänzung steht im Wartekasten", await a.locator(".sheet").innerText(), "Die Fenster waren auch dran");
 
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForTimeout(700);
 enthaelt("B sieht die Ergänzung beim Prüfen", await b.evaluate(() => document.body.innerText), "Die Fenster waren auch dran");
 pruefe("Genau eine offene Meldung", await b.evaluate(async () =>
@@ -90,12 +93,14 @@ await b.screenshot({ path: `${AUS}/st3-pruefen.png` });
 
 console.log("== Zurückziehen");
 await laden(a);
+await a.click("[data-wartet]");
 await a.click('.offene-zeile[data-sheet="meins"]');
 await a.waitForSelector('[data-senden="meins-storno"]');
 await a.click('[data-senden="meins-storno"]');
 await a.waitForTimeout(1500);
 await momenteWeg(a);
 pruefe("Wartekasten ist leer", await a.locator('.offene-zeile[data-sheet="meins"]').count(), 0);
+pruefe("Die Zeile Wartet ist weg", await a.locator("[data-wartet]").count(), 0);
 
 await laden(b);
 pruefe("B hat nichts mehr zu prüfen", await b.evaluate(async () =>
@@ -115,6 +120,7 @@ await a.waitForTimeout(1500);
 await momenteWeg(a);
 
 await laden(a);
+await a.click("[data-wartet]");
 await a.click('.offene-zeile[data-sheet="meins"][data-bereich="requests"]');
 await a.waitForSelector("#mtermin");
 pruefe("Termin ist vorbelegt", await a.inputValue("#mtermin"), "Freitag");
@@ -125,7 +131,7 @@ await a.waitForTimeout(1500);
 await momenteWeg(a);
 
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForTimeout(700);
 const beiB = await b.evaluate(() => document.body.innerText);
 enthaelt("B sieht den neuen Termin", beiB, "Sonntag");
@@ -136,7 +142,7 @@ await b.click('[data-entscheiden="requests"][data-status="bestaetigt"]');
 await b.waitForTimeout(1600);
 await momenteWeg(b);
 await laden(a);
-pruefe("Nichts mehr zum Zurückziehen", await a.locator('.offene-zeile[data-sheet="meins"]').count(), 0);
+pruefe("Nichts mehr zum Zurückziehen", await a.locator("[data-wartet]").count(), 0);
 
 console.log(fehler ? `\n${fehler} FEHLER` : "\nALLES GRÜN");
 await browser.close();

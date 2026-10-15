@@ -52,7 +52,7 @@ const laden = async (s) => {
 };
 const zurAufgabe = async (s) => {
   await laden(s);
-  await s.click('.rowlink[data-go="plan"]');
+  await s.click('.startkachel[data-go="plan"]');
   await s.waitForSelector("[data-plan]", { timeout: 8000 });
   await s.click("[data-plan]");
   await s.waitForSelector('[data-sheet="erledigt"], .card.urlaub, .card.alert', { timeout: 8000 });
@@ -98,7 +98,7 @@ pruefe("Kein zweiter Anlauf, solange er läuft", await a.locator('[data-sheet="r
 
 console.log("== Bei B steht er unter Prüfen");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const karte = await b.locator(".card.vote").first().innerText();
 enthaelt("Sagt, wer zurücktritt", karte, "Anna tritt zurück");
@@ -126,7 +126,7 @@ pruefe("Aufgabe gehört weiter A", await b.evaluate(async () =>
 
 console.log("== C gibt die entscheidende Stimme");
 await laden(c);
-await c.click('.navbar [data-go="pruefen"]');
+await c.click('.navbar [data-go="start"]'); await c.click('.abschnitt [data-go="pruefen"]');
 await c.waitForSelector(".card.vote [data-stimme]", { timeout: 8000 });
 await c.click('.card.vote [data-stimme][data-antwort="ja"]');
 await c.waitForTimeout(1800);
@@ -158,7 +158,7 @@ await momenteWeg(a);
 
 for (const s of [b, c]) {
   await laden(s);
-  await s.click('.navbar [data-go="pruefen"]');
+  await s.click('.navbar [data-go="start"]'); await s.click('.abschnitt [data-go="pruefen"]');
   await s.waitForSelector('.card.vote [data-sheet="ablehnen"]', { timeout: 8000 });
   await s.click('.card.vote [data-sheet="ablehnen"]');
   await s.waitForSelector("#abgrund");
@@ -187,7 +187,7 @@ await a.evaluate(async (b) => fetch("/api/proposals", {
   body: JSON.stringify({ art: "reward_cost", zielId: b.id, wert: b.cost + 1 })
 }), bel);
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector(".card.vote", { timeout: 8000 });
 const normale = await b.locator(".card.vote").first().innerText();
 enthaelt("Weiter Einstimmigkeit", normale, "wenn alle 3 zugestimmt haben");

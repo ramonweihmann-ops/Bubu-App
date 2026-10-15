@@ -114,7 +114,8 @@ for (const [token, name] of [["tok-e", "Emil"], ["tok-f", "Fine"]]) {
 await d.reload({ waitUntil: "networkidle" });
 await d.waitForSelector(".navbar");
 await momenteWeg(d);
-pruefe("Drei Konten auf dem Dashboard", await d.locator(".konto").count(), 3);
+// Das eigene Konto groß in der Leiste, die beiden anderen klein daneben.
+pruefe("Drei Konten auf dem Dashboard", 1 + await d.locator(".kontoleiste .mini").count(), 3);
 await d.screenshot({ path: `${AUS}/e10-dashboard-drei.png` });
 
 console.log("\n== Texte in der Mehrzahl");

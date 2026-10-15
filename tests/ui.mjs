@@ -81,7 +81,7 @@ pruefe("Feld übernommen", await seite.inputValue("#name-feld"), "Ramon");
 
 console.log("== Dunkel auf allen Schirmen");
 await seite.click('[data-go="start"]');
-await seite.waitForSelector(".accounts");
+await seite.waitForSelector(".kontoleiste");
 pruefe("Begrüßung", (await seite.locator(".appbar .title").innerText()).trim(), "Hallo Ramon");
 await seite.screenshot({ path: `${AUS}/04-start-dunkel.png` });
 

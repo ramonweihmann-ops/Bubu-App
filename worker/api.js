@@ -57,7 +57,7 @@ export async function handleApi(request, env, url) {
   const teile = pfad.split("/");
 
   try {
-    if (pfad === "state") return json(await zustand(env, ich));
+    if (pfad === "state") return json(await zustand(env, ich, url.searchParams.get("versatz")));
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
     if (pfad === "export") return json(await ausgabe(env, ich));
@@ -81,6 +81,7 @@ export async function handleApi(request, env, url) {
 
     if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
     if (pfad === "phasen") return json(await phasenAendern(env, ich, koerper));
+    if (pfad === "wochenziel") return json(await wochenzielSetzen(env, ich, koerper));
     if (pfad === "gifs") return json(await gifAnlegen(env, ich, koerper));
     if (teile[0] === "gifs" && teile[2] === "weg") return json(await gifWeg(env, ich, teile[1]));
 
@@ -236,6 +237,36 @@ async function phasenAendern(env, ich, { leise, mittel }) {
   await env.DB.prepare("update couples set phase_leise = ?1, phase_mittel = ?2 where id = ?3")
     .bind(a, b, ich.couple_id).run();
   return { ok: true, phasen: { leise: a, mittel: b } };
+}
+
+/** Das gemeinsame Wochenziel. Wie die Phasen eine Sache der Verwaltung und
+ *  ohne Abstimmung: es verteilt keine Cleanies, es zeigt nur einen Balken.
+ *  Null oder nichts nimmt es wieder weg. */
+async function wochenzielSetzen(env, ich, { ziel }) {
+  await nurVerwalter(env, ich);
+  const zahl = Math.floor(Number(ziel) || 0);
+  const wert = zahl > 0 ? grenze(zahl, 1, 9999) : null;
+  await env.DB.prepare("update couples set wochenziel = ?1 where id = ?2")
+    .bind(wert, ich.couple_id).run();
+  return { ok: true, ziel: wert };
+}
+
+/** Was diese Woche schon zusammengekommen ist, je Person — gezählt wie in der
+ *  Auswertung: bestätigte Quests, ab Montag, im Tag der Person, die fragt. */
+async function dieseWoche(env, paar, versatzRoh) {
+  const versatz = Math.max(-840, Math.min(840, Number(versatzRoh) || 0));
+  const schieben = `${versatz >= 0 ? "+" : ""}${versatz} minutes`;
+  const heuteLokal = new Date(Date.now() + versatz * 60000);
+  const wochentag = (heuteLokal.getUTCDay() + 6) % 7;
+  const ab = alsTag(new Date(heuteLokal.getTime() - wochentag * TAG));
+  const zeilen = await env.DB.prepare(
+    `select member_id, sum(delta) as punkte from ledger
+      where couple_id = ?1 and source_type = 'claim' and delta > 0
+        and created_at >= datetime('now', '-8 days')
+        and date(created_at, ?2) >= ?3
+      group by member_id`
+  ).bind(paar, schieben, ab).all();
+  return { ab, je: Object.fromEntries(zeilen.results.map((z) => [z.member_id, z.punkte])) };
 }
 
 const PHASEN_IDS = ["leise", "mittel", "gross"];
@@ -534,7 +565,7 @@ async function abstimmungenNachziehen(env, paarId) {
   }
 }
 
-async function zustand(env, ich) {
+async function zustand(env, ich, versatz = 0) {
   // Ohne Haushalt beginnt die Einrichtung. Sie ist der einzige Weg hinein —
   // erst danach gibt es Quests, Cleanies und alles Weitere.
   if (!ich.couple_id) {
@@ -603,6 +634,7 @@ async function zustand(env, ich) {
                        where couple_id = ?1 order by created_at`).bind(paar).all()
     ]);
 
+  const woche = await dieseWoche(env, paar, versatz);
   const jetzt = new Date().toISOString().slice(0, 19).replace("T", " ");
   const laufend = aktionen.results.filter((a) => a.beginn <= jetzt && a.ende > jetzt);
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
@@ -636,6 +668,14 @@ async function zustand(env, ich) {
     ich: mein,
     mitglieder: mit,
     andere,
+    // Die Kachel „Diese Woche“: je Person, zusammen, und das Ziel — falls eins
+    // eingetragen ist. Ohne Ziel bleibt es null, und die App sagt das auch so.
+    woche: {
+      ab: woche.ab,
+      je: mit.map((m) => ({ id: m.id, punkte: woche.je[m.id] || 0 })),
+      zusammen: mit.reduce((n, m) => n + (woche.je[m.id] || 0), 0),
+      ziel: haus.wochenziel || null
+    },
     raeume: raeume.results,
     gifs: gifs.results,
     // Ein Event hat seinen eigenen Preis — eine laufende Aktion legt sich nicht

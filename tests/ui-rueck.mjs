@@ -47,7 +47,7 @@ pruefe("Antrag raus", await a.locator(".sheet").count(), 0);
 
 console.log("== B fragt nach, statt zu entscheiden");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-sheet="rueckfrage"]');
 await b.screenshot({ path: `${AUS}/s1-pruefen-nachfragen.png` });
 await b.click('[data-sheet="rueckfrage"][data-bereich="requests"]');
@@ -64,6 +64,9 @@ console.log("== A sieht die Rückfrage und antwortet");
 await laden(a);
 pruefe("Rückfrage auf der Startseite", (await a.locator(".body").innerText()).includes("Freitag schaffe ich nicht"), true);
 await a.screenshot({ path: `${AUS}/s3-rueckfrage-start.png` });
+pruefe("Sie liegt als Karte im Stapel", await a.locator('.karte[data-karte^="frage:"]').count(), 1);
+// Die ausführliche Fassung liegt hinter „Alle ›“.
+await a.click('.abschnitt [data-go="pruefen"]');
 await a.click('[data-sheet="antwort"]');
 await a.waitForSelector("#atermin");
 pruefe("Vorschlag übernommen", await a.inputValue("#atermin"), "Samstag Abend");
@@ -74,18 +77,18 @@ pruefe("Rückfrage weg", (await a.locator(".body").innerText()).includes("fragt 
 
 console.log("== B genehmigt, A muss den Empfang bestätigen");
 await laden(b);
-await b.click('.navbar [data-go="pruefen"]');
+await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
 await b.waitForSelector('[data-entscheiden="requests"][data-status="bestaetigt"]');
 await b.click('[data-entscheiden="requests"][data-status="bestaetigt"]');
 await b.waitForTimeout(1500);
 await momenteWeg(b);
 await b.click('.navbar [data-go="start"]');
 await b.waitForTimeout(400);
-pruefe("B sieht seine Zusage auf der Startseite", (await b.locator(".body").innerText()).includes("Du schuldest"), true);
+pruefe("B sieht seine Zusage auf der Startseite", /du schuldest/i.test(await b.locator(".body").innerText()), true);
 await b.screenshot({ path: `${AUS}/s4-zusage.png` });
 
 await laden(a);
-await a.click('.navbar [data-go="pruefen"]');
+await a.click('.navbar [data-go="start"]'); await a.click('.abschnitt [data-go="pruefen"]');
 await a.waitForSelector("[data-empfang]");
 pruefe("Empfangsfrage da", (await a.locator(".body").innerText()).includes("Hast du sie bekommen?"), true);
 await a.screenshot({ path: `${AUS}/s5-empfang.png` });
@@ -99,15 +102,16 @@ pruefe("B hat Punkte verloren", nachher < vorher, true);
 
 console.log("== B holt nach, A bestätigt");
 await laden(b);
-pruefe("B sieht die Nachhol-Zeile", (await b.locator(".body").innerText()).includes("nachholen?"), true);
+pruefe("B sieht die Nachhol-Karte", /nachholen\?/i.test(await b.locator(".body").innerText()), true);
 await b.screenshot({ path: `${AUS}/s6-nachholen.png` });
+await b.click('.abschnitt [data-go="pruefen"]');
 await b.click('[data-sheet="zusage"]');
 await b.waitForSelector("[data-nachholen]");
 await b.click("[data-nachholen]");
 await b.waitForTimeout(1500);
 
 await laden(a);
-await a.click('.navbar [data-go="pruefen"]');
+await a.click('.navbar [data-go="start"]'); await a.click('.abschnitt [data-go="pruefen"]');
 await a.waitForSelector("[data-nachhol]");
 await a.screenshot({ path: `${AUS}/s7-nachhol-pruefen.png` });
 await a.click('[data-nachhol][data-ja="ja"]');
