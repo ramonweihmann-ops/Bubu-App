@@ -72,6 +72,7 @@ genau so, wie er es soll.
 | `mockup-events.mjs` | Das Event-Mockup: alle Schirme da, nichts läuft über, kein „Punkte“ |
 | `mockup-klang.mjs` | Die Hörprobe: klingen alle sechzehn Jubel, und sind sie gleich laut? |
 | `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |
+| `mockup-icons.mjs` | Das Bilder-Mockup: Stift oben, Symbol wählen und hochladen, Hintergründe, die Schrift bleibt vorn |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |
 
 ## Helfer, die nicht im Gesamtlauf stecken

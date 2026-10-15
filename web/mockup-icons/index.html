@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Haus-Quest – Mockup: Bilder für Quests und Belohnungen</title>
+<meta name="robots" content="noindex">
+<style>
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --bald:#c47a00; --bald-tint:#fdf1dc;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef;
+  --lila:#7a4fd0; --lila-tint:#f1ebfb;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:26px 16px 80px}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:70ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);border-radius:999px;padding:2px 9px}
+.vorbild.tipp{color:var(--frei);background:var(--frei-tint)}
+.bu{font-size:13px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+.schalter{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;margin:0 0 18px}
+.schalter button{font:inherit;font-size:13px;font-weight:600;border:none;background:none;border-radius:999px;padding:6px 13px;cursor:pointer;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.schalterzeile{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.schalterzeile .marke{margin-bottom:18px}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:736px;background:var(--bg);border:9px solid var(--ink);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px rgba(21,44,79,.5);display:flex;flex-direction:column;margin:0 auto}
+.kopf{flex:none;padding:14px 14px 8px;display:flex;align-items:center;gap:8px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.1}
+.kopf .sub{font-size:11.5px;color:var(--ink-3)}
+.kopf .knopf{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);
+  background:var(--bg);cursor:pointer;flex:none;padding:0}
+.kopf .knopf:first-of-type{margin-left:auto}
+.kopf .knopf svg{width:17px;height:17px}
+.kopf .stift[aria-pressed="true"]{width:auto;padding:0 12px;background:var(--ink);border-color:var(--ink);color:#fff;font:inherit;font-size:13px;font-weight:700}
+.bearbeiten-hinweis{display:none;margin:0 14px 6px;background:var(--ruhig-tint);color:var(--ruhig);border-radius:12px;padding:8px 11px;font-size:12.5px;font-weight:600;flex:none}
+.phone[data-bearbeiten] .bearbeiten-hinweis{display:block}
+.inhalt{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 14px 18px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.inhalt>*{flex-shrink:0}
+.suche{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:8px 11px;color:var(--ink-3);font-size:13px}
+.suche input{border:none;outline:none;font:inherit;color:var(--ink);flex:1;min-width:0;background:none}
+.filter{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+.filter::-webkit-scrollbar{display:none}
+.filter button{flex:none;font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);border-radius:999px;padding:5px 11px;cursor:pointer}
+.filter button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.leiste{flex:none;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;border-top:1px solid var(--line);padding:6px 4px 10px;background:var(--bg)}
+.leiste span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9.5px;font-weight:600;color:var(--ink-3)}
+.leiste span[data-an]{color:var(--accent)}
+.leiste b{font-size:16px;font-weight:400;line-height:1}
+.leiste .plus{width:44px;height:44px;border-radius:15px;background:var(--accent);color:#fff;font-size:24px;display:grid;place-items:center;margin:-20px auto 0}
+
+/* ---------- Das Bild einer Quest ---------- */
+.ico{display:grid;place-items:center;border-radius:13px;background:var(--t,var(--tint));flex:none;overflow:hidden}
+.ico span{font-family:var(--emoji);line-height:1}
+.ico img{width:100%;height:100%;object-fit:cover}
+
+/* Die Cleanies-Spalte: die Zahl vorn, der Stern ganz schwach dahinter. */
+.wert{position:relative;display:grid;place-items:center;flex:none;min-width:44px;height:40px}
+.wert::before{content:"";position:absolute;inset:0;margin:auto;width:38px;height:38px;background:url(/cleanie.webp) center/contain no-repeat;opacity:.18}
+.wert b{position:relative;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--ink)}
+body[data-stern="weg"] .wert::before{display:none}
+body[data-stern="klein"] .wert::before{display:none}
+body[data-stern="klein"] .wert b::after{content:"";display:inline-block;width:.8em;height:.8em;margin-left:.15em;vertical-align:-.08em;background:url(/cleanie.webp) center/contain no-repeat}
+
+/* Bearbeiten: jede Zeile zeigt, dass sie sich antippen lässt. */
+.phone[data-bearbeiten] [data-q], .phone[data-bearbeiten] [data-b]{outline:2px dashed var(--ruhig);outline-offset:-2px}
+.phone[data-bearbeiten] .ico, .phone[data-bearbeiten] .rico{position:relative}
+.phone[data-bearbeiten] [data-q] .ico::after, .phone[data-bearbeiten] [data-b] .rico::after{content:"✎";position:absolute;right:-1px;bottom:-1px;width:17px;height:17px;border-radius:50%;
+  background:var(--ruhig);color:#fff;font-size:10px;display:grid;place-items:center;font-family:var(--font-ui)}
+
+/* A: Liste */
+.qa-zeile{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:15px;background:var(--bg);padding:8px 8px 8px 9px;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.qa-zeile .ico{width:46px;height:46px}
+.qa-zeile .ico span{font-size:27px}
+.qa-zeile .n{flex:1;min-width:0}
+.qa-zeile .n b{display:block;font-size:13.5px;font-weight:700;line-height:1.25}
+.qa-zeile .n i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-3)}
+
+/* B: Kacheln */
+.qb-raster{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qb-kachel{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:10px;display:flex;flex-direction:column;gap:6px;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;min-width:0}
+.qb-kachel .oben{display:flex;align-items:flex-start;justify-content:space-between}
+.qb-kachel .ico{width:48px;height:48px}
+.qb-kachel .ico span{font-size:29px}
+.qb-kachel b{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
+.qb-kachel i{font-style:normal;font-size:11px;color:var(--ink-3)}
+
+/* C: Raster wie ein Startbildschirm */
+.qc-raster{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px}
+.qc-feld{display:flex;flex-direction:column;align-items:center;gap:4px;font:inherit;color:inherit;background:none;border:none;border-radius:14px;cursor:pointer;padding:4px 2px;min-width:0}
+.qc-feld .ico{width:62px;height:62px;border-radius:18px}
+.qc-feld .ico span{font-size:36px}
+.qc-feld b{font-size:11.5px;font-weight:600;line-height:1.2;text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em}
+.qc-feld .wert{height:24px;min-width:30px}
+.qc-feld .wert::before{width:24px;height:24px}
+.qc-feld .wert b{font-size:14px}
+.raumkopf{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -2px}
+
+/* ---------- Belohnungen ---------- */
+.rewards{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rbox{position:relative;border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden;font:inherit;color:inherit;
+  text-align:left;cursor:pointer;padding:0;display:flex;flex-direction:column;min-width:0;min-height:128px}
+.rbox[data-zu-teuer]{opacity:.55}
+.rico{width:34px;height:34px;border-radius:11px;background:var(--bg);display:grid;place-items:center;flex:none;box-shadow:0 2px 8px -3px rgba(21,44,79,.35);overflow:hidden}
+.rico span{font-family:var(--emoji);font-size:19px;line-height:1}
+.rico img{width:100%;height:100%;object-fit:cover}
+.rbox .n{font-size:13px;font-weight:700;line-height:1.25}
+.rbox .c{font-family:var(--font-data);font-size:11.5px;color:var(--ink-2)}
+/* Das Bild — ein Motiv oder ein eigenes Foto. */
+.motiv{position:absolute;inset:0;overflow:hidden;background:linear-gradient(135deg,var(--m1),var(--m2))}
+.motiv span{position:absolute;font-family:var(--emoji);line-height:1}
+.motiv img{width:100%;height:100%;object-fit:cover;display:block}
+.motiv .z1{font-size:64px;right:-8px;bottom:-10px;transform:rotate(-12deg)}
+.motiv .z2{font-size:34px;left:10px;top:8px;transform:rotate(10deg);opacity:.9}
+.motiv .z3{font-size:26px;right:34%;top:30%;transform:rotate(-6deg);opacity:.8}
+
+/* RA: Bild schwach dahinter, Schrift wie gewohnt */
+.ra .rbox .motiv{opacity:.55}
+.ra .rbox .schleier{position:absolute;inset:0;background:linear-gradient(to top,rgba(255,255,255,.96) 42%,rgba(255,255,255,.3) 100%)}
+.ra .rbox .drin{position:relative;padding:11px;display:flex;flex-direction:column;gap:6px;flex:1}
+.ra .rbox .unten{margin-top:auto}
+
+/* RB: Bild oben, Schrift unten auf ruhigem Grund */
+.rb .rbox .bildteil{position:relative;height:72px;flex:none}
+.rb .rbox .rico{position:absolute;left:10px;bottom:-14px}
+.rb .rbox .drin{padding:20px 11px 11px;display:flex;flex-direction:column;gap:3px;flex:1}
+.rb .rbox .bildteil.ohne{background:var(--tint)}
+
+/* RC: Bild ganz, Verlauf darunter, Schrift hell */
+.rc .rbox{min-height:150px;border:none}
+.rc .rbox .schleier{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,20,38,0) 25%,rgba(10,20,38,.82) 78%)}
+.rc .rbox .drin{position:relative;padding:10px 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1}
+.rc .rbox .unten{margin-top:auto}
+.rc .rbox .n{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.45)}
+.rc .rbox .c{color:#d5dfee}
+.rc .rbox.ohnebild .motiv{background:linear-gradient(135deg,#2a4775,#152c4f)}
+
+.uebertragen{grid-column:1/-1;display:flex;align-items:center;gap:10px;border-radius:14px;background:var(--tint);padding:10px 12px;font-size:12.5px;font-weight:700}
+.uebertragen small{display:block;font-weight:400;color:var(--ink-2);font-size:11.5px}
+
+/* ---------- Blätter in den Telefonen ---------- */
+.blatt-schleier{position:absolute;inset:0;background:rgba(21,44,79,.45);display:none;z-index:20;align-items:flex-end}
+.blatt-schleier[data-auf]{display:flex}
+.blatt{width:100%;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 14px 16px;display:flex;flex-direction:column;gap:9px;
+  max-height:90%;overflow-y:auto;animation:hoch .3s cubic-bezier(.2,.9,.3,1)}
+.blatt .griff{width:38px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 2px;flex:none}
+.blatt h5{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;line-height:1.2}
+@keyframes hoch{from{transform:translateY(40%)}to{transform:none}}
+.wahl{display:flex;align-items:center;gap:10px;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:13px;padding:10px 12px;cursor:pointer;text-align:left;width:100%}
+.wahl em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.wahl em.sofort{background:var(--frei-tint);color:var(--frei)}
+.wahl em.abst{background:var(--tint-2);color:var(--ink-2)}
+.wahl.rot{color:var(--accent);border-color:var(--accent)}
+.wahl.neu{border-color:var(--ruhig);background:var(--ruhig-tint)}
+.notiz{font-size:12px;color:var(--ink-2);background:var(--tint);border-radius:11px;padding:8px 10px}
+.vorschau{display:flex;align-items:center;gap:11px;background:var(--tint);border-radius:14px;padding:9px}
+.vorschau .ico{width:56px;height:56px;border-radius:16px}
+.vorschau .ico span{font-size:33px}
+.vorschau b{font-size:13.5px;line-height:1.25}
+.farben{display:flex;gap:7px}
+.farben button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.farben button[aria-pressed="true"]{border-color:var(--ink)}
+.kats{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+.kats::-webkit-scrollbar{display:none}
+.kats button{flex:none;font:inherit;font-size:11.5px;font-weight:600;border:none;background:var(--tint);color:var(--ink-2);border-radius:999px;padding:5px 10px;cursor:pointer}
+.kats button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.emojis button{font-family:var(--emoji);font-size:25px;line-height:1;aspect-ratio:1;border:none;background:none;border-radius:11px;cursor:pointer;padding:0}
+.emojis button[aria-pressed="true"]{background:var(--ruhig-tint);box-shadow:inset 0 0 0 2px var(--ruhig)}
+.motive{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.motive button{position:relative;height:62px;border-radius:12px;border:2px solid transparent;overflow:hidden;cursor:pointer;padding:0;background:none}
+.motive button[aria-pressed="true"]{border-color:var(--ink)}
+.motive button small{position:absolute;left:6px;bottom:4px;font-size:10.5px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.motive .motiv .z1{font-size:40px}
+.motive .motiv .z2{font-size:20px}
+.motive .motiv .z3{display:none}
+.knopfreihe{display:flex;gap:8px}
+.knopf-gross{flex:1;font:inherit;font-size:14px;font-weight:700;border-radius:13px;padding:11px;border:1px solid var(--line);cursor:pointer;background:var(--bg);color:var(--ink);text-align:center}
+.knopf-gross.ja{background:var(--ink);border-color:var(--ink);color:#fff}
+.knopf-gross.rot{background:var(--accent);border-color:var(--accent);color:#fff}
+label.knopf-gross input{display:none}
+.toast{position:absolute;left:14px;right:14px;bottom:76px;z-index:25;background:var(--ink);color:#fff;border-radius:13px;padding:10px 12px;font-size:12.5px;
+  display:none}
+.toast[data-an]{display:block;animation:hoch .25s ease}
+
+/* ---------- Text ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+.tabelle{overflow-x:auto}
+.empfehlung{background:var(--ink);color:#fff;border-radius:20px;padding:18px 20px}
+.empfehlung h3{color:#fff;margin-bottom:6px}
+.empfehlung p{margin:0 0 6px;color:#c9d6ea;font-size:14px}
+.empfehlung p:last-child{margin:0}
+.empfehlung b{color:#fff}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0}
+.frage b{display:block}
+code{font-family:var(--font-data);font-size:12px;background:var(--tint-2);border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body data-stern="dahinter">
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Bilder für Quests und Belohnungen</h1>
+  <p class="lead">Menschen erkennen ein Bild schneller, als sie einen Text lesen. Deshalb bekommt jede
+    <b>Quest ein Symbol</b> und jede <b>Belohnung ein Hintergrundbild</b> — beides frei wählbar oder
+    selbst hochgeladen. Der Stift wandert dafür <b>nach oben neben das Plus</b>, und in der freien Spalte
+    stehen die Cleanies.</p>
+  <p class="lead">Alle Telefone lassen sich anfassen: <b>Stift oben antippen</b>, dann eine Quest oder
+    Belohnung wählen und ihr ein neues Bild geben. Was du in einem Telefon änderst, ändert sich in allen
+    drei Varianten — so siehst du dasselbe Bild in jeder Form.</p>
+
+  <!-- ================================================================ QUESTS -->
+  <h2>Die Questseite</h2>
+  <div class="schalterzeile">
+    <span class="marke">Der Stern hinter den Cleanies</span>
+    <div class="schalter" id="stern">
+      <button data-stern="dahinter" aria-pressed="true">schwach dahinter</button>
+      <button data-stern="klein" aria-pressed="false">klein daneben</button>
+      <button data-stern="weg" aria-pressed="false">weg</button>
+    </div>
+  </div>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Liste mit Symbol</h3><span class="vorbild tipp">wie WhatsApp-Chats</span></div>
+      <div class="phone" id="qa" data-art="quest" data-variante="a"></div>
+      <p class="bu">Alles wie gewohnt untereinander, nur links ein <b>großes Symbol</b> und rechts die
+        <b>Cleanies als Zahl</b>. Lange Namen passen ganz hinein.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Kacheln zu zweit</h3><span class="vorbild">wie Too Good To Go</span></div>
+      <div class="phone" id="qb" data-art="quest" data-variante="b"></div>
+      <p class="bu">Doppelt so viele Quests auf einen Blick. Das Symbol führt, der Name steht in zwei Zeilen
+        darunter — sehr lange Namen werden gekürzt.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Raster nach Raum</h3><span class="vorbild">wie ein Homescreen</span></div>
+      <div class="phone" id="qc" data-art="quest" data-variante="c"></div>
+      <p class="bu">Nur noch Symbole, nach Raum sortiert. Am schnellsten, sobald man die Bilder kennt —
+        am Anfang muss man lesen.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">So läuft das Anpassen</h3>
+  <div class="tabelle"><table>
+    <tr><th style="width:26%">Schritt</th><th>Was passiert</th></tr>
+    <tr><td><b>1 · Stift oben</b></td><td>Der Stift steht neben dem Plus. Antippen schaltet die Liste in den
+      Bearbeiten-Modus: oben steht „Welche Quest willst du anpassen?“, jede Quest bekommt einen Rahmen.
+      Aus dem Stift wird „Fertig“.</td></tr>
+    <tr><td><b>2 · Quest antippen</b></td><td>Es öffnet sich dasselbe Menü wie heute — Cleanies-Wert, Raum,
+      Rhythmus, Löschen — und ganz oben neu <b>„Bild ändern“</b>.</td></tr>
+    <tr><td><b>3 · Bild wählen</b></td><td>Symbole in Gruppen wie bei WhatsApp, eine Farbe für den Hintergrund,
+      oder ein <b>eigenes Bild hochladen</b>. Das Bild gilt sofort für alle.</td></tr>
+    <tr><td><b>Ohne Stift</b></td><td>Antippen meldet wie bisher „Erledigt“. Das Melde-Blatt bleibt nur
+      fürs Melden da — so wie du es wolltest.</td></tr>
+  </table></div>
+  <p class="frage"><b>Abstimmung fürs Bild?</b> Nein, so wie bei den Räumen: Bilder sind Ordnung, keine
+    Cleanies. Cleanies-Wert, Rhythmus und Löschen laufen weiter über die Abstimmung.</p>
+
+  <!-- ================================================================ BELOHNUNGEN -->
+  <h2>Die Belohnungen</h2>
+  <p class="lead">Jede Box kann ein Bild bekommen — ein <b>Motiv</b> aus der Auswahl oder ein <b>eigenes
+    Foto</b>. Die Schrift bleibt in allen drei Varianten vorn: das Bild liegt nie ungeschützt unter ihr.
+    Das Herz wird zum <b>Symbol nach Wahl</b>, aus demselben Wähler wie bei den Quests. Boxen ohne Bild
+    sehen aus wie heute.</p>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Bild schwach dahinter</h3><span class="vorbild">dezent</span></div>
+      <div class="phone" id="ra" data-art="belohnung" data-variante="a"></div>
+      <p class="bu">Das Bild ist nur eine Stimmung im Hintergrund. Die Schrift steht dunkel auf fast
+        weißem Grund — so gut lesbar wie heute.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Bild oben, Schrift unten</h3><span class="vorbild tipp">wie Airbnb</span></div>
+      <div class="phone" id="rb" data-art="belohnung" data-variante="b"></div>
+      <p class="bu">Bild und Schrift teilen sich die Box. Das Bild ist <b>voll zu sehen</b> und die Schrift
+        steht trotzdem nie darauf — die sicherste Lösung für eigene Fotos.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Bild ganz, Schrift hell</h3><span class="vorbild">wie Netflix</span></div>
+      <div class="phone" id="rc" data-art="belohnung" data-variante="c"></div>
+      <p class="bu">Das Bild füllt die Box, nach unten wird es dunkel, die Schrift steht hell darauf.
+        Am stimmungsvollsten — bei sehr hellen Fotos muss der Verlauf mehr tragen.</p>
+    </div>
+  </div>
+
+  <h2>Was ich empfehle</h2>
+  <div class="empfehlung">
+    <h3>Quests: A · Liste mit Symbol. Belohnungen: B · Bild oben, Schrift unten.</h3>
+    <p><b>Quests als Liste</b>, weil eure Namen lang sind („1 gr. Fenster putzen (beide Seiten)“) und in
+      Kacheln abgeschnitten würden. Das Symbol links reicht, um eine Quest im Vorbeiscrollen zu finden.</p>
+    <p><b>Belohnungen mit Bild oben</b>, weil dort eigene Fotos landen — und bei einem Foto weiß niemand
+      vorher, wie hell es ist. Wenn Bild und Schrift sich nicht überlagern, bleibt die Schrift immer Fokus.</p>
+    <p>Gespeichert wird das Bild klein gerechnet in eurer eigenen Datenbank, wie heute die Profilbilder —
+      ein Symbol als Zeichen, ein Foto auf höchstens 600 Pixel verkleinert.</p>
+  </div>
+
+  <h3 style="margin-top:26px">Zu klären, bevor ich es einbaue</h3>
+  <p class="frage"><b>1. Welche Variante bei den Quests, welche bei den Belohnungen?</b>
+    Mischen geht: etwa Liste bei den Quests und Bild oben bei den Belohnungen.</p>
+  <p class="frage"><b>2. Der Stern hinter den Cleanies?</b> Der Schalter oben zeigt alle drei Möglichkeiten.</p>
+  <p class="frage"><b>3. Sollen die Startdaten gleich passende Symbole bekommen?</b> Ich würde jeder der
+    22 Quests und 11 Belohnungen eins vorschlagen, wie hier zu sehen — ändern kann man sie danach jederzeit.</p>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Daten
+ * Die echten Startquests und -belohnungen, damit das Bild stimmt. */
+const FARBEN = {
+  blau: "#eaf1fb", gruen: "#e4f5ef", rot: "#fdecea", gelb: "#fdf1dc", lila: "#f1ebfb", grau: "#eef1f6"
+};
+const RAUMFARBE = { Küche: "gelb", Bad: "blau", Wohnen: "gruen", Fenster: "blau", Sonstiges: "grau" };
+
+const QUESTS = [
+  ["Staubsaugen ganze Wohnung", "Wohnen", 10, 24, "🧹"],
+  ["Küche reinigen nach Kochen", "Küche", 3, 31, "🍳"],
+  ["Spülmaschine ausräumen", "Küche", 2, 40, "🍽️"],
+  ["Wäsche aufhängen + zusammenlegen", "Wohnen", 2, 28, "🧺"],
+  ["Bad reinigen", "Bad", 4, 12, "🛁"],
+  ["1 gr. Fenster putzen (beide Seiten)", "Fenster", 10, 3, "🪟"],
+  ["Restmüll entsorgen", "Sonstiges", 1, 22, "🗑️"],
+  ["Betten abziehen / frisch beziehen", "Wohnen", 3, 6, "🛏️"],
+  ["Backofen reinigen + Blech + Rost", "Küche", 5, 2, "🧽"],
+  ["Kühlschrank sauber machen + enteisen", "Küche", 5, 1, "🧊"],
+  ["Gäste-WC reinigen", "Bad", 3, 9, "🚽"],
+  ["1 großen Raum Boden wischen", "Wohnen", 3, 11, "🪣"],
+  ["Staub wischen alle Räume", "Wohnen", 1, 14, "🪶"],
+  ["Altglas entsorgen (5 Flaschen = 1 Pkt)", "Sonstiges", 1, 5, "🍾"],
+  ["Arzttermin machen + hingehen", "Sonstiges", 6, 2, "🩺"],
+  ["1 Monitor reinigen", "Wohnen", 1, 4, "🖥️"]
+].map(([name, raum, cl, n, icon], id) => ({ id, name, raum, cl, n, icon, farbe: RAUMFARBE[raum] }));
+
+/* Motive für die Belohnungen: ein ruhiger Verlauf mit großen Zeichen. Eigene
+ * Fotos kommen über „Eigenes Foto“ dazu. */
+const MOTIVE = {
+  kino:     { name: "Kino",      m: ["#2a2f5c", "#7a4fd0"], z: ["🎬", "🍿", "⭐"] },
+  essen:    { name: "Essen",     m: ["#ffb35c", "#ec5f3a"], z: ["🍕", "🍔", "🍟"] },
+  wellness: { name: "Wellness",  m: ["#b9e6d8", "#5fb59a"], z: ["🧖", "🌿", "🫧"] },
+  ausflug:  { name: "Ausflug",   m: ["#9fd3ff", "#2f6fd0"], z: ["🏞️", "🚲", "☀️"] },
+  zocken:   { name: "Zocken",    m: ["#3b3f4a", "#ec0f06"], z: ["🎮", "👾", "🕹️"] },
+  suess:    { name: "Süßes",     m: ["#ffd6e5", "#ff8fb1"], z: ["🍰", "🍩", "🍬"] },
+  ruhe:     { name: "Ausschlafen", m: ["#c7d2ff", "#6a7bd8"], z: ["🛌", "🌙", "💤"] },
+  shoppen:  { name: "Shoppen",   m: ["#ffe08a", "#f0a500"], z: ["🛍️", "👗", "💳"] },
+  natur:    { name: "Blumen",    m: ["#e9f7c6", "#8cc63f"], z: ["💐", "🌷", "🦋"] }
+};
+
+const BELOHNUNGEN = [
+  ["Film / Serie aussuchen", 3, "🎬", "kino"],
+  ["Lieferdienst bestimmen", 2, "🍕", "essen"],
+  ["Massage eine Region", 3, "💆", "wellness"],
+  ["Freizeitaktivität bestimmen", 15, "🎟️", "ausflug"],
+  ["Gua Sha Gesicht", 4, "🌸", null],
+  ["Brote schmieren abgeben", 4, "🥪", null],
+  ["Zopf flechten", 4, "❤️", null],
+  ["Veto-Ausnahmeantrag", 15, "🛡️", null]
+].map(([name, cl, icon, bild], id) => ({ id, name, cl, icon, bild }));
+const KONTO = 12;
+
+/* Der Symbol-Wähler in Gruppen, angelehnt an WhatsApp. */
+const GRUPPEN = {
+  "Putzen": "🧹 🧽 🧼 🪣 🧴 🧻 🫧 ✨ 🪶 💨 🧤 🪥",
+  "Küche": "🍳 🍽️ 🥄 🍴 🔪 🧊 🥘 🍲 🥗 ☕ 🍞 🫖",
+  "Wäsche": "🧺 👕 👖 🧦 👗 🛏️ 🧸 🪡 🧷 👟 🧥 🧣",
+  "Bad": "🛁 🚿 🚽 🪒 🪞 🧴 🧻 🪥 💧 🫧 🧼 🪠",
+  "Wohnen": "🛋️ 🪑 📦 🖥️ 💡 🪟 🚪 🖼️ 🕯️ 🪴 🧯 🔧",
+  "Draußen": "🌱 🌳 🍂 ❄️ 🚗 🚲 🏡 🌻 💧 ☀️ 🌧️ 🪵",
+  "Erledigen": "🛒 🗑️ ♻️ 📰 🍾 📬 💊 🩺 💶 📅 📞 🧾",
+  "Tiere & Kinder": "🐶 🐱 🐟 🐦 🐾 👶 🧒 🎒 🍼 🧩 🐹 🐢",
+  "Belohnung": "🎬 🍿 🍕 🍰 💆 💅 🎮 🎟️ 🛍️ 🌴 🍷 📚 🎵 💐 🛌 ❤️ 🎁 ⭐ 🌸 🥪 🛡️ 🧖 ☕ 🏖️"
+};
+const gruppe = (g) => GRUPPEN[g].split(" ");
+
+/* ---------------------------------------------------------------- Bausteine */
+const symbol = (x, gross = "") => x.icon && x.icon.startsWith("data:")
+  ? `<img src="${x.icon}" alt="">` : `<span${gross}>${x.icon}</span>`;
+const kachelFarbe = (x) => `--t:${FARBEN[x.farbe] || FARBEN.grau}`;
+const wert = (n) => `<span class="wert"><b>${n}</b></span>`;
+const STIFT = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M14.5 5.5l4 4" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>`;
+const PLUS = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
+function motivHtml(b) {
+  if (!b.bild) return "";
+  if (b.bild.startsWith("data:")) return `<div class="motiv"><img src="${b.bild}" alt=""></div>`;
+  const m = MOTIVE[b.bild];
+  return `<div class="motiv" style="--m1:${m.m[0]};--m2:${m.m[1]}">
+    <span class="z1">${m.z[0]}</span><span class="z2">${m.z[1]}</span><span class="z3">${m.z[2]}</span></div>`;
+}
+
+/* ---------------------------------------------------------------- Telefone */
+const zustand = {};      // je Telefon: Filter, Suche, Bearbeiten
+
+function questInhalt(id) {
+  const z = zustand[id];
+  const var_ = document.getElementById(id).dataset.variante;
+  const s = (z.suche || "").toLowerCase();
+  const liste = QUESTS.filter((q) => (z.filter === "Alle" || q.raum === z.filter) && (!s || q.name.toLowerCase().includes(s)))
+    .sort((a, b) => b.n - a.n);
+  const raeume = ["Alle", ...new Set(QUESTS.map((q) => q.raum))];
+  const kopf = `
+    <label class="suche">🔍<input placeholder="Quest suchen …" data-suche value="${z.suche || ""}"></label>
+    <div class="filter">${raeume.map((r) => `<button data-filter="${r}" aria-pressed="${z.filter === r}">${r}</button>`).join("")}</div>`;
+  if (!liste.length) return kopf + `<p class="bu" style="text-align:center;padding:20px 0">Nichts gefunden.</p>`;
+  if (var_ === "a") {
+    return kopf + liste.map((q) => `
+      <button class="qa-zeile" data-q="${q.id}">
+        <span class="ico" style="${kachelFarbe(q)}">${symbol(q)}</span>
+        <span class="n"><b>${q.name}</b><i>${q.raum} · ${q.n}× erledigt</i></span>
+        ${wert(q.cl)}
+      </button>`).join("");
+  }
+  if (var_ === "b") {
+    return kopf + `<div class="qb-raster">${liste.map((q) => `
+      <button class="qb-kachel" data-q="${q.id}">
+        <span class="oben"><span class="ico" style="${kachelFarbe(q)}">${symbol(q)}</span>${wert(q.cl)}</span>
+        <b>${q.name}</b><i>${q.raum} · ${q.n}×</i>
+      </button>`).join("")}</div>`;
+  }
+  const gruppen = [...new Set(liste.map((q) => q.raum))];
+  return kopf + gruppen.map((r) => `
+    <p class="raumkopf">${r}</p>
+    <div class="qc-raster">${liste.filter((q) => q.raum === r).map((q) => `
+      <button class="qc-feld" data-q="${q.id}">
+        <span class="ico" style="${kachelFarbe(q)}">${symbol(q)}</span>
+        <b>${q.name}</b>${wert(q.cl)}
+      </button>`).join("")}</div>`).join("");
+}
+
+/** Eine Belohnungsbox in der Form der Variante. */
+function belohnungBox(b, var_, probe = false) {
+    const teuer = b.cl > KONTO;
+    const preis = teuer ? `${KONTO} von ${b.cl} Cleanies` : `${b.cl} Cleanies`;
+    if (var_ === "b") {
+      return `<button class="rbox" ${probe ? "data-probe" : `data-b="${b.id}"`} ${teuer ? "data-zu-teuer" : ""}>
+        <span class="bildteil ${b.bild ? "" : "ohne"}">${motivHtml(b)}<span class="rico">${symbol(b)}</span></span>
+        <span class="drin"><span class="n">${b.name}</span><span class="c">${preis}</span></span>
+      </button>`;
+    }
+    return `<button class="rbox ${b.bild ? "" : "ohnebild"}" ${probe ? "data-probe" : `data-b="${b.id}"`} ${teuer ? "data-zu-teuer" : ""}>
+      ${var_ === "c" ? (b.bild ? motivHtml(b) : '<div class="motiv"></div>') : motivHtml(b)}
+      ${b.bild || var_ === "c" ? '<span class="schleier"></span>' : ""}
+      <span class="drin"><span class="rico">${symbol(b)}</span>
+        <span class="unten"><span class="n">${b.name}</span><br><span class="c">${preis}</span></span></span>
+    </button>`;
+}
+
+function belohnungInhalt(id) {
+  const var_ = document.getElementById(id).dataset.variante;
+  return `
+    <label class="suche">🔍<input placeholder="Belohnung suchen …"></label>
+    <div class="rewards ${"r" + var_}">
+      <div class="uebertragen"><span style="font-size:20px">🔁</span><span>Cleanies übertragen
+        <small>Damit sich jemand etwas leisten kann</small></span></div>
+      ${BELOHNUNGEN.map((b) => belohnungBox(b, var_)).join("")}
+    </div>`;
+}
+
+function telefonBauen(id) {
+  const t = document.getElementById(id);
+  const quest = t.dataset.art === "quest";
+  zustand[id] ||= { filter: "Alle", suche: "" };
+  const bearbeiten = t.hasAttribute("data-bearbeiten");
+  t.innerHTML = `
+    <div class="kopf">
+      <div><div class="titel">${quest ? "Quests" : "Belohnungen"}</div>
+        <div class="sub">${quest ? "Cleanies gelten für alle" : `Dein Konto: ${KONTO} Cleanies`}</div></div>
+      <button class="knopf stift" data-stift aria-pressed="${bearbeiten}"
+        aria-label="${quest ? "Quests" : "Belohnungen"} anpassen">${bearbeiten ? "Fertig" : STIFT}</button>
+      <button class="knopf" aria-label="Vorschlagen">${PLUS}</button>
+    </div>
+    <div class="bearbeiten-hinweis">Welche ${quest ? "Quest" : "Belohnung"} willst du anpassen? Tippe sie an.</div>
+    <div class="inhalt">${quest ? questInhalt(id) : belohnungInhalt(id)}</div>
+    <div class="leiste">
+      <span><b>⌂</b>Start</span><span ${quest ? "data-an" : ""}><b>🧹</b>Quests</span>
+      <span><span class="plus">+</span>Erledigt</span>
+      <span ${quest ? "" : "data-an"}><b>🎁</b>Belohnung</span><span><b>≡</b>Wir</span>
+    </div>
+    <div class="toast"></div>
+    <div class="blatt-schleier"><div class="blatt"></div></div>`;
+}
+
+const alleTelefone = () => ["qa", "qb", "qc", "ra", "rb", "rc"];
+function allesNeu(art) {
+  for (const id of alleTelefone()) {
+    const t = document.getElementById(id);
+    if (art && t.dataset.art !== art) continue;
+    const inhalt = t.querySelector(".inhalt");
+    const hoehe = inhalt ? inhalt.scrollTop : 0;
+    const blattAuf = t.querySelector(".blatt-schleier[data-auf]");
+    const blatt = blattAuf ? blattAuf.innerHTML : null;
+    telefonBauen(id);
+    t.querySelector(".inhalt").scrollTop = hoehe;
+    if (blatt) { const s = t.querySelector(".blatt-schleier"); s.innerHTML = blatt; s.setAttribute("data-auf", ""); }
+  }
+}
+
+/* ---------------------------------------------------------------- Blätter */
+function blattAuf(t, html) {
+  const s = t.querySelector(".blatt-schleier");
+  s.innerHTML = `<div class="blatt"><div class="griff"></div>${html}</div>`;
+  s.setAttribute("data-auf", "");
+}
+const blattZu = (t) => t.querySelector(".blatt-schleier").removeAttribute("data-auf");
+function toast(t, text) {
+  const e = t.querySelector(".toast");
+  e.textContent = text; e.removeAttribute("data-an"); void e.offsetWidth; e.setAttribute("data-an", "");
+  clearTimeout(e._uhr); e._uhr = setTimeout(() => e.removeAttribute("data-an"), 2600);
+}
+
+function blattMelden(t, q) {
+  blattAuf(t, `<h5>Erledigt melden</h5>
+    <div class="vorschau"><span class="ico" style="${kachelFarbe(q)}">${symbol(q)}</span>
+      <b style="flex:1">${q.name}</b>${wert(q.cl)}</div>
+    <div class="notiz">Die Cleanies kommen, sobald jemand anderes bestätigt. Hier wird nur gemeldet —
+      Anpassen liegt hinter dem Stift oben.</div>
+    <button class="knopf-gross rot" data-gemeldet>Zur Bestätigung senden</button>`);
+}
+
+function blattAnpassen(t, x) {
+  const quest = t.dataset.art === "quest";
+  t.dataset.wahlId = x.id;
+  blattAuf(t, `<h5>${x.name}</h5>
+    ${quest ? `<div class="vorschau"><span class="ico" style="${kachelFarbe(x)}">${symbol(x)}</span>
+      <b style="flex:1">Quest · ${x.raum}</b>${wert(x.cl)}</div>` : ""}
+    <button class="wahl neu" data-tun="bild">🖼️ ${quest ? "Bild ändern" : "Hintergrundbild ändern"}<em class="sofort">sofort</em></button>
+    ${quest ? "" : `<button class="wahl neu" data-tun="symbol">✨ Symbol ändern<em class="sofort">sofort</em></button>`}
+    <button class="wahl">${quest ? "Cleanies-Wert ändern" : "Kosten ändern"}<em class="abst">Abstimmung</em></button>
+    ${quest ? `<button class="wahl">Raum ändern<em class="sofort">sofort</em></button>
+    <button class="wahl">Wiederkehrende Aufgabe daraus machen<em class="abst">Abstimmung</em></button>` : ""}
+    <button class="wahl rot">${quest ? "Quest löschen" : "Belohnung löschen"}<em class="abst">Abstimmung</em></button>
+    <div class="notiz">Bilder sind Ordnung wie die Räume — die ändert jeder sofort. Cleanies und Löschen
+      gehen wie bisher nur gemeinsam.</div>`);
+}
+
+/* Der Symbol-Wähler — für Quests mit Farbe, für Belohnungen ohne. */
+let wahl = null;          // { art, id, icon, farbe, kat }
+function blattSymbol(t, x, art) {
+  wahl ||= { art, id: x.id, icon: x.icon, farbe: x.farbe, kat: art === "quest" ? "Putzen" : "Belohnung" };
+  const quest = art === "quest";
+  blattAuf(t, `<h5>${quest ? "Bild" : "Symbol"} für „${x.name}“</h5>
+    <div class="vorschau"><span class="ico" style="${quest ? `--t:${FARBEN[wahl.farbe]}` : "--t:var(--bg)"}">${symbol({ icon: wahl.icon })}</span>
+      <b style="flex:1">${x.name}</b></div>
+    ${quest ? `<div class="farben">${Object.entries(FARBEN).map(([k, f]) =>
+      `<button data-farbe="${k}" style="background:${f}" aria-pressed="${wahl.farbe === k}" aria-label="${k}"></button>`).join("")}</div>` : ""}
+    <div class="kats">${Object.keys(GRUPPEN).map((g) => `<button data-kat="${g}" aria-pressed="${wahl.kat === g}">${g}</button>`).join("")}</div>
+    <div class="emojis">${gruppe(wahl.kat).map((e) => `<button data-emoji="${e}" aria-pressed="${wahl.icon === e}">${e}</button>`).join("")}</div>
+    <div class="knopfreihe">
+      <label class="knopf-gross">📷 Eigenes Bild<input type="file" accept="image/*" data-hochladen="symbol"></label>
+      <button class="knopf-gross ja" data-uebernehmen>Übernehmen</button>
+    </div>`);
+}
+
+function blattHintergrund(t, b) {
+  wahl ||= { art: "belohnung", id: b.id, bild: b.bild };
+  const probe = { ...b, bild: wahl.bild };
+  blattAuf(t, `<h5>Hintergrund für „${b.name}“</h5>
+    <div class="rewards r${t.dataset.variante}" style="grid-template-columns:1fr 1fr">
+      ${belohnungBox(probe, t.dataset.variante, true)}
+      <div class="notiz" style="align-self:center">So sieht die Box aus. Die Schrift bleibt vorn —
+        das Bild liegt nie ungeschützt unter ihr.</div>
+    </div>
+    <div class="motive">${Object.entries(MOTIVE).map(([k, m]) => `
+      <button data-motiv="${k}" aria-pressed="${wahl.bild === k}">${motivHtml({ bild: k })}<small>${m.name}</small></button>`).join("")}</div>
+    <div class="knopfreihe">
+      <label class="knopf-gross">📷 Eigenes Foto<input type="file" accept="image/*" data-hochladen="bild"></label>
+      <button class="knopf-gross" data-ohne>Ohne Bild</button>
+    </div>
+    <button class="knopf-gross ja" data-uebernehmen>Übernehmen</button>`);
+}
+
+/* Ein Foto auf dem Handy quadratisch beschneiden und verkleinern — genau so,
+ * wie es die App heute mit Profilbildern macht. */
+function bildLesen(datei, kante, quadrat) {
+  return new Promise((ok, nein) => {
+    const leser = new FileReader();
+    leser.onerror = nein;
+    leser.onload = () => {
+      const img = new Image();
+      img.onerror = nein;
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        if (quadrat) {
+          const s = Math.min(img.width, img.height);
+          c.width = c.height = kante;
+          c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, kante, kante);
+        } else {
+          const f = Math.min(1, kante / Math.max(img.width, img.height));
+          c.width = Math.round(img.width * f); c.height = Math.round(img.height * f);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        }
+        ok(c.toDataURL("image/jpeg", 0.8));
+      };
+      img.src = leser.result;
+    };
+    leser.readAsDataURL(datei);
+  });
+}
+
+/* ---------------------------------------------------------------- Bedienen */
+function bedienen(t) {
+  t.addEventListener("input", (e) => {
+    if (!e.target.matches("[data-suche]")) return;
+    zustand[t.id].suche = e.target.value;
+    const pos = e.target.selectionStart;
+    t.querySelector(".inhalt").innerHTML = questInhalt(t.id);
+    const feld = t.querySelector("[data-suche]");
+    feld.focus(); feld.setSelectionRange(pos, pos);
+  });
+
+  t.addEventListener("change", async (e) => {
+    const f = e.target.closest("[data-hochladen]");
+    if (!f || !f.files.length) return;
+    const symbolArt = f.dataset.hochladen === "symbol";
+    const daten = await bildLesen(f.files[0], symbolArt ? 160 : 600, symbolArt);
+    const liste = wahl.art === "quest" ? QUESTS : BELOHNUNGEN;
+    if (symbolArt) { wahl.icon = daten; blattSymbol(t, liste[wahl.id], wahl.art); }
+    else { wahl.bild = daten; blattHintergrund(t, liste[wahl.id]); }
+  });
+
+  t.addEventListener("click", (e) => {
+    const schleier = t.querySelector(".blatt-schleier");
+    if (e.target === schleier) { blattZu(t); wahl = null; return; }
+    const ziel = e.target.closest("button,[data-q],[data-b]");
+    if (!ziel || !t.contains(ziel)) return;
+    const quest = t.dataset.art === "quest";
+
+    if (ziel.hasAttribute("data-stift")) {
+      t.toggleAttribute("data-bearbeiten");
+      telefonBauen(t.id);
+      return;
+    }
+    if (ziel.dataset.filter) { zustand[t.id].filter = ziel.dataset.filter; t.querySelector(".inhalt").innerHTML = questInhalt(t.id); return; }
+    if (ziel.dataset.q !== undefined && !ziel.closest(".blatt")) {
+      const q = QUESTS[ziel.dataset.q];
+      wahl = null;
+      if (t.hasAttribute("data-bearbeiten")) blattAnpassen(t, q); else blattMelden(t, q);
+      return;
+    }
+    if (ziel.dataset.b !== undefined && !ziel.closest(".blatt")) {
+      const b = BELOHNUNGEN[ziel.dataset.b];
+      wahl = null;
+      if (t.hasAttribute("data-bearbeiten")) blattAnpassen(t, b);
+      else blattAuf(t, `<h5>${b.name}</h5><div class="notiz">Hier geht es wie heute zum Antrag — einlösen,
+        Termin, Nachricht. Anpassen liegt hinter dem Stift oben.</div>
+        <button class="knopf-gross ja" data-gemeldet>Antrag stellen</button>`);
+      return;
+    }
+    if (ziel.hasAttribute("data-gemeldet")) { blattZu(t); toast(t, quest ? "Gemeldet — die anderen müssen bestätigen." : "Antrag gesendet."); return; }
+
+    const aktuell = () => (quest ? QUESTS : BELOHNUNGEN)[wahl ? wahl.id : t.dataset.wahlId];
+    if (ziel.dataset.tun === "bild") {
+      const x = aktuell();
+      wahl = null;
+      if (quest) blattSymbol(t, x, "quest"); else blattHintergrund(t, x);
+      return;
+    }
+    if (ziel.dataset.tun === "symbol") { const x = aktuell(); wahl = null; blattSymbol(t, x, "belohnung"); return; }
+    if (ziel.dataset.farbe) { wahl.farbe = ziel.dataset.farbe; blattSymbol(t, aktuell(), wahl.art); return; }
+    if (ziel.dataset.kat) { wahl.kat = ziel.dataset.kat; blattSymbol(t, aktuell(), wahl.art); return; }
+    if (ziel.dataset.emoji) { wahl.icon = ziel.dataset.emoji; blattSymbol(t, aktuell(), wahl.art); return; }
+    if (ziel.dataset.motiv) { wahl.bild = ziel.dataset.motiv; blattHintergrund(t, aktuell()); return; }
+    if (ziel.hasAttribute("data-ohne")) { wahl.bild = null; blattHintergrund(t, aktuell()); return; }
+    if (ziel.hasAttribute("data-uebernehmen")) {
+      const x = aktuell();
+      if ("icon" in wahl) x.icon = wahl.icon;
+      if ("farbe" in wahl && wahl.farbe) x.farbe = wahl.farbe;
+      if ("bild" in wahl) x.bild = wahl.bild;
+      const art = wahl.art;
+      wahl = null;
+      blattZu(t);
+      allesNeu(art);
+      toast(t, "Geändert — gilt sofort für alle.");
+    }
+  });
+}
+
+for (const id of alleTelefone()) { telefonBauen(id); bedienen(document.getElementById(id)); }
+
+document.getElementById("stern").addEventListener("click", (e) => {
+  const k = e.target.closest("[data-stern]");
+  if (!k) return;
+  document.body.dataset.stern = k.dataset.stern;
+  for (const b of document.querySelectorAll("#stern button")) b.setAttribute("aria-pressed", String(b === k));
+});
+</script>
+</body>
+</html>
