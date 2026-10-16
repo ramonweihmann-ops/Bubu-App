@@ -71,6 +71,8 @@ const FIGUREN = { "fuchs": "/fox.webp", "wolf": "/wolf.webp" };
 function bild(person, groesse = "") {
   const huelle = `avatar ${groesse}`;
   const eigen = person?.bild;
+  // Kinder ohne Google-Konto haben kein Foto — sie haben ein Tier.
+  if (!eigen && person?.tier) return `<span class="${huelle} tieravatar">${esc(person.tier)}</span>`;
   if (eigen) {
     if (FIGUREN[eigen]) return `<span class="${huelle}"><img src="${FIGUREN[eigen]}" alt=""></span>`;
     if (eigen.startsWith("data:")) return `<span class="${huelle}"><img src="${esc(eigen)}" alt=""></span>`;
@@ -216,6 +218,14 @@ async function laden(still = false) {
     // Die Woche fängt am Montag an — dort, wo man wohnt, nicht in Greenwich.
     S = await api(`state?versatz=${-new Date().getTimezoneOffset()}`);
     zeichne();
+    // In der Kinderansicht auf dem Handy der Eltern warten deren Nachrichten,
+    // bis sie zurück sind. Ein Kind am eigenen Gerät sieht nur seinen Jubel.
+    const kind = kindImBild();
+    if (kind && aufElternHandy()) return;
+    if (kind) S.ereignisse = (S.ereignisse || []).filter((e) => {
+      if (e.art === "info") api("events/gelesen", { ids: [e.id] }).catch(() => {});
+      return e.art !== "info";
+    });
     await ereignisseZeigen();
   } catch (fehler) {
     if (String(fehler.message).includes("Nicht angemeldet")) {
@@ -268,6 +278,8 @@ function zeichne() {
   if (!S) return;
   if (!S.angemeldet) return anmelden();
   if (!S.eingerichtet) return einrichtung();
+  const kind = kindImBild();
+  if (kind) return zeichneKind(kind);
   if (ansicht === "einladen") return einladen();
 
   // Liegt ein Finger auf einer Karte, wartet das neue Bild, bis er loslässt —
@@ -355,6 +367,20 @@ function zeichne() {
   }
 }
 
+/** Die Kinderansicht zeichnen — wie zeichne(), nur ohne Reiter: neu gebaut
+ *  wird erst, wenn sich etwas geändert hat, und die Scrollhöhe bleibt. */
+function zeichneKind(k) {
+  const bild = schirmKind(k);
+  if (bild === letztesBild && app.querySelector(".kv")) return;
+  const vorher = app.querySelector(".kv-body");
+  const hoehe = vorher && letzteAnsicht === `kind:${k.id}` ? vorher.scrollTop : 0;
+  app.innerHTML = bild;
+  letztesBild = bild;
+  letzteAnsicht = `kind:${k.id}`;
+  const nachher = app.querySelector(".kv-body");
+  if (nachher && hoehe) nachher.scrollTop = hoehe;
+}
+
 /* ------------------------------------------------------------------ Anmeldung */
 
 function anmelden() {
@@ -364,6 +390,7 @@ function anmelden() {
       <h1>Haus-Quest</h1>
       <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
       <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
+      <button class="btn text" data-kind-code-eingeben>Ich bin ein Kind</button>
       <p style="font-size:12px;color:var(--ink-3);margin-top:18px;max-width:30ch">
         Gespeichert werden Name, E-Mail und Profilbild aus deinem Google-Konto — sonst nichts.
       </p>
@@ -640,14 +667,16 @@ function eCodeSchirm() {
  *  Sache aus den zwei Blickrichtungen. Auch Abstimmungen gehören dazu:
  *  solange meine Stimme fehlt, bin ich der Empfänger. */
 const zuPruefen = () => [
-  ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id && !m.rueckfrage).map((m) => ({ ...m, art: "meldung" })),
+  ...S.meldungen.filter((m) => m.claimed_by !== S.ich.id && !m.rueckfrage && darfEntscheiden(m.claimed_by))
+    .map((m) => ({ ...m, art: "meldung" })),
   ...offeneAbstimmungen().filter((a) => a.meine === undefined || a.meine === null)
     .map((a) => ({ ...a, vorschlag: a.art, art: "abstimmung" })),
   ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "offen")
     .map((r) => ({ ...r, art: "empfang" })),
   ...belohnungenOffen().filter((r) => r.requested_by === S.ich.id && r.erfuellt === "nachgeholt")
     .map((r) => ({ ...r, art: "nachhol" })),
-  ...S.antraege.filter((a) => a.requested_by !== S.ich.id && !a.rueckfrage).map((a) => ({ ...a, art: "antrag" })),
+  ...S.antraege.filter((a) => a.requested_by !== S.ich.id && !a.rueckfrage && darfEntscheiden(a.requested_by))
+    .map((a) => ({ ...a, art: "antrag" })),
   ...S.uebertragungen.filter((u) => u.to_member === S.ich.id).map((u) => ({ ...u, art: "uebertragung" }))
 ];
 
@@ -1399,6 +1428,7 @@ function schirmStart() {
     </div>
     <div class="body start">
       ${kontoLeiste()}
+      ${kinderReihe()}
       ${pillen()}
       ${stapelBlock(st)}
       <div class="startkacheln">${planKachel()}${wocheKachel()}</div>
@@ -1480,10 +1510,17 @@ function sheetWartet() {
     : '<div class="card flat" style="font-size:13px;color:var(--ink-2)">Nichts offen.</div>'}`);
 }
 
-/** Das Plus in der Leiste: die meistgenutzten Quests zuerst, darüber die Suche. */
+/** Wer im Plus gerade gewählt ist: ich selbst oder eines der Kinder. */
+let plusWer = "ich";
+
+/** Das Plus in der Leiste: die meistgenutzten Quests zuerst, darüber die Suche.
+ *  Für ein Kind stehen nur die Quests da, die Kinder sehen. */
 function plusListe(text = "") {
   const s = schlicht(text.trim());
+  const kind = plusWer !== "ich" ? mitglied(plusWer) : null;
   const liste = S.quests
+    .filter((q) => kind ? (!istKindProfilM(kind) || q.fuer !== "erwachsene")
+                        : !(familie() && ichErwachsen() && q.fuer === "kinder"))
     .filter((q) => !s || schlicht(q.name).includes(s) || schlicht(q.category).includes(s))
     .sort((a, b) => (b.genutzt || 0) - (a.genutzt || 0) || a.name.localeCompare(b.name, "de"));
   if (!liste.length) return '<div class="leer-hinweis">Nichts gefunden.</div>';
@@ -1496,10 +1533,19 @@ function plusListe(text = "") {
     </button>`).join("");
 }
 
-function sheetPlus() {
+function sheetPlus(wer = "ich") {
+  const wahl = ichErwachsen() ? kinder() : [];
+  plusWer = wahl.some((k) => k.id === wer) ? wer : "ich";
+  const kind = plusWer !== "ich" ? mitglied(plusWer) : null;
   sheet(`
     <div class="grabber"></div>
-    <h3>Was hast du erledigt?</h3>
+    <h3>${kind ? `Was hat ${esc(vorname(kind.name))} erledigt?` : "Was hast du erledigt?"}</h3>
+    ${wahl.length ? `
+    <div class="werwahl">
+      <button data-plus-wer="ich" aria-pressed="${!kind}">${bild(S.ich, "sm")}Ich</button>
+      ${wahl.map((k) => `<button data-plus-wer="${k.id}" aria-pressed="${plusWer === k.id}">
+        ${istKindProfilM(k) ? tierHtml(k, "sm") : bild(k, "sm")}${esc(vorname(k.name))}</button>`).join("")}
+    </div>` : ""}
     <div class="suchzeile">${icon("i-search", 18)}
       <input id="plussuche" type="search" inputmode="search" autocomplete="off" placeholder="Quest suchen …"></div>
     <p class="section-label" id="pluslabel">Am häufigsten</p>
@@ -1782,6 +1828,7 @@ function questListe() {
           <span class="t">${esc(q.name)}${q.wiederkehrend ? '&nbsp;<span class="chip open">↻</span>' : ""}${
             wartet ? `&nbsp;<span class="chip wait">${wartet > 1 ? `${wartet}× ` : ""}gemeldet</span>` : ""}</span>
           <span class="m">${esc(q.category)}${q.wiederkehrend ? ` · ${esc(q.rhythmus)}` : ""}${
+            familie() && q.fuer !== "alle" ? ` · nur ${FUER_TEXT[q.fuer]}` : ""}${
             e ? ` · ${eventZeit(e)}` : q.genutzt ? ` · ${q.genutzt}× erledigt` : ""}${
             wartet ? ` · ${wartet === 1 ? "eine Meldung wartet" : `${wartet} Meldungen warten`}${
               meins ? ` auf ${esc(andereName())}` : " auf Bestätigung"}` : ""}</span>
@@ -1987,13 +2034,14 @@ function schirmPruefen() {
 
 /** Eine Box: oben das Bild, darunter auf ruhigem Grund die Schrift. Das
  *  Symbol sitzt auf der Kante. Ohne Bild bleibt oben ein schmaler Streifen. */
-function belohnungBox(b, { probe = false } = {}) {
+function belohnungBox(b, { probe = false, wunsch = false } = {}) {
   const kosten = b.kosten_jetzt ?? b.cost;
-  const zuTeuer = kosten > S.ich.punkte;
+  // Ein Wunsch der Kinder kostet die Großen nichts — er wird ja nicht von ihnen eingelöst.
+  const zuTeuer = !wunsch && kosten > S.ich.punkte;
   const e = eventZu(b);
   const bild = probe ? (b.bild === "ohne" ? null : b.bild) : belohnungHintergrund(b);
   const ziel = probe ? "data-probe"
-    : bearbeiten.belohnungen ? `data-sheet="menue" data-art="belohnung" data-id="${b.id}"`
+    : bearbeiten.belohnungen || wunsch ? `data-sheet="menue" data-art="belohnung" data-id="${b.id}"`
     : `data-sheet="antrag" data-id="${b.id}"`;
   return `
     <button class="reward bildbox" ${ziel} ${zuTeuer && !bearbeiten.belohnungen ? "data-locked" : ""}>
@@ -2004,10 +2052,16 @@ function belohnungBox(b, { probe = false } = {}) {
         <span class="c">${zuTeuer
           ? `${S.ich.punkte} von ${kosten} Cleanies`
           : b.rabatt ? `<s style="opacity:.55">${b.cost}</s> ${kosten} Cleanies`
-          : `${b.cost} Cleanies`}${e ? ` · ${eventZeit(e)}` : b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
+          : `${b.cost} Cleanies`}${e ? ` · ${eventZeit(e)}` : wunsch ? zielVon(b) : b.genutzt ? ` · ${b.genutzt}×` : ""}</span>
       </span>
     </button>`;
 }
+
+/** Welche Kinder gerade auf diesen Wunsch sparen. */
+const zielVon = (b) => {
+  const wer = kinderProfile().filter((k) => kindWunsch(k)?.id === b.id).map((k) => esc(vorname(k.name)));
+  return wer.length ? ` · Ziel von ${wer.join(", ")}` : "";
+};
 
 function belohnungsListe(quelle = S.belohnungen) {
   const liste = sortiereUndSuche(quelle, "belohnungen", (b) => b.kosten_jetzt ?? b.cost);
@@ -2042,7 +2096,13 @@ function schirmBelohnungen() {
         Events stehen über der festen Liste und verschwinden von selbst.</p>` : ""}
 
       <p class="section-label">${S.belohnungen.some((b) => b.event_id) ? "Immer" : "Einlösbar"}</p>
-      <div class="rewards" id="liste">${belohnungsListe(S.belohnungen.filter((b) => !b.event_id))}</div>
+      <div class="rewards" id="liste">${belohnungsListe(S.belohnungen.filter((b) => !b.event_id && (!familie() || b.fuer !== "kinder")))}</div>
+      ${familie() && S.belohnungen.some((b) => !b.event_id && b.fuer === "kinder") ? `
+      <p class="section-label">Wünsche der Kinder</p>
+      <div class="rewards">${sortiereUndSuche(S.belohnungen.filter((b) => !b.event_id && b.fuer === "kinder"), "belohnungen",
+        (b) => b.kosten_jetzt ?? b.cost).map((b) => belohnungBox(b, { wunsch: true })).join("")}</div>
+      <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
+        Einlösen tun die Kinder in ihrer Ansicht. Antippen zum Anpassen.</p>` : ""}
       <p style="font-size:12px;color:var(--ink-3);margin:2px 0 0">
         Jede Einlösung geht als Antrag an ${esc(andereName())}.
         Erst mit Zustimmung werden die Cleanies abgebucht.
@@ -2081,6 +2141,7 @@ function abstimmungWorum(a) {
     case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
+    case "kurs": return "Taschengeld — der Kurs soll sich ändern";
     default: return "Vorschlag";
   }
 }
@@ -2111,6 +2172,8 @@ function abstimmungWandel(a) {
             <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
+  if (a.art === "kurs") return `<span class="old">${a.alt} Cent</span>→<span class="new">${a.neu} Cent</span>
+            <span style="color:var(--ink-2);font-weight:400">je Cleanie</span>`;
   if (a.art === "event_aus") {
     return `<span class="old">läuft</span>→<span class="new">beendet</span>
             <span style="color:var(--ink-2);font-weight:400">· offene Anträge bleiben gültig</span>`;
@@ -2208,6 +2271,8 @@ function schirmWir() {
       ${aktionsBanner()}
 
       ${aktionenBlock()}
+
+      ${familieBlock()}
 
       ${laufendeEvents().length ? `
       <p class="section-label">Läuft gerade</p>
@@ -3405,6 +3470,8 @@ function sheetMenue(art, eintrag) {
     </div>
     <button class="wahl neu" data-symbol="${art}:${eintrag.id}">${istQuest ? "Bild ändern" : "Symbol ändern"}${tag(true)}</button>
     ${istQuest ? "" : `<button class="wahl neu" data-hintergrund="${eintrag.id}">Hintergrundbild ändern${tag(true)}</button>`}
+    ${familie() && ichErwachsen() && !e ? `<button class="wahl" data-fuer-wahl="${istQuest ? "quests" : "rewards"}:${eintrag.id}">
+      <span>Für wen: <b>${FUER_TEXT[eintrag.fuer] || "Alle"}</b></span>${tag(true)}</button>` : ""}
     ${e ? `
     <button class="wahl" data-eventmenue="${e.id}">Event ansehen<em class="abst">dort ändern</em></button>` : `
     <button class="wahl" data-sheet="${istQuest ? "punktwert" : "kosten"}" data-id="${eintrag.id}">
@@ -3418,7 +3485,8 @@ function sheetMenue(art, eintrag) {
     <button class="wahl" data-plan="${eintrag.id}">Im Haushaltsplan ansehen<em class="abst">›</em></button>` : ""}` : ""}
     <button class="wahl rot" data-sheet="loeschen" data-art="${art}" data-id="${eintrag.id}">
       ${istQuest ? "Quest löschen" : "Belohnung löschen"}${tag(false)}</button>`}
-    <div class="note">${icon("i-vote", 16)}<span>Bilder und Räume sind Ordnung — die ändert jeder sofort.
+    <div class="note">${icon("i-vote", 16)}<span>Bilder und Räume sind Ordnung — die ändert jeder sofort${
+      familie() ? ", und für wen etwas gilt, stellen die Erwachsenen ein" : ""}.
       Cleanies, Rhythmus und Löschen gehen nur gemeinsam: ${esc(andereName())}
       ${beugung("muss", "müssen")} zustimmen.</span></div>`);
 }
@@ -3949,11 +4017,731 @@ function schirmHaushalt() {
     </div>`;
 }
 
+/* ------------------------------------------------------------------ Familie */
+//
+// Kinder machen mit, auch ohne eigenes Handy. Ein Kind ist ein Mitglied ohne
+// Google-Konto; die Stufe sagt, wie es mitmacht. Kleine Kinder sehen eine
+// eigene Kinderansicht: das Sparglas oder den Weg zum Wunsch — das Kind
+// wählt selbst. Auf dem Handy der Eltern schließt sie eine PIN ab, damit dort
+// niemand seine eigene Aufgabe bestätigt.
+
+const TIERE = "🦊 🐼 🐰 🦄 🐯 🐸 🐨 🦁 🐙 🐝 🐢 🐧".split(" ");
+const STUFEN = {
+  ohne: { name: "Ohne Handy", text: "Ihr tragt ein. Die Kinderansicht läuft auf eurem Handy oder einem Familien-Tablet." },
+  geraet: { name: "Eigenes Gerät", text: "Meldet selbst in der Kinderansicht. Anmeldung mit einem Code, ohne Google." },
+  gross: { name: "Jugendlich", text: "Eigenes Google-Konto und die normale App. Meldet, bestätigt Erwachsene und stimmt mit ab." }
+};
+const FUER_TEXT = { alle: "Alle", kinder: "Kinder", erwachsene: "Erwachsene" };
+const FUER_NAECHST = { alle: "kinder", kinder: "erwachsene", erwachsene: "alle" };
+const TIERFARBE = ["gelb", "gruen", "lila", "blau", "rot"];
+
+const istKindM = (m) => !!m && m.erwachsen === false;
+const istKindProfilM = (m) => m?.stufe === "ohne" || m?.stufe === "geraet";
+const ichErwachsen = () => !!S?.ich && !istKindM(S.ich) && !S.ich.stufe;
+const kinder = () => (S?.mitglieder || []).filter(istKindM);
+const kinderProfile = () => kinder().filter(istKindProfilM);
+const familie = () => S?.haushalt?.art === "familie" || kinder().length > 0;
+const erwachsenenNamen = () => (S?.mitglieder || []).filter((m) => !istKindM(m)).map((m) => vorname(m.name));
+const elternWort = () => {
+  const n = erwachsenenNamen();
+  return n.length ? (n.length === 1 ? n[0] : `${n.slice(0, -1).join(", ")} oder ${n[n.length - 1]}`) : "die Großen";
+};
+/** Kinder bestätigen nie Kinder — das sieht ein Kind gar nicht erst im Stapel. */
+const darfEntscheiden = (steller) => !(istKindM(S.ich) && istKindM(mitglied(steller)));
+
+const kindFarbe = (k) => TIERFARBE[[...String(k.id)].reduce((n, z) => n + z.charCodeAt(0), 0) % TIERFARBE.length];
+const tierHtml = (k, klasse = "") => `<span class="kv-tier ${klasse}" data-farbe="${kindFarbe(k)}">${esc(k.tier || "🦊")}</span>`;
+const euro = (cl) => (cl * (S?.haushalt?.kurs || 10) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+
+/* ---------- Wer gerade die Kinderansicht sieht ---------- */
+
+const KINDMODUS = "hq-kindmodus";
+function kindModusId() { try { return localStorage.getItem(KINDMODUS); } catch { return null; } }
+function kindModusSetzen(id) {
+  try { if (id) localStorage.setItem(KINDMODUS, id); else localStorage.removeItem(KINDMODUS); } catch { /* dann bis zum Neuladen */ }
+}
+/** Auf dem eigenen Gerät ist es das Kind selbst, auf dem Handy der Eltern das
+ *  Kind, dessen Ansicht sie geöffnet haben. Sonst niemand. */
+function kindImBild() {
+  if (!S?.eingerichtet) return null;
+  if (istKindProfilM(S.ich)) return S.ich;
+  const id = kindModusId();
+  if (!id) return null;
+  const k = kinderProfile().find((x) => x.id === id);
+  if (!k) kindModusSetzen(null);
+  return k || null;
+}
+const aufElternHandy = () => !istKindProfilM(S.ich);
+
+/** Auf dem Handy der Eltern spricht die Kinderansicht für das Kind. */
+function kindApi(pfad, daten = {}) {
+  const k = kindImBild();
+  return api(pfad, aufElternHandy() && k ? { ...daten, alsKind: k.id } : daten);
+}
+
+/* ---------- Was ein Kind sieht ---------- */
+
+const preis = (b) => b.kosten_jetzt ?? b.cost;
+const kindWuensche = () => S.belohnungen.filter((b) => b.fuer !== "erwachsene" && !b.event_id)
+  .sort((a, b) => preis(a) - preis(b));
+function kindWunsch(k) {
+  const liste = kindWuensche();
+  return liste.find((b) => b.id === k.wunsch)
+    || liste.find((b) => preis(b) > k.punkte) || liste[liste.length - 1] || null;
+}
+const kindQuests = () => S.quests.filter((q) => q.fuer !== "erwachsene" && !q.event_id)
+  .sort((a, b) => (b.genutzt || 0) - (a.genutzt || 0) || a.name.localeCompare(b.name, "de"));
+
+function kindZustand(k, q) {
+  const offen = S.meldungen.find((m) => m.claimed_by === k.id && m.quest_id === q.id);
+  if (offen) return { z: offen.rueckfrage ? "rueckfrage" : "wartet", meldung: offen };
+  const heute = (S.heute || []).find((h) => h.wer === k.id && h.quest === q.id);
+  return heute ? { z: "geschafft", n: heute.n } : { z: "offen" };
+}
+const ZMARKE = {
+  wartet: () => "⏳ wartet",
+  rueckfrage: () => "❓ Frage",
+  geschafft: (s) => `✓ ${s.n > 1 ? `${s.n}× ` : ""}heute`
+};
+const zMarke = (s) => s.z === "offen" ? "" : `<span class="kv-marke">${ZMARKE[s.z](s)}</span>`;
+const kvStern = '<img class="kv-stern" src="/cleanie.webp" alt="">';
+const offenerWunsch = (k) => S.antraege.find((a) => a.requested_by === k.id);
+
+function kvKopf(k) {
+  const wahl = aufElternHandy() ? kinderProfile() : [];
+  const ansicht = k.ansicht === "weg" ? "weg" : "glas";
+  return `
+    <div class="kv-kopf">
+      ${wahl.length > 1 ? `<div class="kv-wahl">${wahl.map((x) => `
+        <button data-kv-kind="${x.id}" aria-pressed="${x.id === k.id}" aria-label="${esc(vorname(x.name))}">${esc(x.tier || "🦊")}</button>`).join("")}</div>`
+        : `<span class="kv-was">${aufElternHandy() ? "Kinderansicht" : "Haus-Quest"}</span>`}
+      <div class="kv-schalter" role="group" aria-label="Ansicht">
+        <button data-kv-ansicht="glas" aria-pressed="${ansicht === "glas"}">🫙 Glas</button>
+        <button data-kv-ansicht="weg" aria-pressed="${ansicht === "weg"}">🗺️ Weg</button>
+      </div>
+      ${aufElternHandy() ? '<button class="kv-knopf" data-kv-schloss aria-label="Zurück zu den Eltern">🔒</button>' : ""}
+    </div>`;
+}
+
+function kvKachel(k, q) {
+  const s = kindZustand(k, q);
+  return `<button class="kv-kachel" data-kv-quest="${q.id}" data-zustand="${s.z}">
+    ${zMarke(s)}${symbolKachel(questSymbol(q), questFarbe(q), "gross")}
+    <b>${esc(q.name)}</b><span class="kv-lohn">+${q.punkte_jetzt ?? q.points}${kvStern}</span></button>`;
+}
+
+function kvZeile(k, q) {
+  const s = kindZustand(k, q);
+  return `<button class="kv-zeile" data-kv-quest="${q.id}" data-zustand="${s.z}">
+    ${symbolKachel(questSymbol(q), questFarbe(q))}<span class="n">${esc(q.name)}</span>
+    ${s.z === "offen" ? `<span class="kv-lohn">+${q.punkte_jetzt ?? q.points}${kvStern}</span>` : zMarke(s)}</button>`;
+}
+
+/** Das Sparglas: der Wunsch sitzt auf dem Glas, die Cleanies füllen es. */
+function kvGlas(k, w) {
+  if (!w) return '<div class="leer-hinweis">Noch keine Wünsche — die legen die Großen an.</div>';
+  const rest = Math.max(0, preis(w) - k.punkte);
+  const voll = Math.round(Math.min(1, k.punkte / preis(w)) * 100);
+  return `
+    <button class="kv-spar ${rest ? "" : "voll"}" data-kv-wunsch>
+      <span class="kv-glaswrap"><span class="kv-deckel"></span>
+        <span class="kv-glas"><span class="kv-fuellung" style="height:${voll}%"></span>
+          <span class="kv-etikett">${symbolHtml(belohnungSymbol(w))}</span></span></span>
+      <span class="kv-text"><small>Dein Wunsch</small><b>${esc(w.name)}</b>
+        <span class="kv-zahl">${Math.min(k.punkte, preis(w))}<small> von ${preis(w)}</small></span>
+        <span class="kv-rest">${rest ? `Noch ${rest} Cleanies!` : "Du kannst ihn einlösen!"}</span></span>
+    </button>`;
+}
+
+/* Der Weg: neun Steine in drei Reihen hin und her, oben der Wunsch. Gerechnet
+ * in einem 294 × 240 großen Feld und in Prozent gesetzt — er wächst mit. */
+const STEINE = 9;
+const WEG = [[52, 210], [147, 218], [242, 206], [240, 146], [147, 138], [54, 150], [56, 86], [150, 78], [240, 90], [147, 32]];
+const lage = ([x, y]) => `left:${(x / 294 * 100).toFixed(2)}%;top:${(y / 240 * 100).toFixed(2)}%`;
+
+function kvWeg(k, w) {
+  if (!w) return '<div class="leer-hinweis">Noch keine Wünsche — die legen die Großen an.</div>';
+  const rest = Math.max(0, preis(w) - k.punkte);
+  const schritt = Math.min(STEINE, Math.floor(STEINE * Math.min(1, k.punkte / preis(w))));
+  return `
+    <button class="kv-weg" data-kv-wunsch aria-label="Dein Wunsch: ${esc(w.name)}">
+      <svg viewBox="0 0 294 240" preserveAspectRatio="none" aria-hidden="true">
+        <polyline vector-effect="non-scaling-stroke" points="${WEG.map(([x, y]) => `${x},${y}`).join(" ")}"/></svg>
+      ${WEG.slice(0, STEINE).map((p, i) => `<span class="kv-stein ${i < schritt ? "voll" : ""}" style="${lage(p)}"></span>`).join("")}
+      <span class="kv-schatz ${rest ? "" : "da"}" style="${lage(WEG[STEINE])}">${symbolHtml(belohnungSymbol(w))}</span>
+      <span class="kv-figur" style="${lage(WEG[schritt])}">${esc(k.tier || "🦊")}</span>
+    </button>
+    <p class="kv-wegtext">${rest ? `Noch <b>${rest} Cleanies</b> bis: ${esc(w.name)}` : "<b>Angekommen!</b> Tipp aufs Ziel zum Einlösen."}</p>`;
+}
+
+/** Was die Großen gemeldet haben — ein Kind mit eigenem Gerät darf es
+ *  bestätigen. Auf dem Handy der Eltern nicht: dort wären es die Eltern selbst. */
+function kvFuerDieGrossen() {
+  if (aufElternHandy()) return "";
+  const liste = S.meldungen.filter((m) => m.claimed_by !== S.ich.id && !istKindM(mitglied(m.claimed_by)) && !m.rueckfrage);
+  if (!liste.length) return "";
+  return `<p class="kv-label">Stimmt das?</p>
+    ${liste.map((m) => `
+    <div class="kv-pruef">
+      ${bild(mitglied(m.claimed_by), "sm")}
+      <span class="grow"><b>${esc(nameVon(m.claimed_by))}</b> sagt: ${esc(m.quest)}</span>
+      <button class="btn dark" data-entscheiden="claims" data-status="bestaetigt" data-id="${m.id}">Stimmt!</button>
+    </div>`).join("")}`;
+}
+
+function schirmKind(k) {
+  const w = kindWunsch(k);
+  const liste = kindQuests();
+  const glas = k.ansicht !== "weg";
+  return `
+    <div class="kv">
+      ${kvKopf(k)}
+      <div class="kv-body">
+        <div class="kv-hallo">${tierHtml(k, "gross")}
+          <span><b>Hallo ${esc(vorname(k.name))}!</b><small>Du hast <span data-kv-konto>${k.punkte}</span> Cleanies</small></span></div>
+        ${glas ? kvGlas(k, w) : kvWeg(k, w)}
+        ${offenerWunsch(k) ? `<div class="kv-hinweis">⏳ ${esc(elternWort())} ${
+          erwachsenenNamen().length > 1 ? "schauen" : "schaut"} nach deinem Wunsch.</div>` : ""}
+        ${kvFuerDieGrossen()}
+        <p class="kv-label">Heute für dich</p>
+        ${!liste.length ? '<div class="leer-hinweis">Gerade keine Aufgaben.</div>'
+          : glas ? `<div class="kv-kacheln">${liste.map((q) => kvKachel(k, q)).join("")}</div>`
+          : `<div class="kv-zeilen">${liste.map((q) => kvZeile(k, q)).join("")}</div>`}
+      </div>
+    </div>`;
+}
+
+/* ---------- Die Blätter der Kinderansicht ---------- */
+
+function sheetKvMelden(q) {
+  const k = kindImBild();
+  const s = kindZustand(k, q);
+  const n = q.punkte_jetzt ?? q.points;
+  if (s.z === "rueckfrage") {
+    sheet(`
+      <div class="grabber"></div>
+      <div class="kv-meldebild">${symbolKachel(questSymbol(q), questFarbe(q), "riesig")}<h3>${esc(q.name)}</h3></div>
+      <div class="note">${icon("i-info", 16)}<span><b>${esc(nameVon(s.meldung.rueckfrage_von))}</b> fragt:
+        „${esc(s.meldung.rueckfrage)}“</span></div>
+      <button class="btn primary block" data-kv-antwort="${s.meldung.id}">Jetzt ist es fertig</button>`);
+    return;
+  }
+  sheet(`
+    <div class="grabber"></div>
+    <div class="kv-meldebild">${symbolKachel(questSymbol(q), questFarbe(q), "riesig")}<h3>${esc(q.name)}</h3>
+      <p>${s.z === "geschafft" ? "Noch einmal geschafft?" : "Hast du das geschafft?"}</p></div>
+    <div class="note">${icon("i-info", 16)}<span>Du bekommst <b>${n} ${n === 1 ? "Cleanie" : "Cleanies"}</b>,
+      sobald ${esc(elternWort())} es gesehen ${erwachsenenNamen().length > 1 ? "haben" : "hat"}.</span></div>
+    <div class="btnrow">
+      <button class="btn ghost" data-kv-zu>Noch nicht</button>
+      <button class="btn primary" data-kv-fertig="${q.id}">Ja, fertig!</button>
+    </div>`);
+}
+
+function sheetKvWunsch() {
+  const k = kindImBild();
+  const w = kindWunsch(k);
+  const liste = kindWuensche();
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Worauf sparst du?</h3>
+    ${liste.map((b) => `
+      <button class="kv-wunschzeile" data-kv-wunschwahl="${b.id}" aria-pressed="${w && b.id === w.id}">
+        <span class="rico">${symbolHtml(belohnungSymbol(b))}</span>
+        <span class="grow"><b>${esc(b.name)}</b><small>${preis(b)} Cleanies</small></span>
+        ${k.punkte >= preis(b) ? "<em>geht schon!</em>" : ""}</button>`).join("")}
+    ${offenerWunsch(k) ? `<div class="note">${icon("i-info", 16)}<span>${esc(elternWort())}
+        ${erwachsenenNamen().length > 1 ? "schauen" : "schaut"} schon nach deinem Wunsch.</span></div>`
+      : w && k.punkte >= preis(w) ? `<button class="btn primary block" data-kv-einloesen="${w.id}">${esc(w.name)} einlösen</button>`
+      : `<div class="note">${icon("i-info", 16)}<span>Die Wünsche legen die Großen fest. Einlösen geht, sobald genug Cleanies da sind.</span></div>`}`);
+}
+
+let pinEingabe = "";
+function sheetKvPin() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Zurück zu den Eltern</h3>
+    <div class="kv-pinpunkte">${[0, 1, 2, 3].map((i) => `<i class="${i < pinEingabe.length ? "an" : ""}"></i>`).join("")}</div>
+    <div class="kv-pinfeld">${["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((z) => z === "" ? "<span></span>"
+      : `<button data-kv-ziffer="${z}" aria-label="${z === "⌫" ? "Löschen" : z}">${z}</button>`).join("")}</div>
+    <div class="note">${icon("i-lock", 16)}<span>Mit der Eltern-PIN. So bestätigt hier niemand seine eigene Aufgabe.</span></div>`);
+}
+
+/* ---------- Was die Eltern sehen ---------- */
+
+function kinderReihe() {
+  if (!ichErwachsen() || !kinder().length) return "";
+  return `<div class="kinderreihe">${kinder().map((k) => {
+    const w = istKindProfilM(k) ? kindWunsch(k) : null;
+    return `<button class="kindkarte" data-kind="${k.id}">
+      <span class="oben">${istKindProfilM(k) ? tierHtml(k) : bild(k, "sm")}<span><b>${esc(vorname(k.name))}</b><small>${esc(STUFEN[k.stufe]?.name || "Kind")}</small></span></span>
+      <span class="stand">${cl(k.punkte)}</span>
+      ${w ? `<span class="minibalken"><i style="width:${Math.round(Math.min(1, k.punkte / preis(w)) * 100)}%"></i></span>
+      <span class="ziel">${esc(w.name)}</span>` : ""}
+    </button>`;
+  }).join("")}</div>`;
+}
+
+function familieBlock() {
+  if (!familie()) return "";
+  const tg = kinder().filter((k) => k.taschengeld);
+  return `
+    <p class="section-label">Familie</p>
+    ${S.mitglieder.map((m) => istKindM(m) ? `
+      <button class="rowlink" data-kind="${m.id}">${istKindProfilM(m) ? tierHtml(m, "sm") : bild(m, "sm")}
+        <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
+          <span class="m">${esc(STUFEN[m.stufe]?.name || "Kind")} · ${m.punkte} Cleanies</span></span>
+        <span style="color:var(--ink-3)">›</span></button>` : `
+      <button class="rowlink" ${ichErwachsen() && m.id !== S.ich.id && !String(m.id).startsWith("kind-") ? `data-mitglied="${m.id}"` : "disabled"}>
+        ${bild(m, "sm")}
+        <span class="grow"><span class="t">${esc(vorname(m.name))}${m.id === S.ich.id ? " (du)" : ""}</span>
+          <span class="m">Erwachsen${m.rolle === "verwalter" ? " · verwaltet" : ""}</span></span></button>`).join("")}
+    ${ichErwachsen() ? `<button class="btn ghost block" data-kind-neu>${icon("i-plus", 16)} Kind hinzufügen</button>` : ""}
+    ${tg.length ? `
+    <p class="section-label">Taschengeld</p>
+    <button class="rowlink" ${ichErwachsen() ? "data-kurs" : "disabled"}>
+      <span class="avatar sm" style="background:var(--tint)">💶</span>
+      <span class="grow"><span class="t">1 Cleanie = ${S.haushalt.kurs} Cent</span>
+        <span class="m">Den Kurs ändert ihr gemeinsam, wie einen Cleanies-Wert</span></span>
+      ${ichErwachsen() ? '<span style="color:var(--ink-3)">›</span>' : ""}</button>
+    ${tg.map((k) => `
+      <div class="rowlink" style="cursor:default">${istKindProfilM(k) ? tierHtml(k, "sm") : bild(k, "sm")}
+        <span class="grow"><span class="t">${esc(vorname(k.name))}</span>
+          <span class="m">${k.punkte} Cleanies = ${euro(k.punkte)}</span></span>
+        ${ichErwachsen() ? `<button class="btn dark klein" data-auszahlen="${k.id}">Auszahlen</button>` : ""}</div>`).join("")}` : ""}`;
+}
+
+function sheetKind(k) {
+  const w = istKindProfilM(k) ? kindWunsch(k) : null;
+  sheet(`
+    <div class="grabber"></div>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:12px">
+      ${istKindProfilM(k) ? tierHtml(k, "gross") : bild(k, "sm")}
+      <span class="grow"><b style="font-size:17px;display:block">${esc(k.name)}</b>
+        <span style="font-size:12.5px;color:var(--ink-2)">${esc(STUFEN[k.stufe]?.name || "Kind")} · ${cl(k.punkte)}${
+          w ? ` · spart auf ${esc(w.name)}` : ""}</span></span>
+    </div>
+    <button class="wahl" data-fuer-kind="${k.id}">Für ${esc(vorname(k.name))} eintragen<em>zählt sofort</em></button>
+    ${k.taschengeld ? `<button class="wahl" data-auszahlen="${k.id}">Taschengeld auszahlen<em>${euro(k.punkte)}</em></button>` : ""}
+    ${istKindProfilM(k) ? `<button class="wahl" data-kv-oeffnen="${k.id}">Kinderansicht öffnen<em>auf diesem Handy</em></button>` : ""}
+    ${k.stufe === "geraet" ? `
+    <button class="wahl" data-kind-code="${k.id}">Gerät anmelden<em>Code</em></button>
+    <button class="wahl" data-kind-abmelden="${k.id}">Alle Geräte abmelden</button>` : ""}
+    ${istKindProfilM(k) ? `<button class="wahl" data-kind-bearbeiten="${k.id}">Name, Tier, Stufe, Taschengeld</button>
+    <button class="wahl rot" data-kind-weg="${k.id}">Profil löschen</button>`
+      : `<button class="wahl" data-jugendlich="${k.id}" data-ja="nein">Wieder als erwachsen führen</button>`}`);
+}
+
+/** Ein Mitglied mit Google-Konto als jugendlich führen — oder zurück. */
+function sheetMitglied(m) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(vorname(m.name))}</h3>
+    <div class="note">${icon("i-info", 16)}<span>Jugendliche nutzen die normale App, melden, bestätigen die Erwachsenen
+      und stimmen mit ab. Nur Geschwister bestätigen sie nicht — bei Kindern ist immer ein Erwachsener dabei.</span></div>
+    <button class="btn dark block" data-jugendlich="${m.id}" data-ja="ja">Als jugendlich führen</button>`);
+}
+
+let kindForm = null;
+function sheetKindForm(k = null) {
+  kindForm ||= k ? { id: k.id, name: k.name, tier: k.tier || "🦊", stufe: k.stufe, taschengeld: !!k.taschengeld }
+                 : { id: null, name: "", tier: "🐰", stufe: "ohne", taschengeld: true, einwilligung: false };
+  const f = kindForm;
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${f.id ? "Kind ändern" : "Kind hinzufügen"}</h3>
+    <div class="field"><label for="kindname">Vorname</label>
+      <input id="kindname" maxlength="20" autocomplete="off" placeholder="z. B. Mia" value="${esc(f.name)}"></div>
+    <p class="section-label">Ein Tier statt Foto</p>
+    <div class="kv-tiere">${TIERE.map((t) => `<button data-kv-tier="${t}" aria-pressed="${f.tier === t}">${t}</button>`).join("")}</div>
+    <p class="section-label">Wie macht es mit?</p>
+    ${Object.entries(STUFEN).filter(([id]) => !f.id || id !== "gross").map(([id, s]) => `
+      <button class="wahl stufe" data-kv-stufe="${id}" aria-pressed="${f.stufe === id}">
+        <span class="zwei"><b>${s.name}</b><small>${s.text}</small></span></button>`).join("")}
+    ${f.stufe === "gross" ? `
+    <div class="note">${icon("i-info", 16)}<span>Jugendliche melden sich mit eigenem Google-Konto über euren
+      Einladungscode an. Danach tippt ihr sie hier unter „Familie“ an und führt sie als jugendlich.</span></div>
+    <button class="btn dark block" data-go="einladen">Einladungscode zeigen</button>` : `
+    <button class="wahl" data-kv-tg aria-pressed="${f.taschengeld}"><span class="zwei"><b>Taschengeld</b>
+      <small>Cleanies lassen sich in Euro auszahlen</small></span><span class="kv-toggle"></span></button>
+    ${f.id ? "" : `
+    <label class="kv-einwilligung"><input type="checkbox" id="einwilligung" ${f.einwilligung ? "checked" : ""}>
+      <span>Ich bin sorgeberechtigt und willige ein, dass Haus-Quest den Vornamen und die Cleanies dieses
+      Kindes speichert. Keine E-Mail, kein Foto, keine Werbung.</span></label>`}
+    <button class="btn dark block" data-kind-speichern>${f.id ? "Speichern" : "Anlegen"}</button>`}`);
+}
+
+/** Merkt sich, was schon eingetippt ist, bevor das Blatt neu gezeichnet wird. */
+function kindFormLesen() {
+  if (!kindForm) return;
+  const name = document.getElementById("kindname");
+  if (name) kindForm.name = name.value;
+  const ja = document.getElementById("einwilligung");
+  if (ja) kindForm.einwilligung = ja.checked;
+}
+
+/** Der Code fürs Gerät — als QR zum Scannen und zum Abtippen. Der QR führt
+ *  direkt in die App; dort meldet sich das Gerät von selbst an. */
+async function sheetKindCode(k, code) {
+  const link = `${location.origin}/app/?kind=${code.replace("-", "")}`;
+  let qr = "";
+  try {
+    const { default: qrcode } = await import("./qr.js");
+    const q = qrcode(0, "M");
+    q.addData(link);
+    q.make();
+    const n = q.getModuleCount();
+    let felder = "";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      if (q.isDark(r, c)) felder += `M${c} ${r}h1v1h-1z`;
+    }
+    qr = `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="QR-Code zum Anmelden"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${felder}" fill="#152c4f"/></svg>`;
+  } catch { /* dann eben nur zum Abtippen */ }
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(vorname(k.name))}s Gerät anmelden</h3>
+    ${qr ? `<div class="kv-qr">${qr}</div>` : ""}
+    <div class="kv-code" id="kindcode">${esc(code)}</div>
+    <div class="note">${icon("i-info", 16)}<span>Mit der Kamera von ${esc(vorname(k.name))}s Gerät scannen — oder dort
+      haus-quest.com öffnen, „Ich bin ein Kind“ tippen und den Code eingeben. Er gilt 10 Minuten und nur einmal.
+      ${esc(vorname(k.name))} braucht kein Google-Konto.</span></div>
+    <button class="btn dark block" data-bleiben>Fertig</button>`);
+}
+
+let auszahlung = null;
+function sheetAuszahlen(k) {
+  auszahlung ||= { kind: k.id, n: k.punkte };
+  const wahl = [...new Set([k.punkte, 20, 10, 5].filter((n) => n > 0 && n <= k.punkte))];
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Taschengeld für ${esc(vorname(k.name))}</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:12px">
+      ${istKindProfilM(k) ? tierHtml(k, "gross") : bild(k, "sm")}
+      <span class="grow"><b style="font-size:16px;display:block">${cl(k.punkte)}</b>
+        <span style="font-size:12.5px;color:var(--ink-2)">= ${euro(k.punkte)} bei ${S.haushalt.kurs} Cent je Cleanie</span></span>
+    </div>
+    ${k.punkte ? `
+    <p class="section-label">Wie viel?</p>
+    ${wahl.map((n) => `<button class="wahl" data-auszahl-betrag="${n}" aria-pressed="${auszahlung.n === n}">
+      ${n === k.punkte ? "Alles" : `${n} Cleanies`}<em>${euro(n)}</em></button>`).join("")}
+    <div class="note">${icon("i-info", 16)}<span>Das Geld gebt ihr ${esc(vorname(k.name))} selbst. Die App bucht die
+      Cleanies ab, damit der Stand stimmt.</span></div>
+    <button class="btn dark block" data-auszahlen-ok>${euro(auszahlung.n)} ausgezahlt</button>`
+    : `<div class="note">${icon("i-info", 16)}<span>${esc(vorname(k.name))} hat gerade keine Cleanies.</span></div>`}`);
+}
+
+function sheetKurs() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Taschengeld-Kurs</h3>
+    <div class="field"><label>Cent je Cleanie</label>
+      <div class="stepper">
+        <button data-kurs-schritt="-1" aria-label="weniger">−</button>
+        <span class="val" id="kurswahl">${S.haushalt.kurs}</span>
+        <button data-kurs-schritt="1" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--ink-3)">heute ${S.haushalt.kurs} Cent</span>
+      </div></div>
+    <div class="field"><label>Begründung</label><textarea id="grund" placeholder="optional"></textarea></div>
+    <div class="note">${icon("i-vote", 16)}<span>Wie ein Cleanies-Wert: der neue Kurs gilt, wenn alle Erwachsenen zustimmen.</span></div>
+    <button class="btn dark block" data-kurs-ok>Zur Abstimmung stellen</button>`);
+}
+
+function sheetPinSetzen(kindId) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Eltern-PIN festlegen</h3>
+    <div class="field"><label for="pinneu">Vier Ziffern</label>
+      <input id="pinneu" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></div>
+    <div class="note">${icon("i-lock", 16)}<span>Mit dieser PIN kommt ihr aus der Kinderansicht zurück. Sie gilt für alle
+      Erwachsenen im Haushalt — sagt sie euch gegenseitig.</span></div>
+    <button class="btn dark block" data-pin-ok="${kindId}">Festlegen und Kinderansicht öffnen</button>`);
+}
+
+/** Erledigt eintragen für ein Kind. Die Eltern haben es gesehen — damit sind
+ *  sie das zweite Paar Augen, und es zählt sofort. */
+function sheetEintragen(quest, k) {
+  const n = quest.punkte_jetzt ?? quest.points;
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Für ${esc(vorname(k.name))} eintragen</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      ${symbolKachel(questSymbol(quest), questFarbe(quest))}
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="pts-pill">${cl(n)}</span>
+    </div>
+    <div class="field"><label>Wie oft</label>
+      <div class="stepper">
+        <button data-menge="-1" aria-label="weniger">−</button>
+        <span class="val" id="menge">1</span>
+        <button data-menge="1" aria-label="mehr">+</button>
+        <span style="margin-left:auto;font-family:var(--font-data);font-size:14px;color:var(--ink-2)">
+          = <b style="color:var(--accent)" id="summe">${n}</b> Cleanies</span>
+      </div></div>
+    <div class="note">${icon("i-check", 16)}<span>Du hast es gesehen. Darum zählt es gleich als bestätigt,
+      und ${esc(vorname(k.name))} bekommt die Cleanies sofort.</span></div>
+    <button class="btn primary block" data-senden="eintragen" data-id="${quest.id}" data-fuer="${k.id}"
+      data-punkte="${n}">Für ${esc(vorname(k.name))} eintragen</button>`);
+}
+
+/** Die Ansicht, in der man den Code des Kindes eintippt — statt Google. */
+function anmeldenKind() {
+  app.innerHTML = `
+    <div class="mitte">
+      <img class="logo" src="/logo.webp" alt="">
+      <h1>Hallo!</h1>
+      <p>Gib den Code ein, den dir Mama oder Papa zeigen.</p>
+      <input id="kindcode-eingabe" class="kv-codefeld" maxlength="9" autocomplete="off" autocapitalize="characters"
+        placeholder="ABCD-1234" aria-label="Code">
+      <button class="btn primary" data-kind-anmelden>Los geht's</button>
+      <button class="btn text" data-kind-zurueck>Zurück</button>
+    </div>`;
+  document.getElementById("kindcode-eingabe")?.focus();
+}
+
+async function kindCodeEinloesen(code) {
+  await api("kind/anmelden", { code });
+  kindModusSetzen(null);
+  await laden();
+}
+
+/* ---------- Bedienen ---------- */
+
+const mehrereEltern = () => erwachsenenNamen().length > 1;
+const elternVerb = (einer, mehrere) => mehrereEltern() ? mehrere : einer;
+
+function sheetKindWeg(k) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>${esc(vorname(k.name))} löschen?</h3>
+    <div class="note">${icon("i-info", 16)}<span>Das Profil verschwindet mit allen Cleanies und Buchungen.
+      Das lässt sich nicht rückgängig machen.</span></div>
+    <button class="btn primary block" data-kind-weg-ok="${k.id}">Endgültig löschen</button>
+    <button class="btn text block" data-bleiben>Abbrechen</button>`);
+}
+
+/** Ein Gerät, auf dem schon ein Erwachsener angemeldet ist, fragt nach, bevor
+ *  es zum Gerät eines Kindes wird. */
+function sheetKindLink(code) {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Gerät eines Kindes?</h3>
+    <div class="note">${icon("i-info", 16)}<span>Mit diesem Code wird dieses Gerät zum Gerät eines Kindes.
+      Du bist hier dann abgemeldet.</span></div>
+    <button class="btn dark block" data-kind-link="${esc(code)}">Ja, für das Kind anmelden</button>
+    <button class="btn text block" data-bleiben>Nein, ich bleibe angemeldet</button>`);
+}
+
+/** Alle Knöpfe des Familienmodus. Gibt zurück, ob einer gedrückt wurde. */
+async function familieKlick(el) {
+  const d = el.dataset;
+  const tun = async (f) => {
+    try { el.disabled = true; await f(); }
+    catch (fehler) { toast(fehler.message, true); }
+    finally { el.disabled = false; }
+    return true;
+  };
+  const neuZeichnen = () => { letztesBild = ""; zeichne(); };
+
+  /* Kinderansicht */
+  if (d.kvKind) { kindModusSetzen(d.kvKind); neuZeichnen(); return true; }
+  if (d.kvAnsicht) return tun(async () => { await kindApi("kind/ansicht", { ansicht: d.kvAnsicht }); await laden(); });
+  if (el.hasAttribute("data-kv-schloss")) { pinEingabe = ""; sheetKvPin(); return true; }
+  if (d.kvZiffer) {
+    pinEingabe = d.kvZiffer === "⌫" ? pinEingabe.slice(0, -1) : (pinEingabe + d.kvZiffer).slice(0, 4);
+    if (pinEingabe.length < 4) { sheetKvPin(); return true; }
+    const pin = pinEingabe;
+    pinEingabe = "";
+    return tun(async () => {
+      try { await api("eltern-pin/pruefen", { pin }); } catch (f) { sheetKvPin(); throw f; }
+      kindModusSetzen(null);
+      sheetZu();
+      ansicht = "start";
+      neuZeichnen();
+      await laden();
+      toast("Willkommen zurück.");
+    });
+  }
+  if (d.kvQuest) {
+    const q = S.quests.find((x) => x.id === d.kvQuest);
+    if (!q) return true;
+    if (kindZustand(kindImBild(), q).z === "wartet") {
+      toast(`${elternWort()} ${elternVerb("schaut", "schauen")} gleich nach.`);
+      return true;
+    }
+    sheetKvMelden(q);
+    return true;
+  }
+  if (el.hasAttribute("data-kv-zu")) { sheetZu(); return true; }
+  if (d.kvFertig) return tun(async () => {
+    await kindApi("claims", { questId: d.kvFertig });
+    sheetZu();
+    await laden();
+    toast(`Super! ${elternWort()} ${elternVerb("schaut", "schauen")} gleich nach.`);
+  });
+  if (d.kvAntwort) return tun(async () => {
+    await kindApi(`claims/${d.kvAntwort}/antwort`, { nachricht: "Jetzt ist es fertig" });
+    sheetZu();
+    await laden();
+    toast("Prima — jetzt wird nachgeschaut.");
+  });
+  if (el.hasAttribute("data-kv-wunsch")) { sheetKvWunsch(); return true; }
+  if (d.kvWunschwahl) return tun(async () => {
+    await kindApi("kind/wunsch", { rewardId: d.kvWunschwahl });
+    await laden();
+    sheetKvWunsch();
+  });
+  if (d.kvEinloesen) return tun(async () => {
+    await kindApi("requests", { rewardId: d.kvEinloesen });
+    sheetZu();
+    await laden();
+    toast(`Gefragt! ${elternWort()} ${elternVerb("sagt", "sagen")} gleich Bescheid.`);
+  });
+
+  /* Die Eltern: Kinder und Familie */
+  if (d.kind) { const k = mitglied(d.kind); if (k.name) sheetKind(k); return true; }
+  if (d.mitglied) { const m = mitglied(d.mitglied); if (m.name) sheetMitglied(m); return true; }
+  if (el.hasAttribute("data-kind-neu")) { kindForm = null; sheetKindForm(); return true; }
+  if (d.kindBearbeiten) { kindForm = null; sheetKindForm(mitglied(d.kindBearbeiten)); return true; }
+  if (d.kvTier && kindForm) { kindFormLesen(); kindForm.tier = d.kvTier; sheetKindForm(); return true; }
+  if (d.kvStufe && kindForm) { kindFormLesen(); kindForm.stufe = d.kvStufe; sheetKindForm(); return true; }
+  if (el.hasAttribute("data-kv-tg") && kindForm) {
+    kindFormLesen(); kindForm.taschengeld = !kindForm.taschengeld; sheetKindForm(); return true;
+  }
+  if (el.hasAttribute("data-kind-speichern")) return tun(async () => {
+    kindFormLesen();
+    const f = kindForm;
+    if (f.id) {
+      await api(`kinder/${f.id}`, { name: f.name, tier: f.tier, stufe: f.stufe, taschengeld: f.taschengeld });
+      kindForm = null;
+      sheetZu();
+      await laden();
+      toast("Gespeichert.");
+      return;
+    }
+    if (!f.einwilligung) throw new Error("Ohne Einwilligung der Eltern geht es nicht");
+    const r = await api("kinder", { name: f.name, tier: f.tier, stufe: f.stufe, taschengeld: f.taschengeld, einwilligung: true });
+    kindForm = null;
+    await laden();
+    const k = mitglied(r.id);
+    if (r.stufe === "geraet") {
+      const c = await api(`kinder/${r.id}/code`, {});
+      await sheetKindCode(k, c.code);
+    } else {
+      sheetZu();
+      toast(`${vorname(k.name)} ist da. Unter „Wir“ antippen, um einzutragen oder die Kinderansicht zu öffnen.`);
+    }
+  });
+  if (d.kindCode) return tun(async () => {
+    const k = mitglied(d.kindCode);
+    const c = await api(`kinder/${k.id}/code`, {});
+    await sheetKindCode(k, c.code);
+  });
+  if (d.kindAbmelden) return tun(async () => {
+    const r = await api(`kinder/${d.kindAbmelden}/abmelden`, {});
+    sheetZu();
+    toast(r.geraete ? `${r.geraete} ${r.geraete === 1 ? "Gerät" : "Geräte"} abgemeldet.` : "Es war kein Gerät angemeldet.");
+  });
+  if (d.kindWeg) { sheetKindWeg(mitglied(d.kindWeg)); return true; }
+  if (d.kindWegOk) return tun(async () => {
+    await api(`kinder/${d.kindWegOk}/loeschen`, {});
+    sheetZu();
+    await laden();
+    toast("Profil gelöscht.");
+  });
+  if (d.jugendlich) return tun(async () => {
+    await api(`mitglieder/${d.jugendlich}/jugendlich`, { ja: d.ja === "ja" });
+    sheetZu();
+    await laden();
+    toast(d.ja === "ja" ? "Als jugendlich geführt." : "Wieder als erwachsen geführt.");
+  });
+  if (d.fuerKind) { sheetZu(); sheetPlus(d.fuerKind); return true; }
+  if (d.plusWer) {
+    const text = document.getElementById("plussuche")?.value || "";
+    sheetPlus(d.plusWer);
+    const feld = document.getElementById("plussuche");
+    if (feld && text) { feld.value = text; document.getElementById("plusliste").innerHTML = plusListe(text); }
+    return true;
+  }
+  if (d.kvOeffnen) {
+    if (!S.haushalt.pin) { sheetPinSetzen(d.kvOeffnen); return true; }
+    kindModusSetzen(d.kvOeffnen);
+    sheetZu();
+    neuZeichnen();
+    return true;
+  }
+  if (d.pinOk) return tun(async () => {
+    await api("eltern-pin", { pin: document.getElementById("pinneu")?.value || "" });
+    await laden();
+    kindModusSetzen(d.pinOk);
+    sheetZu();
+    neuZeichnen();
+  });
+
+  /* Taschengeld */
+  if (d.auszahlen) { auszahlung = null; sheetAuszahlen(mitglied(d.auszahlen)); return true; }
+  if (d.auszahlBetrag && auszahlung) {
+    auszahlung.n = Number(d.auszahlBetrag); sheetAuszahlen(mitglied(auszahlung.kind)); return true;
+  }
+  if (el.hasAttribute("data-auszahlen-ok") && auszahlung) return tun(async () => {
+    const r = await api(`kinder/${auszahlung.kind}/auszahlen`, { cleanies: auszahlung.n });
+    const k = mitglied(auszahlung.kind);
+    auszahlung = null;
+    sheetZu();
+    await laden();
+    toast(`Gebucht: ${r.euro} € Taschengeld für ${vorname(k.name)}.`);
+  });
+  if (el.hasAttribute("data-kurs")) { sheetKurs(); return true; }
+  if (d.kursSchritt) {
+    const feld = document.getElementById("kurswahl");
+    feld.textContent = Math.max(1, Math.min(100, Number(feld.textContent) + Number(d.kursSchritt)));
+    return true;
+  }
+  if (el.hasAttribute("data-kurs-ok")) return tun(async () => {
+    const wert = Number(document.getElementById("kurswahl")?.textContent || 0);
+    await api("proposals", { art: "kurs", wert, grund: document.getElementById("grund")?.value || "" });
+    sheetZu();
+    await laden();
+    toast(S.haushalt.kurs === wert ? `Neuer Kurs: ${wert} Cent je Cleanie.` : "Der neue Kurs steht zur Abstimmung.");
+  });
+
+  /* Für wen eine Quest oder Belohnung gilt */
+  if (d.fuerWahl) return tun(async () => {
+    const [tabelle, eintragId] = d.fuerWahl.split(":");
+    const liste = () => tabelle === "quests" ? S.quests : S.belohnungen;
+    const eintrag = liste().find((x) => x.id === eintragId);
+    if (!eintrag) return;
+    const neu = FUER_NAECHST[eintrag.fuer] || "alle";
+    await api(`${tabelle}/${eintragId}/fuer`, { fuer: neu });
+    await laden();
+    const frisch = liste().find((x) => x.id === eintragId);
+    if (frisch) sheetMenue(tabelle === "quests" ? "quest" : "belohnung", frisch);
+    toast(`Sehen jetzt: ${FUER_TEXT[neu]}.`);
+  });
+
+  /* Anmelden mit dem Code eines Kindes */
+  if (el.hasAttribute("data-kind-code-eingeben")) { anmeldenKind(); return true; }
+  if (el.hasAttribute("data-kind-zurueck")) { anmelden(); return true; }
+  if (el.hasAttribute("data-kind-anmelden")) return tun(async () => {
+    await kindCodeEinloesen(document.getElementById("kindcode-eingabe")?.value || "");
+  });
+  if (d.kindLink) return tun(async () => { sheetZu(); await kindCodeEinloesen(d.kindLink); });
+  return false;
+}
+
+/** Ein QR-Code mit ?kind=… führt hierher: erst schauen, wer schon da ist. */
+async function kindLinkPruefen(code) {
+  history.replaceState(history.state, "", location.pathname);
+  await laden(true);
+  if (S?.angemeldet && S.eingerichtet && !istKindProfilM(S.ich)) { sheetKindLink(code); return; }
+  try { await kindCodeEinloesen(code); } catch (fehler) { toast(fehler.message, true); }
+}
+
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]");
   if (!el) return;
+  if (await familieKlick(el)) return;
 
   // Navigation & Anzeige
   if (el.dataset.go) {
@@ -4021,8 +4809,10 @@ document.addEventListener("click", async (ev) => {
   if (el.hasAttribute("data-plus")) { sheetPlus(); return; }
   if (el.dataset.meldenAus) {
     const quest = S.quests.find((q) => q.id === el.dataset.meldenAus);
+    const kind = plusWer !== "ich" ? mitglied(plusWer) : null;
     sheetZu();
-    if (quest) sheetMelden(quest);
+    if (quest && kind?.name) sheetEintragen(quest, kind);
+    else if (quest) sheetMelden(quest);
     return;
   }
   if (el.dataset.hinweisWeg) {
@@ -4349,7 +5139,7 @@ document.addEventListener("click", async (ev) => {
     const neu = Math.max(Math.abs(schritt) === 25 ? 25 : 1, Number(feld.textContent) + schritt);
     feld.textContent = neu;
     if (summe) {
-      const proStueck = Number(document.querySelector("[data-senden='melden']")?.dataset.punkte || 0);
+      const proStueck = Number(document.querySelector("[data-senden='melden'],[data-senden='eintragen']")?.dataset.punkte || 0);
       summe.textContent = neu * proStueck;
     }
     if (document.getElementById("evsatz")) eventBlattFrischen();
@@ -4622,14 +5412,21 @@ document.addEventListener("click", async (ev) => {
         document.getElementById("grund")?.focus();
         throw new Error("Ohne Begründung geht es nicht — schreib kurz dazu, warum.");
       }
-      await api("claims", {
+      const ergebnis = await api("claims", {
         // Bei einer Aufgabe aus dem Plan gibt es keinen Zähler — es ist immer
         // genau eine Runde.
         questId: el.dataset.id, anzahl: zahl("menge") || 1, notiz: wert("notiz"),
         trotzdem: el.dataset.trotzdem === "ja", grund: wert("grund")
       });
       sheetZu(); await laden();
-      toast(`Gemeldet — ${andereName()} ${beugung("muss", "müssen")} bestätigen.`);
+      toast(ergebnis.sofort ? `Gezählt — +${ergebnis.punkte} Cleanies. Mit den Kleinen allein gilt es sofort.`
+                            : `Gemeldet — ${andereName()} ${beugung("muss", "müssen")} bestätigen.`);
+      return;
+    }
+    if (el.dataset.senden === "eintragen") {
+      const ergebnis = await api("claims", { questId: el.dataset.id, anzahl: zahl("menge") || 1, fuer: el.dataset.fuer });
+      sheetZu(); await laden();
+      toast(`Eingetragen — ${vorname(mitglied(el.dataset.fuer).name)} bekommt ${ergebnis.punkte} Cleanies.`);
       return;
     }
     if (el.dataset.senden === "antrag") {
@@ -4911,7 +5708,8 @@ document.addEventListener("change", async (ev) => {
 function listeZeichnen() {
   const behaelter = document.getElementById("liste");
   if (!behaelter) return;
-  behaelter.innerHTML = ansicht === "quests" ? questListe() : belohnungsListe();
+  behaelter.innerHTML = ansicht === "quests" ? questListe()
+    : belohnungsListe(S.belohnungen.filter((b) => !b.event_id && (!familie() || b.fuer !== "kinder")));
 }
 
 /** Die Tageszahl beim Urlaub rechnet mit, während man tippt — sonst weiß
@@ -5052,7 +5850,10 @@ window.addEventListener("popstate", () => {
 /* ------------------------------------------------------------------ Start */
 
 waechterSetzen();
-laden();
+// Ein QR-Code vom Handy der Eltern bringt den Code für das Gerät eines Kindes mit.
+const kindLink = new URLSearchParams(location.search).get("kind");
+if (kindLink) kindLinkPruefen(kindLink);
+else laden();
 
 // Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen.
 setInterval(() => { if (!document.hidden && !scrim.hasAttribute("data-open")) laden(true); }, 25000);

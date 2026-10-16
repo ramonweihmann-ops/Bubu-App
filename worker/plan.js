@@ -272,7 +272,7 @@ async function mahnen(env, paar, q, abwesend = new Set()) {
  *  nicht mehr: den Ausfall umzulegen hieße, sie für die Abwesenheit der anderen
  *  zu bestrafen. Die Strafe wird kleiner, nicht schwerer. */
 async function strafen(env, paar, q, abwesend = new Set()) {
-  const zahlen = (await mitgliederVon(env, paar)).filter((wer) => !abwesend.has(wer));
+  const zahlen = (await mitgliederVon(env, paar, { mitKindern: false })).filter((wer) => !abwesend.has(wer));
   if (!zahlen.length) {
     // Alle weg, ohne Haushaltsurlaub: dann steht die Runde einfach still.
     await env.DB.prepare("update quests set strafe_runde = ?1 where id = ?2").bind(q.faellig_am, q.id).run();

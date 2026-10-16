@@ -8,6 +8,11 @@ import { sendePush } from "./push.js";
 const id = () => crypto.randomUUID();
 
 export async function melde(env, paarId, empfaengerId, ereignis) {
+  // Ein Kind ohne Handy liest nichts — die Nachricht läge nur herum.
+  const ohne = await env.DB.prepare("select 1 as da from members where user_id = ?1 and stufe = 'ohne'")
+    .bind(empfaengerId).first();
+  if (ohne) return;
+
   await env.DB.prepare(
     `insert into ereignisse (id, couple_id, user_id, art, titel, text, punkte, quelle_id)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
@@ -29,9 +34,16 @@ export async function ereignisseWeg(env, quelleId) {
   await env.DB.prepare("delete from ereignisse where quelle_id = ?1").bind(quelleId).run();
 }
 
-/** Alle Mitglieder des Haushalts. */
-export async function mitgliederVon(env, paarId) {
-  const treffer = await env.DB.prepare("select user_id from members where couple_id = ?1").bind(paarId).all();
+/** Alle Mitglieder des Haushalts, die etwas lesen können. Ein Kind ohne Handy
+ *  hat kein Gerät — Nachrichten an es lägen nur herum.
+ *
+ *  Ohne Kinder heißt: nur Erwachsene und Jugendliche. So zahlen kleine Kinder
+ *  keine Gruppenstrafe für den Haushaltsplan. */
+export async function mitgliederVon(env, paarId, { mitKindern = true } = {}) {
+  const treffer = await env.DB.prepare(mitKindern
+    ? "select user_id from members where couple_id = ?1 and coalesce(stufe, '') <> 'ohne'"
+    : "select user_id from members where couple_id = ?1 and (stufe is null or stufe = 'gross')"
+  ).bind(paarId).all();
   return treffer.results.map((r) => r.user_id);
 }
 

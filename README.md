@@ -38,7 +38,7 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   gebaut wurde A bei den Quests und B bei den Belohnungen, der Stern schwach dahinter.
 - **Mockup „Familienmodus":** [`web/mockup-familie/`](./web/mockup-familie) — live unter
   `haus-quest.com/mockup-familie/`. Kinderprofile ohne Handy, drei Kinderansichten (Sparglas, Weg, Liste),
-  Eintragen für Kinder, Wünsche, Taschengeld — zur Entscheidung.
+  Eintragen für Kinder, Wünsche, Taschengeld. Gebaut wurden Sparglas und Weg — das Kind wählt —, die Liste fiel weg.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -63,6 +63,24 @@ Die zweite Regel ist keine Frage der Oberfläche, sondern der Datenbank: Wer ein
 bestätigen will, bekommt einen Fehler — nicht weil ein Knopf versteckt ist, sondern weil die
 Datenbank es abweist (CHECK in der Tabelle und Prüfung in `worker/api.js`). Punktestände werden nirgends
 gespeichert, sondern aus allen Buchungen berechnet.
+
+## Familienmodus
+
+Kinder machen mit, auch ohne eigenes Handy. Ein Kind ist ein Mitglied ohne Google-Konto: Vorname und
+Tier, keine E-Mail, kein Foto. Angelegt wird es nur mit Einwilligung eines Erwachsenen.
+
+| Stufe | Anmeldung | Was das Kind sieht |
+| --- | --- | --- |
+| Ohne Handy | keine — die Eltern tragen ein | die Kinderansicht auf dem Handy der Eltern, mit Eltern-PIN zurück |
+| Eigenes Gerät | ein Code oder QR-Code, zehn Minuten gültig, ohne Google | die Kinderansicht |
+| Jugendlich | eigenes Google-Konto | die normale App |
+
+Die Kinderansicht zeigt den Wunsch als Sparglas oder als Weg — das Kind wählt. Dazu gelten drei Regeln:
+**Kinder bestätigen nie Kinder** (bei Kindern ist immer ein Erwachsener das zweite Paar Augen; Kinder
+mit eigenem Gerät dürfen dafür die Eltern bestätigen), **abstimmen dürfen Erwachsene und Jugendliche**,
+und **wer allein mit kleinen Kindern ist, dessen Meldung zählt sofort**. Was Eltern für ein Kind
+eintragen, haben sie gesehen — es zählt gleich. Taschengeld ist eine Buchung wie eine Einlösung; den
+Kurs ändern die Erwachsenen gemeinsam. Der Code dazu steht in `worker/familie.js`.
 
 ## Aufbau
 

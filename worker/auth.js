@@ -44,13 +44,24 @@ export async function angemeldet(request, env) {
   const roh = keks(request, SITZUNG);
   if (!roh) return null;
   const treffer = await env.DB.prepare(
-    `select u.id, u.email, u.name, u.avatar_url, u.bild, m.couple_id
+    `select u.id, u.email, u.name, u.avatar_url, u.bild, m.couple_id, m.stufe, m.erwachsen
        from sessions s
        join users u on u.id = s.user_id
        left join members m on m.user_id = u.id
       where s.token_hash = ?1 and s.expires_at > datetime('now')`
   ).bind(await hash(roh)).first();
   return treffer || null;
+}
+
+/** Eine Sitzung für jemanden, der sich ohne Google anmeldet — das Gerät eines
+ *  Kindes mit seinem Code. Zurück kommt der Keks dafür. */
+export async function sitzungAnlegen(env, wer) {
+  const token = zufall(32);
+  await env.DB.prepare(
+    `insert into sessions (token_hash, user_id, expires_at)
+     values (?1, ?2, datetime('now', '+${TAGE} days'))`
+  ).bind(await hash(token), wer).run();
+  return setzeKeks(SITZUNG, token, TAGE * 86400);
 }
 
 export async function handleAuth(request, env, url) {

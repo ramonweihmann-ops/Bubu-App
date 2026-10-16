@@ -3,7 +3,7 @@
 // Die App schickt nur Absichten („ich habe X erledigt“). Ob daraus eine Buchung
 // wird, entscheiden diese Prüfungen und die Regeln in der Datenbank — nicht das Handy.
 
-import { angemeldet } from "./auth.js";
+import { angemeldet, sitzungAnlegen } from "./auth.js";
 import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND, RAUMVORSCHLAEGE } from "./startdaten.js";
 import { vapid } from "./push.js";
 import { melde, meldeAlle } from "./melden.js";
@@ -18,6 +18,11 @@ import {
 } from "./rueckmeldung.js";
 import { zeitraum, urlaubAnlegen, urlaubBeenden, urlaubeVon, urlaubsLage } from "./urlaub.js";
 import { questBild, belohnungBild, bildAusliefern } from "./bilder.js";
+import {
+  istKindProfil, istKind, STIMMRECHT, mitgliedVon, nurErwachsene, entscheidenPruefen,
+  zaehltSofort, alsKind, kindAnlegen, kindAendern, kindLoeschen, kindCode, kindEinloesen, kindAbmelden,
+  jugendlichSetzen, wunschSetzen, ansichtSetzen, fuerSetzen, auszahlen, pinSetzen, pinPruefen, heuteGeschafft
+} from "./familie.js";
 import {
   konfigPruefen, eventAnlegen, eventAendern, eventAus,
   eventsNachziehen, eventsVon, eventPruefen
@@ -41,7 +46,7 @@ const vorname = (n) => String(n || "").split(" ")[0];
 
 export async function handleApi(request, env, url) {
   const pfad = url.pathname.replace(/^\/api\//, "");
-  const ich = await angemeldet(request, env);
+  let ich = await angemeldet(request, env);
 
   if (pfad === "health") {
     // Zeigt nur, OB etwas hinterlegt ist — nie den Wert selbst.
@@ -52,12 +57,23 @@ export async function handleApi(request, env, url) {
       clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET)
     });
   }
+  // Das Gerät eines Kindes meldet sich mit einem Code an — ohne Google.
+  if (pfad === "kind/anmelden" && request.method === "POST") return kindAnmelden(request, env);
   if (!ich) return json({ fehler: "Nicht angemeldet", angemeldet: false }, 401);
 
   const koerper = request.method === "POST" ? await request.json().catch(() => ({})) : {};
   const teile = pfad.split("/");
 
   try {
+    // Ein Kind mit eigenem Gerät meldet, wünscht sich etwas und bestätigt die
+    // Großen. Alles andere machen die Erwachsenen.
+    if (istKindProfil(ich) && !kindDarf(pfad, teile)) throw new Fehler("Das machen die Erwachsenen", 403);
+    // Die Kinderansicht auf dem Handy der Eltern spricht für das Kind.
+    if (koerper.alsKind) {
+      if (!kindDarf(pfad, teile, true)) throw new Fehler("Das geht in der Kinderansicht nicht", 403);
+      ich = await alsKind(env, ich, koerper.alsKind);
+    }
+
     if (pfad === "state") return json(await zustand(env, ich, url.searchParams.get("versatz")));
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
@@ -71,7 +87,7 @@ export async function handleApi(request, env, url) {
 
     if (!ich.couple_id) throw new Fehler("Noch kein Haushalt eingerichtet", 409);
 
-    if (pfad === "claims") return json(await melden(env, ich, koerper));
+    if (pfad === "claims") return json(koerper.fuer ? await fuerKindEintragen(env, ich, koerper) : await melden(env, ich, koerper));
     if (teile[0] === "claims" && teile[2] === "decide") return json(await meldungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "requests") return json(await antragStellen(env, ich, koerper));
@@ -117,7 +133,28 @@ export async function handleApi(request, env, url) {
 
     if (teile[0] === "urlaub" && teile[2] === "beenden") return json(await urlaubBeenden(env, ich, teile[1]));
 
-    if (pfad === "proposals") return json(await vorschlagen(env, ich, koerper));
+    if (pfad === "proposals") {
+      const ergebnis = await vorschlagen(env, ich, koerper);
+      // Wer als einziger Erwachsener abstimmt, braucht auf niemanden zu warten.
+      await abstimmungenNachziehen(env, ich.couple_id);
+      return json(ergebnis);
+    }
+
+    /* ---------- Familie ---------- */
+    if (pfad === "kinder") return json(await kindAnlegen(env, ich, koerper));
+    if (teile[0] === "kinder" && teile[1] && !teile[2]) return json(await kindAendern(env, ich, teile[1], koerper));
+    if (teile[0] === "kinder" && teile[2] === "loeschen") return json(await kindLoeschen(env, ich, teile[1]));
+    if (teile[0] === "kinder" && teile[2] === "code") return json(await kindCode(env, ich, teile[1]));
+    if (teile[0] === "kinder" && teile[2] === "abmelden") return json(await kindAbmelden(env, ich, teile[1]));
+    if (teile[0] === "kinder" && teile[2] === "auszahlen") return json(await auszahlen(env, ich, teile[1], koerper));
+    if (teile[0] === "mitglieder" && teile[2] === "jugendlich") return json(await jugendlichSetzen(env, ich, teile[1], koerper.ja === true));
+    if (pfad === "kind/wunsch") return json(await wunschSetzen(env, selbstKind(ich), koerper.rewardId));
+    if (pfad === "kind/ansicht") return json(await ansichtSetzen(env, selbstKind(ich), koerper.ansicht));
+    if ((teile[0] === "quests" || teile[0] === "rewards") && teile[2] === "fuer") {
+      return json(await fuerSetzen(env, ich, teile[0], teile[1], koerper.fuer));
+    }
+    if (pfad === "eltern-pin") return json(await pinSetzen(env, ich, koerper));
+    if (pfad === "eltern-pin/pruefen") return json(await pinPruefen(env, ich, koerper));
     if (teile[0] === "proposals" && teile[2] === "vote") return json(await abstimmen(env, ich, teile[1], koerper.antwort, koerper.grund));
 
     return json({ fehler: "Unbekannter Endpunkt" }, 404);
@@ -129,6 +166,51 @@ export async function handleApi(request, env, url) {
       : text;
     return json({ fehler: sauber }, fehler.status || 400);
   }
+}
+
+/* ------------------------------------------------------------------ Kinder */
+
+/** Was ein Kind ohne Google-Konto anfassen darf. Für die Kinderansicht auf dem
+ *  Handy der Eltern gilt noch weniger: dort entscheidet das Kind nichts. */
+function kindDarf(pfad, teile, aufElternHandy = false) {
+  if (["claims", "requests", "kind/wunsch", "kind/ansicht"].includes(pfad)) return true;
+  if (["claims", "requests"].includes(teile[0]) && ["antwort", "storno"].includes(teile[2])) return true;
+  if (aufElternHandy) return false;
+  if (["state", "events/gelesen", "push/key", "push/subscribe"].includes(pfad)) return true;
+  if (["claims", "requests"].includes(teile[0]) && teile[2] === "decide") return true;
+  return teile[0] === "bild";
+}
+
+function selbstKind(ich) {
+  if (!istKindProfil(ich)) throw new Fehler("Das gilt nur in der Kinderansicht");
+  return ich;
+}
+
+async function kindAnmelden(request, env) {
+  const { code } = await request.json().catch(() => ({}));
+  try {
+    const wer = await kindEinloesen(env, code);
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Set-Cookie": await sitzungAnlegen(env, wer)
+      }
+    });
+  } catch (fehler) {
+    return json({ fehler: fehler.message }, fehler.status || 400);
+  }
+}
+
+/** Erledigt eintragen für ein Kind: die Meldung gehört dem Kind, bestätigt
+ *  haben sie die Eltern, die es gesehen haben. Vier Augen bleiben. */
+async function fuerKindEintragen(env, ich, daten) {
+  await nurErwachsene(env, ich);
+  const kind = await mitgliedVon(env, ich.couple_id, daten.fuer);
+  if (!istKind(kind)) throw new Fehler("Dieses Kind gibt es nicht", 404);
+  const akteur = { id: kind.id, name: kind.name, couple_id: ich.couple_id, erwachsen: 0, stufe: kind.stufe };
+  const { id: meldung } = await melden(env, akteur, { ...daten, fuer: undefined }, { still: true });
+  const ergebnis = await meldungEntscheiden(env, ich, meldung, "bestaetigt");
+  return { ...ergebnis, fuer: kind.id };
 }
 
 /* ------------------------------------------------------------------ Profil */
@@ -558,7 +640,7 @@ async function abstimmungenNachziehen(env, paarId) {
     `select p.* from proposals p
       where p.couple_id = ?1 and p.status = 'offen'
         and (select count(*) from proposal_votes v where v.proposal_id = p.id and v.answer = 1)
-            >= (select count(*) from members where couple_id = p.couple_id)`
+            >= (select count(*) from members where couple_id = p.couple_id and ${STIMMRECHT})`
   ).bind(paarId).all();
 
   for (const vorschlag of haengend.results) {
@@ -599,14 +681,15 @@ async function zustand(env, ich, versatz = 0) {
 
   const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume, gifs] =
     await Promise.all([
-      env.DB.prepare(`select u.id, u.name, u.avatar_url, u.bild, m.joined_at, m.rolle, m.erwachsen
+      env.DB.prepare(`select u.id, u.name, u.avatar_url, u.bild, m.joined_at, m.rolle, m.erwachsen,
+                             m.stufe, m.tier, m.ansicht, m.wunsch, m.taschengeld
                         from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
-      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id, q.icon, q.farbe,
+      env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id, q.icon, q.farbe, q.fuer,
                              (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id, b.icon, b.bild,
+      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id, b.icon, b.bild, b.fuer,
                              (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
                         from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
       env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at,
@@ -645,8 +728,12 @@ async function zustand(env, ich, versatz = 0) {
   const punkteVon = Object.fromEntries(staende.results.map((z) => [z.member_id, z.points]));
   const mit = personen.results.map((p) => ({
     id: p.id, name: p.name, avatar: p.avatar_url, bild: p.bild, seit: p.joined_at,
-    rolle: p.rolle, erwachsen: !!p.erwachsen, punkte: punkteVon[p.id] || 0
+    rolle: p.rolle, erwachsen: !!p.erwachsen, punkte: punkteVon[p.id] || 0,
+    stufe: p.stufe || null, tier: p.tier || null, ansicht: p.ansicht || "glas",
+    wunsch: p.wunsch || null, taschengeld: !!p.taschengeld
   }));
+  // Abstimmen dürfen Erwachsene und Jugendliche — die Karten zählen nur sie.
+  const stimmberechtigt = mit.filter((m) => !istKindProfil(m));
   const mein = mit.find((p) => p.id === ich.id) || { id: ich.id, name: ich.name, punkte: 0 };
   const andere = mit.filter((p) => p.id !== ich.id);
 
@@ -667,6 +754,7 @@ async function zustand(env, ich, versatz = 0) {
       art: haus.art, groesse: haus.groesse, erwachsene: haus.erwachsene, kinder: haus.kinder,
       belegt: mit.length, ichVerwalte: mein.rolle === "verwalter",
       strafe: !!haus.strafe_an,
+      kurs: haus.kurs, pin: !!haus.eltern_pin,
       // Die zwei Grenzen des Jubels. Die dritte Stufe ist nach oben offen.
       phasen: { leise: haus.phase_leise, mittel: haus.phase_mittel }
     },
@@ -731,27 +819,30 @@ async function zustand(env, ich, versatz = 0) {
       status: p.status,
       created_at: p.created_at,
       meine: stimmenJe[p.id]?.[ich.id],
-      koepfe: mit.length,
-      noetig: p.kind === "ruecktritt" ? mehrheit(mit.length) : mit.length,
-      stimmen: mit.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id],
+      koepfe: stimmberechtigt.length,
+      noetig: p.kind === "ruecktritt" ? mehrheit(stimmberechtigt.length) : stimmberechtigt.length,
+      stimmen: stimmberechtigt.map((m) => ({ id: m.id, name: m.name, antwort: stimmenJe[p.id]?.[m.id],
                                  grund: gruendeJe[p.id]?.[m.id] || null }))
     })),
     verlauf: verlauf.results,
+    // Was die Kinder heute schon geschafft haben — für die Haken der Kinderansicht.
+    heute: await heuteGeschafft(env, paar, versatz),
     ereignisse: ereignisse.results
   };
 }
 
 /* ------------------------------------------------------------------ Melden */
 
-async function melden(env, ich, daten) {
+async function melden(env, ich, daten, { still = false } = {}) {
   const { questId, anzahl = 1, notiz = "" } = daten;
   const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   const quest = await env.DB.prepare(
-    `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen, event_id
+    `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen, event_id, fuer
        from quests where id = ?1 and couple_id = ?2 and active = 1`
   ).bind(questId, ich.couple_id).first();
   if (!quest) throw new Fehler("Diese Quest gibt es nicht");
+  if (quest.fuer === "erwachsene" && istKindProfil(ich)) throw new Fehler("Diese Quest ist für die Großen");
 
   // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
   if (quest.event_id) await eventPruefen(env, ich, quest.event_id, menge);
@@ -782,13 +873,21 @@ async function melden(env, ich, daten) {
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
   ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung).run();
+  if (still) return { ok: true, id: meldung };
+
+  // Allein unter kleinen Kindern bestätigt niemand — dann zählt es gleich.
+  if (await zaehltSofort(env, ich.couple_id, ich.id)) {
+    await meldungBuchen(env, ich.couple_id, { id: meldung, quest_id: quest.id, wiederkehrend: quest.wiederkehrend }, "bestaetigt", null);
+    return { ok: true, id: meldung, sofort: true, punkte: menge * wert };
+  }
+
   await meldeAllen(env, ich, {
     art: "info", quelle: meldung,
     titel: `${vorname(ich.name)} hat etwas erledigt`,
     text: `${quest.name}${menge > 1 ? ` (${menge}×)` : ""} — ${menge * wert} Cleanies warten auf eine Bestätigung.${
       besonders?.fremd ? ` Die Runde war ${wessen} zugeteilt.` : ""}`
   });
-  return { ok: true };
+  return { ok: true, id: meldung };
 }
 
 async function meldungEntscheiden(env, ich, meldungId, status) {
@@ -800,14 +899,29 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
   ).bind(meldungId, ich.couple_id).first();
   if (!meldung) throw new Fehler("Meldung nicht gefunden", 404);
   if (meldung.claimed_by === ich.id) throw new Fehler("Eine Meldung muss von jemand anderem bestätigt werden");
+  await entscheidenPruefen(env, ich, meldung.claimed_by);
+  // Ein Kind sagt „Stimmt!“ — Nein sagen bleibt bei den Großen.
+  if (istKindProfil(ich) && status !== "bestaetigt") throw new Fehler("Ablehnen machen die Großen", 403);
+  await meldungBuchen(env, ich.couple_id, meldung, status, ich.id);
 
-  // Entscheidung und Buchung in einem Zug: die zweite Anweisung sieht den neuen
-  // Stand und bucht nur, wenn wirklich bestätigt wurde — und nur einmal.
+  const punkte = meldung.quantity * meldung.points_each;
+  await melde(env, ich.couple_id, meldung.claimed_by, status === "bestaetigt"
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat bestätigt`, text: meldung.quest, punkte }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: meldung.quest, punkte });
+
+  return { ok: true, punkte, quest: meldung.quest };
+}
+
+/** Entscheidung und Buchung in einem Zug: die zweite Anweisung sieht den neuen
+ *  Stand und bucht nur, wenn wirklich bestätigt wurde — und nur einmal. Ohne
+ *  Entscheider (allein unter kleinen Kindern) zählt die Meldung von selbst. */
+async function meldungBuchen(env, paar, meldung, status, wer) {
+  const meldungId = meldung.id;
   const [entschieden] = await env.DB.batch([
     env.DB.prepare(
       `update claims set status = ?1, decided_by = ?2, decided_at = datetime('now')
-        where id = ?3 and couple_id = ?4 and status = 'offen' and claimed_by <> ?2`
-    ).bind(status, ich.id, meldungId, ich.couple_id),
+        where id = ?3 and couple_id = ?4 and status = 'offen' and (?2 is null or claimed_by <> ?2)`
+    ).bind(status, wer, meldungId, paar),
     env.DB.prepare(
       `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
        select ?1, c.couple_id, c.claimed_by, c.quantity * c.points_each,
@@ -822,22 +936,19 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
       : [])
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Meldung ist bereits entschieden");
-
-  const punkte = meldung.quantity * meldung.points_each;
-  await melde(env, ich.couple_id, meldung.claimed_by, status === "bestaetigt"
-    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat bestätigt`, text: meldung.quest, punkte }
-    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: meldung.quest, punkte });
-
-  return { ok: true, punkte, quest: meldung.quest };
 }
 
 /* ------------------------------------------------------------------ Belohnungen */
 
 async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "", gutschriftAn = null }) {
   const belohnung = await env.DB.prepare(
-    "select id, name, cost, event_id from rewards where id = ?1 and couple_id = ?2 and active = 1"
+    "select id, name, cost, event_id, fuer from rewards where id = ?1 and couple_id = ?2 and active = 1"
   ).bind(rewardId, ich.couple_id).first();
   if (!belohnung) throw new Fehler("Diese Belohnung gibt es nicht");
+  if (belohnung.fuer === "erwachsene" && istKindProfil(ich)) throw new Fehler("Diese Belohnung ist für die Großen");
+  if (belohnung.fuer === "kinder" && !istKind(await mitgliedVon(env, ich.couple_id, ich.id))) {
+    throw new Fehler("Das ist ein Wunsch für die Kinder");
+  }
 
   // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
   if (belohnung.event_id) await eventPruefen(env, ich, belohnung.event_id, 1);
@@ -848,12 +959,27 @@ async function antragStellen(env, ich, { rewardId, termin = "", nachricht = "", 
     belohnung.event_id ? [] : await laufendeAktionen(env, ich.couple_id));
   const empfaenger = await gutschriftPruefen(env, ich, gutschriftAn);
 
+  // Allein unter kleinen Kindern genehmigt niemand — dann gilt es gleich. Dafür
+  // muss das Konto aber schon reichen, sonst bliebe ein Antrag ohne Entscheider.
+  const sofort = await zaehltSofort(env, ich.couple_id, ich.id);
+  if (sofort) {
+    const stand = await env.DB.prepare("select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1")
+      .bind(ich.id).first();
+    if (stand.punkte < wert) throw new Fehler(`Zu wenig Cleanies für diese Belohnung — ${stand.punkte} von ${wert}`);
+  }
+
   const antrag = id();
   await env.DB.prepare(
     `insert into requests (id, couple_id, reward_id, requested_by, cost, wish_date, message, gutschrift_an)
      values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
   ).bind(antrag, ich.couple_id, belohnung.id, ich.id, wert,
          String(termin).slice(0, 60), String(nachricht).slice(0, 300), empfaenger).run();
+
+  if (sofort) {
+    await antragBuchen(env, ich.couple_id, antrag, "bestaetigt", null);
+    return { ok: true, sofort: true, gutschriftAn: empfaenger };
+  }
+
   await meldeAllen(env, ich, {
     art: "info", quelle: antrag,
     titel: `${vorname(ich.name)} möchte etwas einlösen`,
@@ -890,21 +1016,46 @@ async function antragEntscheiden(env, ich, antragId, status) {
   ).bind(antragId, ich.couple_id).first();
   if (!antrag) throw new Fehler("Antrag nicht gefunden", 404);
   if (antrag.requested_by === ich.id) throw new Fehler("Ein Antrag muss von jemand anderem entschieden werden");
+  await entscheidenPruefen(env, ich, antrag.requested_by);
+  if (istKindProfil(ich) && status !== "bestaetigt") throw new Fehler("Ablehnen machen die Großen", 403);
+  await antragBuchen(env, ich.couple_id, antragId, status, ich.id);
 
+  await melde(env, ich.couple_id, antrag.requested_by, status === "bestaetigt"
+    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat genehmigt`, text: antrag.belohnung, punkte: -antrag.cost }
+    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: antrag.belohnung });
+
+  // Wer die Cleanies bekommt, soll es auch erfahren — außer die Person hat
+  // gerade selbst genehmigt und sieht es ohnehin.
+  if (status === "bestaetigt" && antrag.gutschrift_an && antrag.gutschrift_an !== ich.id) {
+    await melde(env, ich.couple_id, antrag.gutschrift_an, {
+      art: "bestaetigt",
+      titel: `${vorname((await person(env, antrag.requested_by))?.name)} hat dir Cleanies gutgeschrieben`,
+      text: antrag.belohnung, punkte: antrag.cost
+    });
+  }
+
+  return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost, gutschriftAn: antrag.gutschrift_an };
+}
+
+/** Genehmigen oder ablehnen samt Buchung, in einem Zug. Ohne Entscheider gilt
+ *  der Antrag von selbst — wie bei einer Meldung allein unter kleinen Kindern. */
+async function antragBuchen(env, paar, antragId, status, wer) {
   if (status === "bestaetigt") {
     const stand = await env.DB.prepare(
-      "select coalesce(sum(delta), 0) as punkte from ledger where member_id = ?1"
-    ).bind(antrag.requested_by).first();
-    if (stand.punkte < antrag.cost) {
-      throw new Fehler(`Zu wenig Cleanies für diese Belohnung — ${stand.punkte} von ${antrag.cost}`);
+      `select coalesce(sum(l.delta), 0) as punkte, r.cost from requests r
+         left join ledger l on l.member_id = r.requested_by
+        where r.id = ?1 group by r.id`
+    ).bind(antragId).first();
+    if (stand.punkte < stand.cost) {
+      throw new Fehler(`Zu wenig Cleanies für diese Belohnung — ${stand.punkte} von ${stand.cost}`);
     }
   }
 
   const [entschieden] = await env.DB.batch([
     env.DB.prepare(
       `update requests set status = ?1, decided_by = ?2, decided_at = datetime('now')
-        where id = ?3 and couple_id = ?4 and status = 'offen' and requested_by <> ?2`
-    ).bind(status, ich.id, antragId, ich.couple_id),
+        where id = ?3 and couple_id = ?4 and status = 'offen' and (?2 is null or requested_by <> ?2)`
+    ).bind(status, wer, antragId, paar),
     env.DB.prepare(
       `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
        select ?1, r.couple_id, r.requested_by, -r.cost,
@@ -934,22 +1085,6 @@ async function antragEntscheiden(env, ich, antragId, status) {
     ).bind(antragId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Dieser Antrag ist bereits entschieden");
-
-  await melde(env, ich.couple_id, antrag.requested_by, status === "bestaetigt"
-    ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat genehmigt`, text: antrag.belohnung, punkte: -antrag.cost }
-    : { art: "abgelehnt", titel: `${vorname(ich.name)} hat abgelehnt`, text: antrag.belohnung });
-
-  // Wer die Cleanies bekommt, soll es auch erfahren — außer die Person hat
-  // gerade selbst genehmigt und sieht es ohnehin.
-  if (status === "bestaetigt" && antrag.gutschrift_an && antrag.gutschrift_an !== ich.id) {
-    await melde(env, ich.couple_id, antrag.gutschrift_an, {
-      art: "bestaetigt",
-      titel: `${vorname((await person(env, antrag.requested_by))?.name)} hat dir Cleanies gutgeschrieben`,
-      text: antrag.belohnung, punkte: antrag.cost
-    });
-  }
-
-  return { ok: true, belohnung: antrag.belohnung, kosten: antrag.cost, gutschriftAn: antrag.gutschrift_an };
 }
 
 /* ------------------------------------------------------------------ Übertragen */
@@ -981,6 +1116,14 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
      values (?1, ?2, ?3, ?4, ?5, ?6)`
   ).bind(uebertragung, ich.couple_id, ich.id, partner.user_id, menge, String(nachricht).slice(0, 300)).run();
 
+  // Ein Kind ohne eigenes Konto sagt zu einem Geschenk nicht Nein — und es
+  // hätte auch keinen Knopf dafür. Die Cleanies sind gleich da.
+  const kind = await mitgliedVon(env, ich.couple_id, partner.user_id);
+  if (istKindProfil(kind)) {
+    await uebertragungEntscheiden(env, { id: kind.id, name: kind.name, couple_id: ich.couple_id }, uebertragung, "bestaetigt", { still: true });
+    return { ok: true, sofort: true };
+  }
+
   await melde(env, ich.couple_id, partner.user_id, {
     art: "info", quelle: uebertragung,
     titel: `${vorname(ich.name)} schickt dir Cleanies`,
@@ -989,7 +1132,7 @@ async function uebertragen(env, ich, { betrag, an, nachricht = "" }) {
   return { ok: true };
 }
 
-async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
+async function uebertragungEntscheiden(env, ich, uebertragungId, status, { still = false } = {}) {
   if (!["bestaetigt", "abgelehnt"].includes(status)) throw new Fehler("Unbekannte Entscheidung");
 
   const uebertragung = await env.DB.prepare(
@@ -1024,6 +1167,7 @@ async function uebertragungEntscheiden(env, ich, uebertragungId, status) {
     ).bind(id(), uebertragungId)
   ]);
   if (!entschieden.meta.changes) throw new Fehler("Diese Übertragung ist bereits entschieden");
+  if (still) return { ok: true };
 
   await melde(env, ich.couple_id, uebertragung.from_member, status === "bestaetigt"
     ? { art: "bestaetigt", titel: `${vorname(ich.name)} hat die Cleanies angenommen`,
@@ -1040,9 +1184,11 @@ async function vorschlagen(env, ich, daten) {
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
                  "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe",
                  "urlaub_person", "urlaub_haushalt", "ruecktritt",
-                 "neues_event", "event_aendern", "event_aus"];
+                 "neues_event", "event_aendern", "event_aus", "kurs"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
+  if (istKindProfil(ich)) throw new Fehler("Vorschlagen dürfen die Großen", 403);
+  if (art === "kurs") return kursVorschlagen(env, ich, daten);
   if (art === "neues_event" || art === "event_aendern") return eventVorschlagen(env, ich, daten);
   if (art === "event_aus") return eventEndeVorschlagen(env, ich, daten);
   if (art === "ruecktritt") return ruecktrittVorschlagen(env, ich, daten);
@@ -1108,6 +1254,7 @@ async function vorschlagen(env, ich, daten) {
 }
 
 async function abstimmen(env, ich, vorschlagId, antwort, grund = "") {
+  if (istKindProfil(ich)) throw new Fehler("Abstimmen dürfen die Großen", 403);
   const vorschlag = await env.DB.prepare(
     "select * from proposals where id = ?1 and couple_id = ?2"
   ).bind(vorschlagId, ich.couple_id).first();
@@ -1253,7 +1400,7 @@ async function ruecktrittVorschlagen(env, ich, { zielId, grund = "" }) {
   ).bind(ich.couple_id, q.id).first();
   if (laeuft) throw new Fehler("Dazu läuft schon eine Abstimmung");
 
-  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+  const koepfe = await env.DB.prepare(`select count(*) as n from members where couple_id = ?1 and ${STIMMRECHT}`)
     .bind(ich.couple_id).first();
 
   const vorschlag = id();
@@ -1319,6 +1466,36 @@ async function urlaubVorschlagen(env, ich, { art, von, bis, grund = "" }) {
       : `${a} bis ${b} — ${tage} ${tage === 1 ? "Tag" : "Tage"} ohne Mahnungen und Gruppenstrafe. Deine Stimme fehlt.`
   });
   return { ok: true, tage };
+}
+
+/** Der Taschengeld-Kurs: Cent je Cleanie. Es geht um echtes Geld — deshalb
+ *  wie ein Cleanies-Wert nur gemeinsam, und nur unter Erwachsenen. */
+async function kursVorschlagen(env, ich, { wert, grund = "" }) {
+  await nurErwachsene(env, ich);
+  const cent = Math.floor(Number(wert));
+  if (!(cent >= 1 && cent <= 100)) throw new Fehler("Der Kurs liegt zwischen 1 und 100 Cent");
+  const haus = await env.DB.prepare("select kurs from couples where id = ?1").bind(ich.couple_id).first();
+  if (haus.kurs === cent) throw new Fehler("Das ist der aktuelle Kurs");
+  const offen = await env.DB.prepare(
+    "select 1 as da from proposals where couple_id = ?1 and kind = 'kurs' and status = 'offen'"
+  ).bind(ich.couple_id).first();
+  if (offen) throw new Fehler("Dazu läuft schon eine Abstimmung");
+
+  const vorschlag = id();
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into proposals (id, couple_id, kind, old_value, new_value, name, reason, created_by)
+       values (?1, ?2, 'kurs', ?3, ?4, 'Taschengeld', ?5, ?6)`
+    ).bind(vorschlag, ich.couple_id, haus.kurs, cent, String(grund).slice(0, 300), ich.id),
+    env.DB.prepare("insert into proposal_votes (proposal_id, member_id, answer) values (?1, ?2, 1)")
+      .bind(vorschlag, ich.id)
+  ]);
+  await meldeAllen(env, ich, {
+    art: "info", quelle: vorschlag,
+    titel: `${vorname(ich.name)} schlägt einen neuen Taschengeld-Kurs vor`,
+    text: `${cent} Cent je Cleanie statt ${haus.kurs} — deine Stimme fehlt.`
+  });
+  return { ok: true };
 }
 
 /** Wie der Haushalt sich selbst nennt — „die WG", „die Familie", … */
@@ -1444,7 +1621,7 @@ async function auszaehlen(env, vorschlag) {
   const neinZahl = stimmen.results.filter((s) => !s.answer).length;
   const ja = stimmen.results.filter((s) => s.answer).length;
 
-  const koepfe = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
+  const koepfe = await env.DB.prepare(`select count(*) as n from members where couple_id = ?1 and ${STIMMRECHT}`)
     .bind(vorschlag.couple_id).first();
 
   const abgelehnt = async () => {
@@ -1502,6 +1679,8 @@ async function uebernehmen(env, vorschlag) {
     aufgabe_aendern: () => rhythmusSetzen(env, vorschlag),
     delete_aufgabe: () => env.DB.prepare("update quests set active = 0 where id = ?1 and couple_id = ?2")
       .bind(vorschlag.target_id, vorschlag.couple_id),
+    kurs: () => env.DB.prepare("update couples set kurs = ?1 where id = ?2")
+      .bind(vorschlag.new_value, vorschlag.couple_id),
     urlaub_person: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
     urlaub_haushalt: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
     // Die Zuteilung fällt weg, die Frist bleibt stehen: der Haushalt braucht

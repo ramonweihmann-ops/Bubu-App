@@ -393,6 +393,9 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   animation: hoch .28s cubic-bezier(.2, .9, .3, 1);
 }
 @keyframes hoch { from { transform: translateY(40px); opacity: .3; } }
+/* Ist das Blatt voll, scrollt es selbst — nichts darin wird dafür zusammengedrückt.
+   Sonst schrumpfen Reihen mit eigenem Überlauf (etwa „Wer hat's gemacht?“) auf null. */
+.sheet > * { flex-shrink: 0; }
 .grabber { width: 40px; height: 4px; border-radius: 99px; background: var(--line); margin: 2px auto 4px; flex: none; }
 .sheet h3 { font-family: var(--font-display); font-weight: 800; font-size: 20px; margin: 0; letter-spacing: -.02em; }
 .note {
@@ -944,3 +947,178 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .motivwahl .motiv .z2 { font-size: 19px; }
 .motivwahl .motiv .z3 { display: none; }
 [data-bild-ohne][aria-pressed="true"] { border-color: var(--ink); }
+
+/* ---------- Familie ---------- */
+/* Das Sparglas füllt sich gelb mit Cleanies; in dunkel etwas gedämpfter. */
+:root { --fuell-1: #ffd45c; --fuell-2: #ffab2e; --glas-rand: #b9c8de; }
+:root[data-theme="dunkel"] { --fuell-1: #e8b23a; --fuell-2: #c98614; --glas-rand: #3d5378; }
+
+.wahl[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.wahl .zwei { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wahl small { font-weight: 400; font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+.wahl em:not(.sofort):not(.abst) { background: var(--tint-2); color: var(--ink-2); }
+.btn.klein { padding: 7px 11px; font-size: 12.5px; border-radius: 10px; flex: none; }
+
+.kv-tier { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-family: var(--emoji); font-size: 19px; line-height: 1; background: var(--kachel-gelb); }
+.kv-tier[data-farbe="gruen"] { background: var(--kachel-gruen); }
+.kv-tier[data-farbe="lila"] { background: var(--kachel-lila); }
+.kv-tier[data-farbe="blau"] { background: var(--kachel-blau); }
+.kv-tier[data-farbe="rot"] { background: var(--kachel-rot); }
+.kv-tier.sm { width: 34px; height: 34px; }
+.kv-tier.gross { width: 52px; height: 52px; font-size: 30px; }
+
+/* Die Kinder auf der Startseite der Eltern. */
+.kinderreihe { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+.kinderreihe::-webkit-scrollbar { display: none; }
+.kindkarte { flex: none; width: 140px; border: 1px solid var(--line); border-radius: 16px; padding: 10px; background: var(--bg);
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer; font: inherit; color: inherit; text-align: left; }
+.kindkarte .oben { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.kindkarte .oben b { font-size: 13.5px; display: block; line-height: 1.2; }
+.kindkarte .oben small { font-size: 10.5px; color: var(--ink-3); }
+.kindkarte .stand { font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+.kindkarte .ziel { font-size: 11px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.minibalken { height: 6px; border-radius: 999px; background: var(--tint-2); overflow: hidden; display: block; }
+.minibalken i { display: block; height: 100%; background: var(--fuell-2); }
+
+/* Die Kinderansicht: ohne Leiste, alles groß. */
+.kv { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.kv-kopf { flex: none; display: flex; align-items: center; gap: 8px; padding: calc(var(--oben) + 12px) 16px 8px; }
+.kv-was { font-family: var(--font-data); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-right: auto; }
+.kv-wahl { display: flex; gap: 4px; margin-right: auto; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.kv-wahl button { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 2px solid transparent; background: var(--tint);
+  font-family: var(--emoji); font-size: 19px; cursor: pointer; padding: 0; display: grid; place-items: center; }
+.kv-wahl button[aria-pressed="true"] { border-color: var(--ink); background: var(--bg); }
+.kv-schalter { display: flex; background: var(--tint); border-radius: 999px; padding: 3px; gap: 2px; flex: none; }
+.kv-schalter button { font: inherit; font-size: 12px; font-weight: 700; border: none; background: none; border-radius: 999px; padding: 6px 10px;
+  cursor: pointer; color: var(--ink-2); white-space: nowrap; }
+.kv-schalter button[aria-pressed="true"] { background: var(--kontrast-bg); color: var(--kontrast-ink); }
+.kv-knopf { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); flex: none;
+  font-family: var(--emoji); font-size: 17px; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.kv-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 16px calc(var(--unten) + 24px);
+  display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+.kv-body > * { flex-shrink: 0; }
+.kv-hallo { display: flex; align-items: center; gap: 11px; }
+.kv-hallo b { font-family: var(--font-display); font-size: 23px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; display: block; }
+.kv-hallo small { font-size: 13px; color: var(--ink-2); }
+.kv-label { font-family: var(--font-display); font-weight: 800; font-size: 17px; margin: 4px 0 -4px; }
+.kv-hinweis { font-size: 13px; font-weight: 600; color: var(--ruhig); background: var(--ruhig-tint); border-radius: 12px; padding: 9px 12px; }
+.kv-stern { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; }
+.kv-marke { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: var(--bg); white-space: nowrap; }
+[data-zustand="wartet"] .kv-marke { color: var(--ruhig); }
+[data-zustand="geschafft"] .kv-marke { color: var(--urlaub); }
+[data-zustand="rueckfrage"] .kv-marke { color: var(--accent); }
+
+/* A · das Sparglas */
+.kv-spar { display: flex; align-items: center; gap: 16px; background: var(--tint); border-radius: 20px; padding: 12px 14px;
+  border: 2px solid transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.kv-spar.voll { border-color: var(--urlaub); background: var(--urlaub-tint); }
+.kv-glaswrap { flex: none; display: flex; flex-direction: column; align-items: center; }
+.kv-deckel { width: 70px; height: 9px; border-radius: 5px; background: var(--glas-rand); margin-bottom: -1px; }
+.kv-glas { position: relative; width: 78px; height: 96px; border: 3px solid var(--glas-rand); border-top-width: 2px;
+  border-radius: 12px 12px 24px 24px; background: var(--bg); overflow: hidden; }
+.kv-fuellung { position: absolute; left: 0; right: 0; bottom: 0;
+  background: url(/cleanie.webp) 4px 6px / 20px repeat, linear-gradient(var(--fuell-1), var(--fuell-2));
+  transition: height .7s cubic-bezier(.2, .9, .3, 1); }
+.kv-etikett { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 42px; height: 42px; border-radius: 50%;
+  background: var(--bg); display: grid; place-items: center; overflow: hidden; box-shadow: 0 2px 8px -3px rgba(21, 44, 79, .4); }
+.kv-etikett .emoji { font-family: var(--emoji); font-size: 24px; line-height: 1; }
+.kv-etikett img { width: 100%; height: 100%; object-fit: cover; }
+.kv-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.kv-text small { font-size: 12px; color: var(--ink-2); }
+.kv-text b { font-size: 15.5px; line-height: 1.25; }
+.kv-zahl { font-family: var(--font-display); font-weight: 800; font-size: 27px; letter-spacing: -.02em; line-height: 1.1; margin-top: 4px; }
+.kv-zahl small { font-size: 13px; font-weight: 600; }
+.kv-rest { font-size: 13px; font-weight: 700; color: var(--bald); }
+.kv-spar.voll .kv-rest { color: var(--urlaub); }
+.kv-kacheln { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.kv-kachel { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border: 1px solid var(--line);
+  border-radius: 18px; background: var(--bg); padding: 11px; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  min-width: 0; min-height: 124px; }
+.kv-kachel b { font-size: 14px; line-height: 1.25; font-weight: 700; }
+.kv-kachel .kv-marke { position: absolute; right: 8px; top: 8px; }
+.kv-lohn { margin-top: auto; display: inline-flex; align-items: center; font-family: var(--font-display); font-weight: 800; font-size: 15px; flex: none; }
+.kv-kachel[data-zustand="wartet"], .kv-zeile[data-zustand="wartet"] { background: var(--ruhig-tint); border-color: var(--ruhig); }
+.kv-kachel[data-zustand="geschafft"], .kv-zeile[data-zustand="geschafft"] { background: var(--urlaub-tint); border-color: transparent; }
+.kv-kachel[data-zustand="rueckfrage"], .kv-zeile[data-zustand="rueckfrage"] { border-color: var(--accent); }
+
+/* B · der Weg zum Wunsch */
+.kv-weg { position: relative; display: block; width: 100%; height: 240px; background: var(--tint); border-radius: 20px; border: none;
+  padding: 0; cursor: pointer; overflow: hidden; }
+.kv-weg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kv-weg polyline { fill: none; stroke: var(--glas-rand); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 2 11; }
+.kv-stein { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: var(--bg); border: 3px solid var(--glas-rand); }
+.kv-stein.voll { background: var(--fuell-1); border-color: var(--fuell-2); }
+.kv-schatz { position: absolute; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: var(--bg);
+  border: 3px dashed var(--fuell-2); display: grid; place-items: center; overflow: hidden; }
+.kv-schatz .emoji { font-family: var(--emoji); font-size: 28px; line-height: 1; }
+.kv-schatz img { width: 100%; height: 100%; object-fit: cover; }
+.kv-schatz.da { border-style: solid; border-color: var(--urlaub); background: var(--urlaub-tint); }
+.kv-figur { position: absolute; width: 40px; height: 40px; margin: -31px 0 0 -20px; border-radius: 50%; background: var(--bg);
+  display: grid; place-items: center; font-family: var(--emoji); font-size: 25px; box-shadow: 0 4px 10px -4px rgba(21, 44, 79, .5); }
+.kv-wegtext { margin: 0; font-size: 13.5px; color: var(--ink-2); text-align: center; }
+.kv-wegtext b { color: var(--ink); }
+.kv-zeilen { display: flex; flex-direction: column; gap: 8px; }
+.kv-zeile { display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 16px; background: var(--bg);
+  padding: 8px 10px 8px 8px; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.kv-zeile .n { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }
+.kv-zeile .kv-lohn { margin-top: 0; }
+
+/* Ein Kind mit eigenem Gerät schaut bei den Großen nach. */
+.kv-pruef { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 16px; padding: 9px 10px; }
+.kv-pruef .grow { flex: 1; min-width: 0; font-size: 13.5px; }
+.kv-pruef .btn { padding: 9px 13px; flex: none; }
+
+/* Die Blätter der Kinderansicht */
+.kv-meldebild { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.kv-meldebild h3 { margin: 4px 0 0; }
+.kv-meldebild p { margin: 0; font-size: 15px; color: var(--ink-2); }
+.symbolkachel.riesig { width: 96px; height: 96px; border-radius: 28px; }
+.symbolkachel.riesig .emoji { font-size: 58px; }
+.kv-wunschzeile { display: flex; align-items: center; gap: 11px; width: 100%; font: inherit; color: inherit; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; cursor: pointer; text-align: left; }
+.kv-wunschzeile[aria-pressed="true"] { border-color: var(--fuell-2); box-shadow: inset 0 0 0 1px var(--fuell-2); background: var(--bald-tint); }
+.kv-wunschzeile .rico { position: static; box-shadow: none; background: var(--tint); }
+.kv-wunschzeile .grow { flex: 1; min-width: 0; }
+.kv-wunschzeile b { display: block; font-size: 14px; }
+.kv-wunschzeile small { font-size: 12px; color: var(--ink-3); }
+.kv-wunschzeile em { font-style: normal; font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  background: var(--urlaub-tint); color: var(--urlaub); white-space: nowrap; }
+.kv-pinpunkte { display: flex; justify-content: center; gap: 14px; margin: 6px 0; }
+.kv-pinpunkte i { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--ink); }
+.kv-pinpunkte i.an { background: var(--ink); }
+.kv-pinfeld { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 24px; }
+.kv-pinfeld button { font: inherit; font-size: 22px; font-weight: 600; color: var(--ink); background: var(--tint); border: none;
+  border-radius: 14px; padding: 11px 0; cursor: pointer; }
+
+/* Kind anlegen */
+.kv-tiere { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.kv-tiere button { aspect-ratio: 1; font-family: var(--emoji); font-size: 25px; border: none; background: none; border-radius: 12px;
+  cursor: pointer; padding: 0; }
+.kv-tiere button[aria-pressed="true"] { background: var(--ruhig-tint); box-shadow: inset 0 0 0 2px var(--ruhig); }
+.kv-toggle { width: 40px; height: 24px; border-radius: 999px; background: var(--tint-2); position: relative; flex: none; margin-left: auto; }
+.kv-toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg);
+  box-shadow: 0 1px 3px rgba(21, 44, 79, .4); transition: left .2s; }
+[aria-pressed="true"] > .kv-toggle { background: var(--urlaub); }
+[aria-pressed="true"] > .kv-toggle::after { left: 19px; }
+.kv-einwilligung { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--ink-2); background: var(--tint);
+  border-radius: 12px; padding: 10px 11px; cursor: pointer; }
+.kv-einwilligung input { margin: 2px 0 0; width: 18px; height: 18px; flex: none; accent-color: var(--ruhig); }
+.kv-qr { width: 210px; max-width: 100%; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+.kv-qr svg { display: block; width: 100%; height: auto; }
+.kv-code { font-family: var(--font-data); font-size: 24px; letter-spacing: .14em; text-align: center; background: var(--tint);
+  border-radius: 12px; padding: 10px; user-select: all; }
+.kv-codefeld { font-family: var(--font-data); font-size: 22px; letter-spacing: .14em; text-align: center; text-transform: uppercase;
+  width: 230px; max-width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--bg); color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) { .kv-fuellung, .kv-toggle::after { transition: none; } }
+/* Im Plus: wer hat es gemacht? */
+.werwahl { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.werwahl::-webkit-scrollbar { display: none; }
+.werwahl button { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font: inherit; font-size: 12px;
+  font-weight: 600; color: var(--ink-2); background: none; border: 2px solid transparent; border-radius: 14px; padding: 5px 8px; cursor: pointer; }
+.werwahl button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+/* Ein Kind ohne Foto zeigt sein Tier — überall, wo sonst ein Bild stünde. */
+.avatar.tieravatar { font-family: var(--emoji); font-size: 26px; line-height: 1; background: var(--kachel-gelb); }
+.avatar.sm.tieravatar { font-size: 19px; }
+.avatar.xs.tieravatar { font-size: 13px; }
