@@ -32,7 +32,27 @@ if [ ! -d "$HIER/node_modules/playwright" ]; then
 fi
 export HQ_BILDER="${HQ_BILDER:-${TMPDIR:-/tmp}}"
 
-lauf() { echo; echo "───── $1"; shift; "$@" 2>&1 | tail -"${TAIL:-8}"; }
+# Der lokale Testserver stürzt selten, aber dann ohne Vorwarnung ab („Network
+# connection lost“) — und alles danach liefe ins Leere. Deshalb vor jedem Teil
+# die Probe: antwortet er nicht, wird er neu gestartet.
+serverDa() {
+  curl -s -o /dev/null -m 5 --noproxy 127.0.0.1 http://127.0.0.1:8792/api/health && return 0
+  echo "  (Testserver antwortet nicht — wird neu gestartet)"
+  (cd "$APP" && nohup npx wrangler dev --local --port 8792 > "${TMPDIR:-/tmp}/hq-wrangler.log" 2>&1 &)
+  for _ in $(seq 1 60); do
+    curl -s -o /dev/null -m 5 --noproxy 127.0.0.1 http://127.0.0.1:8792/api/health && return 0
+    sleep 1
+  done
+  echo "  (Testserver kommt nicht hoch)"
+}
+# Gezeigt werden die letzten Zeilen; das ganze Protokoll jedes Teils liegt
+# daneben in $HQ_BILDER/protokoll-<teil>.log — für die Fehlersuche.
+lauf() {
+  serverDa; echo; echo "───── $1"
+  local teil=$1; shift
+  "$@" > "$HQ_BILDER/protokoll-$teil.log" 2>&1
+  tail -"${TAIL:-8}" "$HQ_BILDER/protokoll-$teil.log"
+}
 
 echo "═════ Zweier-Haushalt: Vorschläge"
 (cd "$APP" && npx wrangler d1 execute haus-quest --local --file "$HIER/seed.sql" > /dev/null 2>&1) \

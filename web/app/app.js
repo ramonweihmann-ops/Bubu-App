@@ -623,7 +623,8 @@ function einladen() {
         <div class="rowlink" style="cursor:default">
           ${bild(m)}
           <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
-            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt" : "Mitglied"}</span></span>
+            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt"
+              : istKindM(m) ? `Kind · ${STUFEN[m.stufe]?.name || "Jugendlich"}` : "Mitglied"}</span></span>
           ${m.id === S.ich.id ? '<span class="chip wait">du</span>' : ""}
         </div>`).join("")}
       ${Array.from({ length: frei }, (_, i) => `
@@ -4002,9 +4003,16 @@ function schirmHaushalt() {
         <div class="rowlink" style="cursor:default">
           ${bild(m)}
           <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
-            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt" : "Mitglied"}</span></span>
+            <span class="m">${m.rolle === "verwalter" ? "Verwaltet den Haushalt"
+              : istKindM(m) ? `Kind · ${STUFEN[m.stufe]?.name || "Jugendlich"}` : "Mitglied"}</span></span>
           ${m.id === S.ich.id ? '<span class="chip wait">du</span>' : ""}
         </div>`).join("")}
+      ${h.art === "familie" && ichErwachsen() ? `
+      <button class="rowlink" data-kind-neu>
+        <span class="avatar sm" style="background:var(--kachel-gelb)">🧒</span>
+        <span class="grow"><span class="t">Kind hinzufügen</span>
+          <span class="m">Ohne Google-Konto — Vorname und Tier genügen</span></span><span style="color:var(--ink-3)">›</span>
+      </button>` : ""}
       ${h.belegt < h.groesse ? `
       <button class="rowlink" data-go="einladen">
         <span class="avatar sm" style="background:var(--tint)">${icon("i-plus", 17)}</span>
@@ -5196,8 +5204,16 @@ document.addEventListener("click", async (ev) => {
     }
 
     if (el.dataset.hart) {
+      const vorher = S.haushalt.art;
       await api("haushalt", { art: el.dataset.hart });
       await laden();
+      // Die Art allein ändert auf dieser Seite nur den Haken. Wer zur Familie
+      // wird, soll sehen, wo es weitergeht.
+      if (el.dataset.hart === "familie" && vorher !== "familie") {
+        toast("Ihr seid jetzt eine Familie. Kinder fügt ihr unten unter „Wer dabei ist“ oder unter „Wir“ hinzu.");
+      } else if (el.dataset.hart !== vorher) {
+        toast(`Geändert: ${(ARTEN.find((a) => a.id === el.dataset.hart) || {}).k || "Haushalt"}.`);
+      }
       return;
     }
 

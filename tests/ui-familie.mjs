@@ -214,6 +214,16 @@ enthaelt("Gebucht", await toastText(mama), "Taschengeld für Lena");
 pruefe("Lena: alles ausgezahlt", (await api("tok-fm", "state")).mitglieder.find((m) => m.id === lena.id).punkte, 0);
 await mama.screenshot({ path: `${AUS}/uf6-wir.png` });
 
+console.log("== Auch auf der Haushalt-Seite: Kind hinzufügen");
+await mama.click('[data-go="einstellungen"]');
+await mama.click('[data-go="haushalt"]');
+pruefe("Der Knopf steht da", await mama.locator(".body [data-kind-neu]").count(), 1);
+enthaelt("Kinder mit Stufe", await mama.locator(".body").innerText(), "Kind · Ohne Handy");
+await mama.click(".body [data-kind-neu]");
+enthaelt("Das Blatt öffnet sich", await mama.locator(".sheet h3").innerText(), "Kind hinzufügen");
+await mama.evaluate(() => document.getElementById("scrim").click());
+await mama.screenshot({ path: `${AUS}/uf9-haushalt.png` });
+
 console.log("== Mias eigenes Gerät: QR-Link statt Google");
 await api("tok-fp", "claims", { questId: st.quests.find((q) => q.name === "Bad reinigen").id });
 const geraet = await seiteFuer(null);
