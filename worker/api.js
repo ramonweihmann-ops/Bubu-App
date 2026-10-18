@@ -410,14 +410,25 @@ async function haushaltAendern(env, ich, { art, erwachsene, kinder, personen, st
   const neueArt = art === undefined ? jetzt.art : art;
   if (!HAUSHALTSARTEN.includes(neueArt)) throw new Fehler("Unbekannte Art von Haushalt");
 
-  const kinderZahl = neueArt === "familie" ? grenze(kinder ?? jetzt.kinder, 0, 12) : 0;
-  const erwachsenenZahl = neueArt === "familie" ? grenze(erwachsene ?? jetzt.erwachsene, 1, 12) : 0;
+  const belegt = await env.DB.prepare(
+    `select count(*) as n, coalesce(sum(case when erwachsen = 0 then 1 else 0 end), 0) as kinder
+       from members where couple_id = ?1`
+  ).bind(ich.couple_id).first();
+
+  // Wird ein Pärchen oder eine WG zur Familie, behält der Haushalt seine Plätze:
+  // wer schon da ist, zählt als erwachsen, Kinder kommen dazu. Vorher standen
+  // dort null Erwachsene — daraus wurde ein Haushalt für eine Person.
+  const warFamilie = jetzt.art === "familie";
+  const kinderZahl = neueArt === "familie"
+    ? grenze(kinder ?? (warFamilie ? jetzt.kinder : belegt.kinder), 0, 12) : 0;
+  const erwachsenenZahl = neueArt === "familie"
+    ? grenze(erwachsene ?? (warFamilie ? jetzt.erwachsene
+        : Math.max(jetzt.groesse - kinderZahl, belegt.n - belegt.kinder)), 1, 12)
+    : 0;
   const groesse = neueArt === "familie"
     ? erwachsenenZahl + kinderZahl
     : grenze(personen ?? jetzt.groesse, 1, 12);
 
-  const belegt = await env.DB.prepare("select count(*) as n from members where couple_id = ?1")
-    .bind(ich.couple_id).first();
   if (groesse < belegt.n) throw new Fehler(`Ihr seid schon zu ${belegt.n} — kleiner geht nur, wenn jemand geht`);
 
   await env.DB.prepare(

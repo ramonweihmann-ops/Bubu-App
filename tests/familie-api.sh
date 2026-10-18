@@ -17,14 +17,14 @@ feld() { node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{co
 pruefe() { if [ "$2" = "$3" ]; then echo "  ok   $1: $2"; else echo "  FEHL $1: ist=$2 soll=$3"; fehler=$((fehler+1)); fi; }
 
 echo "== Frische Familie: Mama, Papa, Jule (jugendlich) und Sina (allein)"
-roh "delete from couples where id in (select couple_id from members where user_id in ('u-fm','u-fp','u-fj','u-fs'))"
+roh "delete from couples where id in (select couple_id from members where user_id in ('u-fm','u-fp','u-fj','u-fs','u-fx'))"
 roh "delete from users where id like 'kind-%' and id not in (select user_id from members)"
-for n in fm fp fj fs; do
+for n in fm fp fj fs fx; do
   roh "insert into users (id, email, name) values ('u-$n', '$n@test', 'Konto $n') on conflict(id) do update set name_gesetzt = 0"
 done
 node -e '
 const c=require("crypto");
-for (const t of ["tok-fm","tok-fp","tok-fj","tok-fs"]) console.log(t.slice(4)+" "+c.createHash("sha256").update(t).digest("hex"));
+for (const t of ["tok-fm","tok-fp","tok-fj","tok-fs","tok-fx"]) console.log(t.slice(4)+" "+c.createHash("sha256").update(t).digest("hex"));
 ' | while read n h; do
   roh "insert into sessions (token_hash, user_id, expires_at) values ('$h', 'u-$n', datetime('now','+1 day')) on conflict(token_hash) do update set expires_at = datetime('now','+1 day')"
 done
@@ -196,6 +196,25 @@ pruefe "Nichts wartet" "$(get tok-fs state | feld ".meldungen.length")" "0"
 GS=$(get tok-fs state | feld ".belohnungen.filter(b => b.fuer === 'erwachsene').sort((a, b) => b.cost - a.cost)[0].id")
 pruefe "Zu teuer bleibt zu teuer" "$(post tok-fs requests "{\"rewardId\":\"$GS\"}" | feld ".fehler.startsWith('Zu wenig Cleanies')")" "true"
 pruefe "Kein hängender Antrag" "$(get tok-fs state | feld ".antraege.length")" "0"
+roh "delete from couples where id in (select couple_id from members where user_id = 'u-fs')"
+roh "delete from users where id like 'kind-%' and id not in (select user_id from members)"
+
+echo "== Ein Pärchen wird zur Familie — ohne kleiner zu werden"
+PC=$(post tok-fs haushalt/einrichten '{"name":"Sina","art":"paar","personen":2}' | feld ".code")
+post tok-fx pair/join "{\"code\":\"$PC\"}" > /dev/null
+pruefe "Zu zweit" "$(get tok-fs state | feld ".haushalt.belegt")" "2"
+pruefe "Familie geht" "$(post tok-fs haushalt '{"art":"familie"}' | feld ".ok")" "true"
+pruefe "Jetzt Familie" "$(get tok-fs state | feld ".haushalt.art")" "familie"
+pruefe "Weiter zwei Plätze" "$(get tok-fs state | feld ".haushalt.groesse")" "2"
+pruefe "Zwei Erwachsene" "$(get tok-fs state | feld ".haushalt.erwachsene")" "2"
+pruefe "Noch keine Kinder" "$(get tok-fs state | feld ".haushalt.kinder")" "0"
+post tok-fs kinder '{"name":"Ben","einwilligung":true}' > /dev/null
+pruefe "Mit Ben drei" "$(get tok-fs state | feld ".haushalt.groesse")" "3"
+pruefe "Zurück zum Pärchen behält die Plätze" "$(post tok-fs haushalt '{"art":"paar"}' | feld ".ok")" "true"
+pruefe "Drei Plätze" "$(get tok-fs state | feld ".haushalt.groesse")" "3"
+pruefe "Wieder Familie: Ben zählt als Kind" "$(post tok-fs haushalt '{"art":"familie"}' | feld ".ok")" "true"
+pruefe "Zwei Erwachsene" "$(get tok-fs state | feld ".haushalt.erwachsene")" "2"
+pruefe "Ein Kind" "$(get tok-fs state | feld ".haushalt.kinder")" "1"
 roh "delete from couples where id in (select couple_id from members where user_id = 'u-fs')"
 roh "delete from users where id like 'kind-%' and id not in (select user_id from members)"
 
