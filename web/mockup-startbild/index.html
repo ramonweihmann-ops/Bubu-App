@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point Startbild</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit drei Telefonen zum Antippen. Farben und Schrift wie in der App,
+ * hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --rahmen:#152c4f; --schatten:rgba(21,44,79,.45);
+  --navy:#152c4f; --navy-tief:#0b1628;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+    --rahmen:#3a5280; --schatten:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+  --rahmen:#3a5280; --schatten:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+
+/* Das Handy im Bild hat sein eigenes Hell und Dunkel — der Schalter oben stellt es um,
+   unabhängig davon, wie diese Seite gerade aussieht. */
+.phone{
+  --h-bg:#fff; --h-tint:#f4f7fc; --h-line:#dde5f2; --h-ink:#152c4f; --h-ink-2:#56698b; --h-ink-3:#8b9ab4;
+  --h-konto:#152c4f; --h-konto-ink:#fff; --h-start:#fff;
+  --h-wand-1:#cfdcf0; --h-wand-2:#eef3fa; --h-wand-ink:#152c4f;
+}
+.phone[data-dunkel]{
+  --h-bg:#0f1c31; --h-tint:#17263e; --h-line:#27395a; --h-ink:#e8eef8; --h-ink-2:#a9bad4; --h-ink-3:#7d8ea9;
+  --h-konto:#1f3252; --h-konto-ink:#e8eef8; --h-start:#0f1c31;
+  --h-wand-1:#0b1628; --h-wand-2:#1d2f4f; --h-wand-ink:#e8eef8;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:70ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);border-radius:999px;padding:2px 9px}
+.bu{font-size:13px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+
+/* ---------- Schalter ---------- */
+.regler{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--bg);border:1px solid var(--line);
+  border-radius:16px;padding:12px 14px;margin:0 0 22px}
+.regler .gruppe{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.schalter{display:inline-flex;background:var(--tint);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.schalter button{font:inherit;font-size:12.5px;font-weight:600;border:none;background:none;border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+.btn{font:inherit;font-size:13px;font-weight:700;border-radius:12px;padding:9px 12px;border:1px solid var(--line);cursor:pointer;
+  background:var(--bg);color:var(--ink);white-space:nowrap}
+.btn.dunkel{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.knoepfe{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:340px;max-width:100%;margin:0 auto}
+.knoepfe .btn{white-space:normal;line-height:1.25}
+.knoepfe .btn[data-neuladen]{grid-column:1/-1}
+.status{font-size:12.5px;color:var(--ink-2);text-align:center;min-height:38px;margin:0;width:340px;max-width:100%;margin-inline:auto}
+.status b{color:var(--ink)}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:700px;background:var(--h-bg);border:9px solid var(--rahmen);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px var(--schatten);margin:0 auto;color:var(--h-ink)}
+.schicht{position:absolute;inset:0;display:flex;flex-direction:column}
+.schicht[hidden]{display:none}
+
+/* Der Homescreen: ein paar Apps, eine davon ist unsere. */
+.home{background:linear-gradient(160deg,var(--h-wand-1),var(--h-wand-2));color:var(--h-wand-ink);padding:14px 18px}
+.uhr{font-size:12px;font-weight:700;display:flex;justify-content:space-between}
+.raster{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 10px;margin-top:34px}
+.appicon{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;border:none;background:none;color:inherit;font:inherit;padding:0;cursor:default}
+.appicon .kachel{width:54px;height:54px;border-radius:14px;display:block;box-shadow:0 4px 10px -6px rgba(0,0,0,.4)}
+.appicon span:last-child{font-size:10.5px;white-space:nowrap}
+.appicon.unsere{cursor:pointer}
+.appicon.unsere .kachel{background:#fff url(/icons/icon-512.png) center/100% no-repeat}
+.dock{margin-top:auto;background:rgba(255,255,255,.28);border-radius:22px;padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;justify-items:center}
+.dock .kachel{width:50px;height:50px;border-radius:14px}
+
+/* Das Startbild in drei Fassungen. */
+.startbild{align-items:center;justify-content:center;gap:16px;background:var(--h-start);transition:opacity .25s ease}
+.startbild[data-weg]{opacity:0}
+/* Das ganze Homi-Point-Logo, mit „POINT“. Die runden Ecken schneiden den hellen Rand des Icons ab. */
+.startbild .logo{width:150px;height:150px;border-radius:24%;background:#fff url(/icons/icon-512.png) center/100% no-repeat}
+.startbild.v-b{background:var(--navy)}
+.phone[data-dunkel] .startbild.v-b{background:var(--navy-tief)}
+.startbild.v-b .logo{width:150px;height:150px;border-radius:24%;box-shadow:0 18px 40px -16px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.08)}
+.startbild.v-b .name{color:#fff;font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.startbild .name{display:none}
+.startbild.v-b .name{display:block}
+.startbild .unten{position:absolute;bottom:26px;left:0;right:0;text-align:center;font-size:11px;color:var(--h-ink-3);display:none}
+.startbild.v-a .unten{display:block}
+/* C: das Icon tritt auf, drei Cleanies funkeln dahinter hervor. */
+.startbild.v-c[data-laeuft] .logo{animation:auftritt .5s cubic-bezier(.2,.9,.3,1.4) both}
+@keyframes auftritt{from{transform:scale(.78);opacity:0}to{transform:scale(1);opacity:1}}
+.sterne{position:absolute;inset:0;pointer-events:none;display:none}
+.startbild.v-c .sterne{display:block}
+.sterne img{position:absolute;width:26px;height:26px;left:50%;top:50%;margin:-13px 0 0 -13px;opacity:0}
+.startbild.v-c[data-laeuft] .sterne img{animation:funkeln .9s ease-out .25s both}
+.startbild.v-c[data-laeuft] .sterne img:nth-child(2){animation-delay:.33s}
+.startbild.v-c[data-laeuft] .sterne img:nth-child(3){animation-delay:.41s}
+@keyframes funkeln{
+  0%{opacity:0;transform:translate(0,0) scale(.4)}
+  35%{opacity:1}
+  100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1) rotate(25deg)}
+}
+/* Android und iPhone zoomen beim Antippen vom Icon in den Schirm. */
+.startbild[data-zoom]{animation:zoom .26s cubic-bezier(.2,.8,.2,1) both}
+@keyframes zoom{from{transform:scale(.16);border-radius:60px;opacity:.6}to{transform:scale(1);border-radius:0;opacity:1}}
+.ladebalken{position:absolute;bottom:0;left:0;height:3px;background:var(--ruhig);width:0}
+.startbild[data-laeuft] .ladebalken{animation:laden var(--ladezeit,400ms) linear both}
+@keyframes laden{to{width:100%}}
+
+/* Die App selbst, vereinfacht: so sieht die Startseite aus, wenn das Startbild geht. */
+.appbild{background:var(--h-bg);padding:18px 14px 0;gap:12px}
+.appbild[data-auf]{animation:auf .22s ease-out both}
+@keyframes auf{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+.appbild .hallo{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;line-height:1.1}
+.appbild .datum{font-size:11.5px;color:var(--h-ink-3)}
+.konto{background:var(--h-konto);color:var(--h-konto-ink);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:8px}
+.konto b{font-family:var(--font-display);font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.konto img{width:26px;height:26px}
+.konto small{display:block;font-size:11.5px;opacity:.8}
+.platz{background:var(--h-tint);border-radius:16px;height:150px;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;gap:6px}
+.platz i{display:block;height:9px;border-radius:5px;background:var(--h-line)}
+.platz i:nth-child(1){width:70%} .platz i:nth-child(2){width:45%}
+.zwei{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zwei .platz{height:92px}
+.leiste{margin-top:auto;border-top:1px solid var(--h-line);display:flex;justify-content:space-around;padding:10px 0 14px;font-size:10px;color:var(--h-ink-3)}
+.leiste span:first-child{color:#ec0f06;font-weight:700}
+.neuladen{position:absolute;top:10px;left:50%;width:30px;height:30px;margin-left:-15px;border-radius:50%;border:3px solid var(--h-line);
+  border-top-color:var(--ruhig);background:var(--h-bg);opacity:0;pointer-events:none}
+.neuladen[data-an]{opacity:1;animation:drehen .7s linear infinite}
+@keyframes drehen{to{transform:rotate(360deg)}}
+
+/* ---------- Ablauf und Regeln ---------- */
+.ablauf{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;max-width:860px}
+.strecke{display:flex;gap:3px;height:34px}
+.strecke span{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;border-radius:8px;padding:0 6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.strecke .s1{flex:.6;background:var(--tint-2);color:var(--ink-2)}
+.strecke .s2{flex:2;background:var(--kontrast-bg);color:var(--kontrast-ink)}
+.strecke .s3{flex:1.2;background:var(--frei-tint);color:var(--frei)}
+/* Die Marken stehen genau an den Übergängen: 0,6 + 2 + 1,2 Teile. */
+.achse{position:relative;height:16px;font-family:var(--font-data);font-size:10.5px;color:var(--ink-3)}
+.achse span{position:absolute;top:0;white-space:nowrap}
+.achse span:nth-child(2){left:15.8%;transform:translateX(-50%)}
+.achse span:nth-child(3){left:68.4%;transform:translateX(-50%)}
+.tabelle{overflow-x:auto;max-width:860px}
+table{width:100%;border-collapse:collapse;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+tr:last-child td{border-bottom:none}
+td.ja{color:var(--frei);font-weight:700;white-space:nowrap}
+td.nein{color:var(--ink-3);font-weight:700;white-space:nowrap}
+.empfehlung{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:18px;padding:18px 20px;max-width:860px;display:flex;flex-direction:column;gap:8px}
+.empfehlung p{margin:0;color:var(--kontrast-ink-2);font-size:14px}
+.empfehlung p b{color:var(--kontrast-ink)}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0;max-width:80ch}
+.frage b{display:block}
+p{max-width:75ch}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Startbild beim Öffnen</h1>
+  <p class="lead">Wie bei Instagram: Wer die App frisch startet, sieht <b>eine Sekunde lang unser Icon</b>, dann die
+    Startseite. Nur beim echten Start — also wenn die App nicht mehr im Arbeitsspeicher lag. Wer sie aus dem
+    Hintergrund zurückholt oder neu lädt, landet sofort in der App.</p>
+  <p class="lead">Tippt bei jedem Handy auf das Haus-Icon. <b>Beim ersten Mal</b> startet die App frisch, <b>danach</b>
+    liegt sie im Hintergrund — dann kommt kein Startbild mehr. „Ganz schließen“ setzt das zurück.</p>
+
+  <div class="regler" id="regler">
+    <div class="gruppe"><span class="marke">Handy</span>
+      <div class="schalter" data-gruppe="dunkel">
+        <button data-dunkel="aus" aria-pressed="true">hell</button>
+        <button data-dunkel="an" aria-pressed="false">dunkel</button>
+      </div></div>
+    <div class="gruppe"><span class="marke">Netz</span>
+      <div class="schalter" data-gruppe="netz">
+        <button data-netz="schnell" aria-pressed="true">schnell</button>
+        <button data-netz="langsam" aria-pressed="false">langsam</button>
+      </div></div>
+    <button class="btn dunkel" data-alle>Alle drei frisch starten</button>
+  </div>
+
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Nur das Icon</h3><span class="vorbild">wie Instagram</span></div>
+      <div class="phone" id="pa" data-variante="a"></div>
+      <p class="status" data-status></p>
+      <div class="knoepfe"><button class="btn" data-kalt>Ganz schließen und neu starten</button><button class="btn" data-home>Zum Homescreen</button><button class="btn" data-neuladen>In der App neu laden</button></div>
+      <p class="bu">Ruhig: der Hintergrund wie die App, mittig das Icon, unten klein der Name. Im Dunkeln dunkel.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Marke in Navy</h3><span class="vorbild">wie eine Bank-App</span></div>
+      <div class="phone" id="pb" data-variante="b"></div>
+      <p class="status" data-status></p>
+      <div class="knoepfe"><button class="btn" data-kalt>Ganz schließen und neu starten</button><button class="btn" data-home>Zum Homescreen</button><button class="btn" data-neuladen>In der App neu laden</button></div>
+      <p class="bu">Kräftig: die ganze Fläche in unserem Navy, das Icon als Kachel, darunter der Name.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Mit kleinem Auftritt</h3><span class="vorbild">wie ein Spiel</span></div>
+      <div class="phone" id="pc" data-variante="c"></div>
+      <p class="status" data-status></p>
+      <div class="knoepfe"><button class="btn" data-kalt>Ganz schließen und neu starten</button><button class="btn" data-home>Zum Homescreen</button><button class="btn" data-neuladen>In der App neu laden</button></div>
+      <p class="bu">Wie A, aber das Icon springt hinein und drei Cleanies funkeln dahinter hervor.</p>
+    </div>
+  </div>
+
+  <h2>Was beim Start passiert</h2>
+  <div class="ablauf" aria-label="Ablauf beim Start">
+    <div class="strecke">
+      <span class="s1">Handy</span>
+      <span class="s2">Startbild, die App lädt dahinter</span>
+      <span class="s3">Startseite</span>
+    </div>
+    <div class="achse"><span>Tippen</span><span>0,3 s</span><span>1,3 s</span></div>
+    <p class="bu"><b>Handy:</b> Android zeigt beim Start schon selbst kurz das Icon auf dem App-Hintergrund, das iPhone
+      eine leere Fläche. Unser Startbild schließt nahtlos daran an — derselbe Hintergrund, dasselbe Icon. Die Sekunde
+      ist nicht verschenkt: In der Zeit lädt die App schon eure Daten. Ist das Netz langsam, bleibt das Bild, bis die
+      Daten da sind, aber höchstens 2,5 Sekunden.</p>
+  </div>
+
+  <h2>Wann es kommt</h2>
+  <div class="tabelle">
+    <table>
+      <tr><th>Situation</th><th>Startbild</th><th>Warum</th></tr>
+      <tr><td>Die App war zu, nicht mehr im Arbeitsspeicher</td><td class="ja">ja, 1 Sekunde</td><td>ein echter Start</td></tr>
+      <tr><td>Aus einer Benachrichtigung geöffnet, die App war zu</td><td class="ja">ja, 1 Sekunde</td><td>auch ein echter Start</td></tr>
+      <tr><td>Die App lag im Hintergrund und wird zurückgeholt</td><td class="nein">nein</td><td>sie war noch da</td></tr>
+      <tr><td>Nach unten gezogen zum Neuladen</td><td class="nein">nein</td><td>man ist ja schon drin</td></tr>
+      <tr><td>Nach einem Update neu geladen</td><td class="nein">nein</td><td>gilt wie Neuladen</td></tr>
+    </table>
+  </div>
+  <p class="bu" style="margin-top:10px">So erkennt die App den Unterschied: Ein echter Start lädt sie ganz neu, ein
+    Zurückholen aus dem Hintergrund nicht. Damit Neuladen und Updates nicht mitzählen, merkt sie sich für die
+    laufende Sitzung, dass das Bild schon da war — schließt man die App ganz, ist dieser Merkzettel weg.</p>
+
+  <h2>Entschieden und gebaut</h2>
+  <div class="empfehlung">
+    <h3>A · Nur das Icon — im Dunkeln dunkel. Die App heißt jetzt „Homi Point“.</h3>
+    <p><b>Wann:</b> nur beim echten Start der installierten App. Zurückholen aus dem Hintergrund, Neuladen und
+      Updates zeigen es nicht, im Browser-Tab gibt es keins.</p>
+    <p><b>Wie lange:</b> mindestens 1 Sekunde, höchstens 2,5 — es geht, sobald die Daten da sind.</p>
+    <p><b>Der Name:</b> „Homi Point“ steht jetzt unter dem Icon auf dem Handy, im Android-Start, auf der Anmeldung
+      und der Website. Die Adresse bleibt haus-quest.com.</p>
+  </div>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------ Bausteine */
+const MIN = 1000, MAX = 2500;
+const Z = { dunkel: false, netz: "schnell" };
+const ladezeit = () => Z.netz === "schnell" ? 400 : 2000;
+const APPS = [["Kamera", "#5b6b82"], ["Kalender", "#e5554f"], ["Fotos", "#f0b23a"], ["Wetter", "#4a8fe0"],
+              ["Notizen", "#f2c94c"], ["Uhr", "#2d2d2d"], ["Karten", "#5fb37b"], ["Homi Point", ""]];
+const DOCK = ["#3fb950", "#2f6fd0", "#7a5af8", "#ec7a1c"];
+
+function telefon(t) {
+  const variante = t.dataset.variante;
+  t.innerHTML = `
+    <div class="schicht home" data-home-bild>
+      <div class="uhr"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="raster">${APPS.map(([name, farbe]) => name === "Homi Point"
+        ? `<button class="appicon unsere" data-oeffnen aria-label="Homi Point öffnen"><span class="kachel"></span><span>Homi Point</span></button>`
+        : `<span class="appicon"><span class="kachel" style="background:${farbe}"></span><span>${name}</span></span>`).join("")}</div>
+      <div class="dock">${DOCK.map((f) => `<span class="kachel" style="background:${f}"></span>`).join("")}</div>
+    </div>
+    <div class="schicht startbild v-${variante}" data-startbild hidden>
+      <div class="sterne"><img src="/cleanie.webp" alt="" style="--x:-70px;--y:-80px"><img src="/cleanie.webp" alt="" style="--x:78px;--y:-60px"><img src="/cleanie.webp" alt="" style="--x:6px;--y:96px"></div>
+      <div class="logo" role="img" aria-label="Homi Point"></div>
+      <div class="name">Homi Point</div>
+      <div class="unten">Homi Point</div>
+      <div class="ladebalken"></div>
+    </div>
+    <div class="schicht appbild" data-app-bild hidden>
+      <div class="neuladen" data-kreisel></div>
+      <div><div class="hallo">Hallo Anna</div><div class="datum">Donnerstag, 22. Oktober</div></div>
+      <div class="konto"><b>128</b><img src="/cleanie.webp" alt="Cleanies"><span><small>dein Konto · +18 diese Woche</small></span></div>
+      <div class="platz"><i></i><i></i></div>
+      <div class="zwei"><div class="platz"><i></i><i></i></div><div class="platz"><i></i><i></i></div></div>
+      <div class="leiste"><span>Start</span><span>Quests</span><span>Erledigt</span><span>Belohnung</span><span>Wir</span></div>
+    </div>`;
+  t._z = { imSpeicher: false, timer: [] };
+  status(t, "Die App ist zu. <b>Tippt auf das Haus-Icon.</b>");
+}
+
+function status(t, html) { t.closest(".spalte").querySelector("[data-status]").innerHTML = html; }
+const schicht = (t, name) => t.querySelector(`[data-${name}]`);
+function zeige(t, welche) {
+  for (const n of ["home-bild", "startbild", "app-bild"]) schicht(t, n).hidden = n !== welche;
+}
+function aufraeumen(t) { t._z.timer.forEach(clearTimeout); t._z.timer = []; }
+const spaeter = (t, ms, f) => t._z.timer.push(setTimeout(f, ms));
+
+/** Der echte Start: das Handy zoomt auf, das Startbild bleibt, bis die App geladen hat —
+ *  mindestens eine Sekunde, höchstens zweieinhalb. */
+function kaltstart(t) {
+  aufraeumen(t);
+  const sb = schicht(t, "startbild");
+  sb.removeAttribute("data-weg");
+  sb.removeAttribute("data-laeuft");
+  sb.style.setProperty("--ladezeit", `${ladezeit()}ms`);
+  zeige(t, "startbild");
+  sb.setAttribute("data-zoom", "");
+  void sb.offsetWidth;
+  sb.setAttribute("data-laeuft", "");
+  const dauer = Math.min(MAX, Math.max(MIN, ladezeit()));
+  t.dataset.phase = "startbild";
+  status(t, `<b>Frisch gestartet</b> — das Startbild steht ${(dauer / 1000).toLocaleString("de-DE", { minimumFractionDigits: 1 })} s.`);
+  spaeter(t, dauer, () => {
+    sb.setAttribute("data-weg", "");
+    spaeter(t, 250, () => {
+      sb.removeAttribute("data-zoom");
+      zeige(t, "app-bild");
+      t._z.imSpeicher = true;
+      t.dataset.phase = "app";
+      status(t, `<b>Frisch gestartet</b> — nach ${(dauer / 1000).toLocaleString("de-DE", { minimumFractionDigits: 1 })} s in der App. Probiert jetzt „Neu laden“ oder den Homescreen.`);
+    });
+  });
+}
+
+/** Aus dem Hintergrund: die App war noch da, also gleich hinein. */
+function warmstart(t) {
+  aufraeumen(t);
+  const app = schicht(t, "app-bild");
+  zeige(t, "app-bild");
+  app.removeAttribute("data-auf"); void app.offsetWidth; app.setAttribute("data-auf", "");
+  t.dataset.phase = "app";
+  status(t, "<b>Aus dem Hintergrund</b> — kein Startbild, sofort in der App.");
+}
+
+function neuladen(t) {
+  if (t.dataset.phase !== "app") return;
+  aufraeumen(t);
+  const k = schicht(t, "kreisel");
+  k.setAttribute("data-an", "");
+  status(t, "<b>Neu geladen</b> — kein Startbild, nur der Kreisel oben.");
+  spaeter(t, ladezeit() + 300, () => k.removeAttribute("data-an"));
+}
+
+function homescreen(t) {
+  aufraeumen(t);
+  zeige(t, "home-bild");
+  t.dataset.phase = "home";
+  status(t, t._z.imSpeicher ? "Die App liegt im Hintergrund. <b>Tippt noch mal auf das Icon.</b>"
+                            : "Die App ist zu. <b>Tippt auf das Haus-Icon.</b>");
+}
+
+/* ------------------------------------------------------------------ Bedienen */
+const TELEFONE = [...document.querySelectorAll(".phone")];
+TELEFONE.forEach(telefon);
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const spalte = b.closest(".spalte");
+  const t = spalte?.querySelector(".phone");
+  if (b.hasAttribute("data-oeffnen")) { t._z.imSpeicher ? warmstart(t) : kaltstart(t); return; }
+  if (b.hasAttribute("data-kalt")) { t._z.imSpeicher = false; kaltstart(t); return; }
+  if (b.hasAttribute("data-home")) { homescreen(t); return; }
+  if (b.hasAttribute("data-neuladen")) {
+    if (t.dataset.phase !== "app") { status(t, "Erst die App öffnen — dann lässt sie sich neu laden."); return; }
+    neuladen(t); return;
+  }
+  if (b.hasAttribute("data-alle")) { TELEFONE.forEach((x) => { x._z.imSpeicher = false; kaltstart(x); }); return; }
+  if (b.dataset.dunkel || b.dataset.netz) {
+    if (b.dataset.dunkel) Z.dunkel = b.dataset.dunkel === "an";
+    if (b.dataset.netz) Z.netz = b.dataset.netz;
+    TELEFONE.forEach((x) => x.toggleAttribute("data-dunkel", Z.dunkel));
+    for (const g of document.querySelectorAll("#regler [data-gruppe] button")) {
+      const [k, v] = Object.entries(g.dataset)[0];
+      g.setAttribute("aria-pressed", String(k === "dunkel" ? (v === "an") === Z.dunkel : v === Z.netz));
+    }
+  }
+});
+
+/* Nach unten ziehen in der App: neu laden. Mit der Maus geht es per Ziehen oder Doppelklick. */
+for (const t of TELEFONE) {
+  let y0 = null;
+  t.addEventListener("pointerdown", (e) => { if (t.dataset.phase === "app") y0 = e.clientY; });
+  t.addEventListener("pointerup", (e) => { if (y0 !== null && e.clientY - y0 > 50) neuladen(t); y0 = null; });
+  t.addEventListener("dblclick", () => neuladen(t));
+}
+</script>
+</body>
+</html>

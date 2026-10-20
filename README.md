@@ -1,5 +1,8 @@
 # Haus-Quest
 
+Auf dem Handy heißt die App **Homi Point** — so steht es im Icon, unter dem Icon und auf dem
+Startbild. Die Adresse bleibt `haus-quest.com`.
+
 Punktekonto für einen Haushalt. Aufgaben („Quests“) haben einen **vorher festgelegten**
 Punktwert. Wer eine erledigt, meldet sie — gutgeschrieben wird sie erst, wenn **jemand
 anderes bestätigt**. Punktwerte ändern sich nie im Alleingang, sondern nur über eine
@@ -39,6 +42,14 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
 - **Mockup „Familienmodus":** [`web/mockup-familie/`](./web/mockup-familie) — live unter
   `haus-quest.com/mockup-familie/`. Kinderprofile ohne Handy, drei Kinderansichten (Sparglas, Weg, Liste),
   Eintragen für Kinder, Wünsche, Taschengeld. Gebaut wurden Sparglas und Weg — das Kind wählt —, die Liste fiel weg.
+- **Mockup „Fair-Bericht":** [`web/mockup-fair/`](./web/mockup-fair) — live unter
+  `haus-quest.com/mockup-fair/`. Wer macht wie viel über Wochen und Monate: Waage gegen ein gemeinsames Soll,
+  Verlauf, Räume, Arbeit, die man nicht sieht — als Bericht, als Monatsgeschichte und auf einen Blick, mit und ohne Plus.
+  Gebaut wurden der Bericht und der Rückblick zum Monatsanfang.
+- **Mockup „Startbild":** [`web/mockup-startbild/`](./web/mockup-startbild) — live unter
+  `haus-quest.com/mockup-startbild/`. Das Homi-Point-Logo eine Sekunde beim echten Start der App, nicht beim
+  Zurückholen aus dem Hintergrund oder beim Neuladen — drei Varianten zum Antippen, hell und dunkel.
+  Gebaut wurde A: nur das Icon, im Dunkeln dunkel, mindestens 1 und höchstens 2,5 Sekunden.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -81,6 +92,24 @@ mit eigenem Gerät dürfen dafür die Eltern bestätigen), **abstimmen dürfen E
 und **wer allein mit kleinen Kindern ist, dessen Meldung zählt sofort**. Was Eltern für ein Kind
 eintragen, haben sie gesehen — es zählt gleich. Taschengeld ist eine Buchung wie eine Einlösung; den
 Kurs ändern die Erwachsenen gemeinsam. Der Code dazu steht in `worker/familie.js`.
+
+## Fair-Bericht
+
+Wer macht wie viel — nicht nur diese Woche, sondern über Monate. Zu finden hinter der Kachel „Diese
+Woche“ und unter „Wir“. Gerechnet wird aus den Buchungen, die es schon gibt (`worker/fair.js`).
+
+| Teil | Was er zeigt |
+| --- | --- |
+| Waage | Cleanies aus bestätigten Quests, gemessen an dem, was ihr fair nennt — zu zweit per Abstimmung, Start bei 50 : 50 |
+| Verlauf | je Tag, Woche oder Monat der Anteil, mit Soll-Linie und Tabelle |
+| Wer macht was | Anteile je Raum |
+| Was man nicht sieht | Bestätigen, Vorschlagen, Übernehmen, Einlösen — daneben, nicht in der Waage |
+| Kinder | eine eigene Zeile, nicht in der Waage |
+| Rückblick | der Vormonat in Karten, in der ersten Woche des Monats auf der Startseite |
+
+Zeiträume: Woche, Monat, 13 Wochen, Jahr, zurückblättern; Export als PDF und als Tabelle (CSV). Ohne
+Plus gibt es nur die Waage der laufenden Woche, der Rest liegt hinter dem Schloss, einmal 14 Tage zum
+Testen. Bis Plus sich kaufen lässt, haben es alle Haushalte (`couples.plus` steht auf 1).
 
 ## Aufbau
 

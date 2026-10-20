@@ -1122,3 +1122,183 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .avatar.tieravatar { font-family: var(--emoji); font-size: 26px; line-height: 1; background: var(--kachel-gelb); }
 .avatar.sm.tieravatar { font-size: 19px; }
 .avatar.xs.tieravatar { font-size: 13px; }
+
+/* ---------- Fair-Bericht ---------- */
+/* Zwei Reihen, mit dem Palettenprüfer hell und dunkel geprüft: Blau und Marken-Rot.
+   Im Dunkeln eigene Stufen — die hellen der Auswertung fielen aus dem Helligkeitsband. */
+:root { --fair-1: #2f6fd0; --fair-2: #ec0f06; }
+:root[data-theme="dunkel"] { --fair-1: #4f86e0; --fair-2: #ec4a42; }
+
+.fair i.f1, .fair i.f2, .fair i.strich { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.fair i.f1 { background: var(--fair-1); }
+.fair i.f2 { background: var(--fair-2); }
+.fair i.strich { width: 14px; height: 2px; border-radius: 1px; background: var(--ink); vertical-align: 3px; }
+
+.fair-zeitraum button[data-zu] { color: var(--ink-3); }
+.fair-zeitraum button svg { vertical-align: -1px; }
+.fair-blaettern { display: flex; align-items: center; gap: 8px; }
+.fair-blaettern span { flex: 1; text-align: center; font-weight: 700; font-size: 14px; }
+.fair-blaettern .iconbtn { margin: 0; width: 34px; height: 34px; font-size: 18px; }
+.fair-blaettern .iconbtn:disabled { opacity: .3; cursor: default; }
+
+.fair-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fair-kopf .section-label { margin: 0; }
+.fair-rechts { font-size: 12px; color: var(--ink-3); }
+
+.fair-held { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fair-zahl { font-family: var(--font-display); font-weight: 800; font-size: 46px; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.fair-zahl small { font-size: 26px; color: var(--ink-3); font-weight: 700; }
+.fair-urteil { margin-left: auto; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
+.fair-urteil[data-u="gut"] { background: var(--urlaub-tint); color: var(--urlaub); }
+.fair-urteil[data-u="leicht"] { background: var(--bald-tint); color: var(--bald); }
+.fair-urteil[data-u="schief"] { background: var(--bald); color: var(--bg); }
+
+.fair-balken { position: relative; display: flex; gap: 2px; height: 22px; margin-top: 4px; }
+.fair-balken .f1 { background: var(--fair-1); border-radius: 6px 0 0 6px; }
+.fair-balken .f2 { background: var(--fair-2); border-radius: 0 6px 6px 0; }
+.fair-sollstrich { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.fair-enden { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.fair-enden b { color: var(--ink); }
+.fair-enden i.f1 { margin-right: 6px; }
+.fair-enden i.f2 { margin-left: 6px; }
+.fair-enden .fair-sollwert { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+.fair-satz { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.fair-satz b { color: var(--ink); }
+.fair-sollzeile {
+  display: flex; justify-content: space-between; gap: 10px; font: inherit; font-size: 12.5px; color: var(--ink-2);
+  background: var(--tint); border: none; border-radius: 10px; padding: 9px 11px; cursor: pointer; text-align: left;
+}
+.fair-sollzeile span:last-child { color: var(--ruhig); font-weight: 700; white-space: nowrap; }
+
+.fair-personen { display: flex; flex-direction: column; gap: 10px; }
+.fair-person { display: grid; grid-template-columns: 80px 1fr 44px; align-items: center; gap: 10px; font-size: 13px; }
+.fair-person .n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fair-person .w { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.fair-einzel { position: relative; height: 14px; background: var(--tint-2); border-radius: 7px; }
+.fair-einzel > span:first-child { display: block; height: 100%; background: var(--fair-1); border-radius: 7px; }
+
+.fair-saeulen { width: 100%; height: auto; max-height: 240px; display: block; touch-action: pan-y; }
+.fair-saeulen .gitter { stroke: var(--gitter); stroke-width: 1; }
+.fair-saeulen .achse { font-family: var(--font-data); font-size: 9px; fill: var(--ink-3); }
+.fair-saeulen .f1 { fill: var(--fair-1); }
+.fair-saeulen .f2 { fill: var(--fair-2); }
+.fair-saeulen .leer { fill: var(--tint-2); }
+.fair-saeulen .ziel { fill: transparent; cursor: pointer; outline: none; }
+.fair-saeulen .ziel:focus-visible { stroke: var(--ink); stroke-width: 1.5; }
+.fair-saeulen .sollinie { stroke: var(--ink); stroke-width: 2; }
+/* Nur die unsichtbaren Flächen nehmen den Finger an — Linien und Schrift liegen nur darüber. */
+.fair-saeulen line, .fair-saeulen text, .fair-saeulen .saeule, .fair-saeulen .leer { pointer-events: none; }
+.fair-saeulen .saeule { transition: opacity .12s; }
+.fair-saeulen .saeule[data-aus] { opacity: .3; }
+.fair-hinweis { font-size: 12.5px; color: var(--ink-2); min-height: 18px; }
+.fair-hinweis b { color: var(--ink); }
+
+.fair-raeume { display: flex; flex-direction: column; gap: 10px; }
+.fair-raum { display: grid; grid-template-columns: 92px 1fr 52px; align-items: center; gap: 10px; font-size: 13px; }
+.fair-raum .n { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fair-raum .n small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-3); }
+.fair-raum .anteil { text-align: right; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fair-split { display: flex; gap: 2px; height: 16px; }
+.fair-split .f1 { background: var(--fair-1); border-radius: 5px 0 0 5px; }
+.fair-split .f2 { background: var(--fair-2); border-radius: 0 5px 5px 0; }
+.fair-split span:only-child { border-radius: 5px; }
+
+.fair-paare { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fair-paare th {
+  font-family: var(--font-data); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 400; text-align: right; padding: 0 0 6px 8px;
+}
+.fair-paare td {
+  padding: 8px 0 8px 8px; border-top: 1px solid var(--line); text-align: right; vertical-align: middle;
+  font-family: var(--font-display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums;
+}
+.fair-paare td:first-child { text-align: left; padding-left: 0; font-family: var(--font-ui); font-weight: 400; font-size: 13.5px; }
+.fair-paare td .m { font-weight: 600; }
+.fair-paare td small { display: block; font-size: 11.5px; color: var(--ink-3); }
+
+.fair-hls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fair-hl { background: var(--tint); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fair-hl .w { font-size: 11px; color: var(--ink-3); }
+.fair-hl b { font-size: 13.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.fair-hl .wer { font-size: 11.5px; color: var(--ink-2); }
+
+.fair-kind { display: flex; align-items: center; gap: 10px; }
+.fair-kind .grow { flex: 1; min-width: 0; }
+.fair-kind small { display: block; font-size: 12px; color: var(--ink-2); }
+
+.fair-gesperrt { position: relative; min-height: 330px; }
+.fair-attrappe { filter: blur(5px); opacity: .5; pointer-events: none; user-select: none; display: flex; flex-direction: column; gap: 12px; }
+.fair-schloss {
+  position: absolute; top: 22px; left: 14px; right: 14px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  box-shadow: 0 14px 40px -18px var(--schleier);
+}
+.fair-schloss b { font-size: 16px; }
+.fair-schloss p { margin: 0; font-size: 13px; color: var(--ink-2); }
+.plus-chip { font-size: 11px; font-weight: 800; color: var(--accent); background: var(--accent-tint); border-radius: 999px; padding: 3px 10px; }
+
+.fair-export { display: flex; gap: 8px; }
+.fair-export .btn { flex: 1; }
+.fair-fuss { font-size: 12px; color: var(--ink-3); margin: 0; text-align: center; }
+
+/* Der Rückblick: auf der Startseite eine Karte, geöffnet ein ganzer Schirm. */
+.rueckblick-karte { position: relative; }
+.rk-auf {
+  width: 100%; text-align: left; border: none; cursor: pointer; font: inherit; color: var(--kontrast-ink);
+  background: var(--kontrast-bg); border-radius: 18px; padding: 14px 48px 14px 16px; display: flex; flex-direction: column; gap: 2px;
+}
+.rk-klein { font-family: var(--font-data); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.rk-auf b { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+.rk-unter { font-size: 12.5px; opacity: .8; }
+.rk-weg {
+  position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border: none; border-radius: 10px;
+  background: transparent; color: var(--kontrast-ink); opacity: .75; cursor: pointer; font-size: 15px;
+}
+
+.rueckblick {
+  position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; gap: 12px;
+  padding: calc(var(--oben) + 12px) 16px calc(var(--unten) + 16px);
+}
+.rb-punkte { display: flex; gap: 4px; }
+.rb-punkte i { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
+.rb-punkte i.an { background: var(--ink); }
+.rb-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.rb-kopf b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 800; }
+.rb-kopf span { font-size: 12px; color: var(--ink-3); }
+.rb-zu { width: 38px; height: 38px; flex: none; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font-size: 16px; }
+.rb-karte {
+  flex: 1; min-height: 0; border: none; font: inherit; text-align: left; cursor: pointer; border-radius: 24px;
+  padding: 24px 20px 52px; background: var(--kontrast-bg); color: var(--kontrast-ink); position: relative;
+  display: flex; flex-direction: column; justify-content: center; gap: 12px; overflow: hidden;
+}
+.rb-klein { font-family: var(--font-data); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.rb-gross { font-family: var(--font-display); font-weight: 800; font-size: 60px; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-mittel { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -.02em; line-height: 1.15; }
+.rb-text { font-size: 15.5px; line-height: 1.45; opacity: .9; }
+.rb-bild { font-family: var(--emoji); font-size: 64px; line-height: 1; margin-top: 10px; }
+.rb-weiter { position: absolute; left: 20px; bottom: 20px; font-size: 12.5px; opacity: .7; }
+.rb-teilen { flex: none; }
+
+/* Als PDF sichern: nur der Bericht, ohne Knöpfe, und nichts abgeschnitten. */
+@media print {
+  .navbar, .appbar .iconbtn, .fair-zeitraum, .fair-blaettern .iconbtn, .fair-export, .fair .rowlink,
+  .fair-sollzeile, .fair-hinweis, details.tabelle summary, .toast, .scrim, .celebrate, .rueckblick { display: none !important; }
+  html, body, #app { height: auto !important; }
+  .body { overflow: visible !important; padding-bottom: 0 !important; }
+  .card { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ---------- Startbild ---------- */
+/* Das Homi-Point-Logo beim echten Start. Der Hintergrund ist der der App — im Dunkeln dunkel. */
+.startbild {
+  position: fixed; inset: 0; z-index: 100; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .25s ease;
+}
+.startbild img { width: 150px; height: 150px; border-radius: 24%; background: #fff; }
+.startbild-name {
+  position: absolute; left: 0; right: 0; bottom: calc(var(--unten) + 28px);
+  text-align: center; font-size: 12px; color: var(--ink-3);
+}
+.startbild[data-weg] { opacity: 0; pointer-events: none; }

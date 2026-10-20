@@ -2,9 +2,9 @@
 // Hält die Hülle der App offline verfügbar. Daten kommen immer frisch aus dem Netz;
 // gemeldete Quests werden vom Worker nachgereicht, wenn wieder Empfang da ist.
 
-const CACHE = "hq-shell-v16";
+const CACHE = "hq-shell-v18";
 const HUELLE = ["/", "/app/", "/app/app.css", "/app/app.js", "/app/feier.js", "/logo.webp", "/cleanie.webp",
-                "/manifest.webmanifest", "/icons/icon-192.png"];
+                "/manifest.webmanifest", "/icons/icon-192.png", "/icons/startbild.webp"];
 
 self.addEventListener("install", (ev) => {
   ev.waitUntil(caches.open(CACHE).then((c) => c.addAll(HUELLE)).then(() => self.skipWaiting()));
@@ -37,7 +37,7 @@ self.addEventListener("fetch", (ev) => {
 // Belohnungsmoment: Push landet auch bei geschlossener App.
 self.addEventListener("push", (ev) => {
   const daten = ev.data ? ev.data.json() : {};
-  ev.waitUntil(self.registration.showNotification(daten.titel || "Haus-Quest", {
+  ev.waitUntil(self.registration.showNotification(daten.titel || "Homi Point", {
     body: daten.text || "",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",

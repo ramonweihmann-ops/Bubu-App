@@ -53,6 +53,7 @@ genau so, wie er es soll.
 | `event-api.sh` | Events: anlegen, freigeben, einlösen, Deckel, Dauerevent, beenden |
 | `bilder-api.sh` | Symbole, Farben und Hintergründe: ohne Abstimmung, nur Emoji oder kleine Bilder, Auslieferung nur im eigenen Haushalt |
 | `familie-api.sh` | Familienmodus: Kinder ohne Google, Kinder bestätigen nie Kinder, Code fürs eigene Gerät, Taschengeld, Kurs-Abstimmung, Eltern-PIN, allein mit Kleinen zählt es sofort |
+| `fair-api.sh` | Fair-Bericht: Waage, Zeiträume und Blättern, Räume, was man nicht sieht, Übernommen, Soll per Abstimmung, Kinder neben der Waage, ohne Plus und der Test, WG zu dritt |
 | `ui.mjs` | Dunkles Design, Einstellungen |
 | `ui3.mjs` | Ersteinrichtung von der Begrüßung bis zum Einladecode |
 | `ui-scroll.mjs` | Der Schirm springt nicht nach oben, wenn im Hintergrund geladen wird |
@@ -77,7 +78,11 @@ genau so, wie er es soll.
 | `mockup-start.mjs` | Der Startseiten-Mockup: jede Variante passt auf einen Bildschirm, abhaken, Stapel, Kacheln |
 | `mockup-icons.mjs` | Das Bilder-Mockup: Stift oben, Symbol wählen und hochladen, Hintergründe, die Schrift bleibt vorn |
 | `ui-familie.mjs` | Familienmodus im Browser: Kind anlegen, Code und QR, für ein Kind eintragen, Kinderansicht mit PIN, Glas und Weg, eigenes Gerät per Link |
+| `ui-fair.mjs` | Fair-Bericht im Browser: hinein über „Diese Woche“, Zeitraum und Blättern, Säule antippen, Soll zur Abstimmung, Export als Tabelle und PDF, Rückblick in Karten und auf der Startseite, Schloss ohne Plus, dunkel und 375 px |
+| `ui-startbild.mjs` | Startbild und Name: Homi Point in Titel, Manifest, Anmeldung und Website; das Logo nur beim echten Start, mindestens 1 s, höchstens 2,5 s, nicht nach dem Neuladen, im Dunkeln dunkel |
 | `mockup-familie.mjs` | Das Familienmodus-Mockup: Kind meldet, Eltern bestätigen oder tragen ein, Wunsch, Kind anlegen, Taschengeld, PIN, hell und dunkel |
+| `mockup-fair.mjs` | Das Fair-Bericht-Mockup: Zeitraum, Soll, Plus und Kind wirken in allen drei Varianten, Tooltip per Tastatur, Tabellen, Geschichte blättert, Schloss ohne Plus, Handy und dunkel |
+| `mockup-startbild.mjs` | Das Startbild-Mockup: erster Start zeigt das Logo mindestens 1 s, Zurückholen und Neuladen nicht, ganz schließen setzt zurück, langsames Netz bis 2 s, dunkel, 375 px |
 | `cleanie-shot.mjs` | Der Cleanies-Stern in hell und dunkel |
 
 ## Helfer, die nicht im Gesamtlauf stecken

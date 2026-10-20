@@ -276,6 +276,8 @@ let letzteAnsicht = null;
 
 function zeichne() {
   if (!S) return;
+  // Das erste Bild mit Daten steht: das Startbild darf gehen (es bleibt aber mindestens 1 s).
+  window.hqStartbildWeg?.();
   if (!S.angemeldet) return anmelden();
   if (!S.eingerichtet) return einrichtung();
   const kind = kindImBild();
@@ -312,13 +314,13 @@ function zeichne() {
     belohnungen: schirmBelohnungen, wir: schirmWir, verlauf: schirmVerlauf,
     statistik: schirmStatistik, einstellungen: schirmEinstellungen,
     raeume: schirmRaeume, haushalt: schirmHaushalt, urlaub: schirmUrlaub,
-    plan: schirmPlan, aufgabe: schirmAufgabe
+    plan: schirmPlan, aufgabe: schirmAufgabe, fair: schirmFair
   }[ansicht] || schirmStart;
 
   // Unterseiten haben keinen eigenen Knopf in der Leiste. Damit trotzdem immer
   // ein Reiter leuchtet, zeigen sie auf den, aus dem sie hervorgehen.
   const aktiv = { verlauf: "start", statistik: "start", einstellungen: "start", pruefen: "start",
-                  raeume: "start", haushalt: "start", plan: "start", aufgabe: "start" }[ansicht] || ansicht;
+                  raeume: "start", haushalt: "start", plan: "start", aufgabe: "start", fair: "start" }[ansicht] || ansicht;
 
   const bild = inhalt() + `
     <nav class="navbar">
@@ -387,7 +389,7 @@ function anmelden() {
   app.innerHTML = `
     <div class="mitte">
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
-      <h1>Haus-Quest</h1>
+      <h1>Homi Point</h1>
       <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
       <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
       <button class="btn text" data-kind-code-eingeben>Ich bin ein Kind</button>
@@ -570,7 +572,7 @@ function eErhalten() {
       <img class="logo" src="/wolf.webp" alt="" style="width:min(160px,45vw)">
       <h1 style="font-size:27px">Ordnung konstant erhalten</h1>
       <p style="max-width:34ch">Plane wiederkehrende Haushaltsaufgaben ganz entspannt und sorge
-        dafür, dass Ordnung und Sauberkeit langfristig erhalten bleiben. Haus-Quest unterstützt
+        dafür, dass Ordnung und Sauberkeit langfristig erhalten bleiben. Homi Point unterstützt
         dich dabei mit einem individuellen Jahresplan, der sich ganz automatisch auf Basis deiner
         Angaben erstellt. So habt ihr alle Aufgaben und Quests jederzeit im Blick und könnt euren
         Haushalt Schritt für Schritt leichter organisieren.</p>
@@ -1431,6 +1433,7 @@ function schirmStart() {
       ${kontoLeiste()}
       ${kinderReihe()}
       ${pillen()}
+      ${rueckblickKarte()}
       ${stapelBlock(st)}
       <div class="startkacheln">${planKachel()}${wocheKachel()}</div>
       ${wartetZeile()}
@@ -1478,6 +1481,12 @@ function sheetWoche() {
     <button class="btn dark block" data-ziel-setzen>${w.ziel ? "Ziel ändern" : "Eintragen"}</button>
     ${w.ziel ? '<button class="btn text block" data-ziel-weg>Ziel entfernen</button>' : ""}`
     : `<div style="font-size:12px;color:var(--ink-3)">${w.ziel ? "Ändern" : "Eintragen"} kann, wer den Haushalt verwaltet.</div>`}
+    <button class="rowlink" data-go="fair">
+      <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-waage", 18)}</span>
+      <span class="grow"><span class="t">Fair-Bericht</span>
+        <span class="m">Wer macht wie viel — über Wochen und Monate</span></span>
+      <span style="color:var(--ink-3)">›</span>
+    </button>
     <button class="rowlink" data-go="statistik">
       <span class="avatar sm" style="background:var(--tint);color:var(--reihe-ich)">${icon("i-chart", 18)}</span>
       <span class="grow"><span class="t">Auswertung</span>
@@ -2143,6 +2152,7 @@ function abstimmungWorum(a) {
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
     case "kurs": return "Taschengeld — der Kurs soll sich ändern";
+    case "fair_soll": return "Fair-Bericht — daran misst die Waage";
     default: return "Vorschlag";
   }
 }
@@ -2173,6 +2183,12 @@ function abstimmungWandel(a) {
             <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
+  if (a.art === "fair_soll") {
+    const andere = (S.mitglieder || []).find((m) => m.id !== a.ziel && !istKindM(m) && !m.stufe);
+    const wer = `${esc(nameVon(a.ziel))} : ${esc(andere ? nameVon(andere.id) : "die anderen")}`;
+    return `<span class="old">${a.alt} : ${100 - a.alt}</span>→<span class="new">${a.neu} : ${100 - a.neu}</span>
+            <span style="color:var(--ink-2);font-weight:400">${wer}</span>`;
+  }
   if (a.art === "kurs") return `<span class="old">${a.alt} Cent</span>→<span class="new">${a.neu} Cent</span>
             <span style="color:var(--ink-2);font-weight:400">je Cleanie</span>`;
   if (a.art === "event_aus") {
@@ -2299,6 +2315,13 @@ function schirmWir() {
       </ul>
 
       ${erledigt.length ? `<p class="section-label">Entschieden</p>${erledigt.map(abstimmungKarte).join("")}` : ""}
+
+      <p class="section-label">Zusammen</p>
+      <button class="rowlink" data-go="fair">
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-waage", 17)}</span>
+        <span class="grow"><span class="t">Fair-Bericht</span>
+          <span class="m">Wer macht wie viel — über Wochen und Monate</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
 
       <p class="section-label">Konto</p>
       <button class="rowlink" data-go="verlauf">
@@ -4122,7 +4145,7 @@ function kvKopf(k) {
     <div class="kv-kopf">
       ${wahl.length > 1 ? `<div class="kv-wahl">${wahl.map((x) => `
         <button data-kv-kind="${x.id}" aria-pressed="${x.id === k.id}" aria-label="${esc(vorname(x.name))}">${esc(x.tier || "🦊")}</button>`).join("")}</div>`
-        : `<span class="kv-was">${aufElternHandy() ? "Kinderansicht" : "Haus-Quest"}</span>`}
+        : `<span class="kv-was">${aufElternHandy() ? "Kinderansicht" : "Homi Point"}</span>`}
       <div class="kv-schalter" role="group" aria-label="Ansicht">
         <button data-kv-ansicht="glas" aria-pressed="${ansicht === "glas"}">🫙 Glas</button>
         <button data-kv-ansicht="weg" aria-pressed="${ansicht === "weg"}">🗺️ Weg</button>
@@ -4374,7 +4397,7 @@ function sheetKindForm(k = null) {
       <small>Cleanies lassen sich in Euro auszahlen</small></span><span class="kv-toggle"></span></button>
     ${f.id ? "" : `
     <label class="kv-einwilligung"><input type="checkbox" id="einwilligung" ${f.einwilligung ? "checked" : ""}>
-      <span>Ich bin sorgeberechtigt und willige ein, dass Haus-Quest den Vornamen und die Cleanies dieses
+      <span>Ich bin sorgeberechtigt und willige ein, dass Homi Point den Vornamen und die Cleanies dieses
       Kindes speichert. Keine E-Mail, kein Foto, keine Werbung.</span></label>`}
     <button class="btn dark block" data-kind-speichern>${f.id ? "Speichern" : "Anlegen"}</button>`}`);
 }
@@ -4747,18 +4770,30 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS);
   if (!el) return;
   if (await familieKlick(el)) return;
+  try {
+    if (await fairKlick(el)) return;
+  } catch (fehler) {
+    toast(fehler.message, true);
+    return;
+  }
 
   // Navigation & Anzeige
   if (el.dataset.go) {
     ansicht = el.dataset.go;
     bearbeiten.quests = bearbeiten.belohnungen = false;
+    // Der Bericht zeigt nie einen alten Stand — lieber kurz „wird geladen“.
+    if (ansicht === "fair") fair = null;
     sheetZu();
     zeichne();
     if (ansicht === "statistik") {
       statistikLaden().then(zeichne).catch((f) => toast(f.message, true));
+    }
+    if (ansicht === "fair") {
+      fairWahl.zurueck = 0;
+      fairLaden().then(zeichne).catch((f) => toast(f.message, true));
     }
     return;
   }
@@ -5577,7 +5612,7 @@ document.addEventListener("click", async (ev) => {
     }
 
     if (el.hasAttribute("data-teilen")) {
-      const text = `Mein Haus-Quest-Code: ${S.code}\nApp: https://haus-quest.com`;
+      const text = `Mein Homi-Point-Code: ${S.code}\nApp: https://haus-quest.com`;
       if (navigator.share) await navigator.share({ text });
       else { await navigator.clipboard.writeText(text); toast("Code kopiert."); }
       return;
@@ -5766,6 +5801,625 @@ document.addEventListener("input", (ev) => {
     vorhanden.remove();
   }
 });
+
+/* ------------------------------------------------------------------ Fair-Bericht */
+//
+// Wer macht wie viel — über Wochen und Monate, gemessen an dem, was der
+// Haushalt gemeinsam fair nennt. Gerechnet wird auf dem Server (worker/fair.js),
+// hier wird nur gezeichnet. Ohne Plus schickt der Server nur die Waage der
+// laufenden Woche; alles andere liegt sichtbar hinter dem Schloss.
+//
+// Farben: die erste Person (man selbst) im Blau, die andere im Rot — dieselben
+// geprüften Töne wie in der Auswertung, im Dunkeln eigene Stufen. Texte stehen
+// nie in der Reihenfarbe, ein Farbfleck daneben trägt die Zuordnung.
+
+let fair = null;
+const fairWahl = { zeitraum: "monat", zurueck: 0 };
+const FAIR_ZEITRAEUME = [["woche", "Woche"], ["monat", "Monat"], ["quartal", "13 Wochen"], ["jahr", "Jahr"]];
+try {
+  const z = localStorage.getItem("hq-fair-zeitraum");
+  if (FAIR_ZEITRAEUME.some(([id]) => id === z)) fairWahl.zeitraum = z;
+} catch { /* dann eben der Monat */ }
+
+const fairVersatz = () => -new Date().getTimezoneOffset();
+
+async function fairLaden() {
+  fair = await api(`fair?zeitraum=${fairWahl.zeitraum}&zurueck=${fairWahl.zurueck}&versatz=${fairVersatz()}`);
+}
+
+const fairSumme = (je) => Object.values(je).reduce((a, b) => a + b, 0);
+/** Anteil einer Person in Prozent, gerundet — oder null, wenn nichts da ist. */
+const fairAnteil = (je, wer) => { const g = fairSumme(je); return g ? Math.round(je[wer] / g * 100) : null; };
+/** Die erste Person gegen alle anderen. Zu zweit ist „die anderen" ein Name. */
+function fairSeiten(f) {
+  const [p, ...rest] = f.personen;
+  return { p, rest, andere: rest.length === 1 ? rest[0].name : "Die anderen",
+           von: (je) => rest.reduce((s, r) => s + (je[r.id] || 0), 0) };
+}
+
+/** Bis fünf Prozentpunkte neben dem Soll ist ausgeglichen, bis zwölf leicht schief. */
+function fairUrteil(anteil, soll) {
+  const d = Math.abs(anteil - soll);
+  return d <= 5 ? { u: "gut", text: "ausgeglichen", zeichen: "✓" }
+    : d <= 12 ? { u: "leicht", text: "leicht schief", zeichen: "≈" }
+    : { u: "schief", text: "schief", zeichen: "!" };
+}
+
+const fairKopf = (titel, rechts = "") =>
+  `<div class="fair-kopf"><span class="section-label">${titel}</span>${rechts ? `<span class="fair-rechts">${rechts}</span>` : ""}</div>`;
+
+function fairZeitraum(f) {
+  return `
+    <div class="filters fair-zeitraum" role="group" aria-label="Zeitraum">
+      ${FAIR_ZEITRAEUME.map(([id, text]) => {
+        const zu = !f.plus && id !== "woche";
+        return `<button data-fair-zeitraum="${id}" aria-pressed="${f.zeitraum === id}"${zu ? ' data-zu aria-disabled="true"' : ""}>${
+          text}${zu ? ` ${icon("i-lock", 12)}` : ""}</button>`;
+      }).join("")}
+    </div>
+    ${f.plus ? `
+    <div class="fair-blaettern">
+      <button class="iconbtn links" data-fair-blaettern="1" aria-label="Früher"${f.frueher ? "" : " disabled"}>‹</button>
+      <span data-fair-titel>${esc(f.titel)}</span>
+      <button class="iconbtn" data-fair-blaettern="-1" aria-label="Später"${f.zurueck ? "" : " disabled"}>›</button>
+    </div>` : ""}`;
+}
+
+/** Wer wie viel mehr gemacht hat, als ausgemacht war — und wie es vorher stand. */
+function fairSatz(f) {
+  const [p, q] = f.personen;
+  const soll = f.soll[p.id];
+  const mehr = f.waage.je[p.id] - Math.round(f.waage.gesamt * soll / 100);
+  const wer = mehr >= 0 ? p : q;
+  // Satz und Abzeichen sagen dasselbe: „genau“ nur, wenn auch das Abzeichen ausgeglichen sagt.
+  const ausgeglichen = fairUrteil(fairAnteil(f.waage.je, p.id), soll).u === "gut";
+  let satz = mehr === 0 || (ausgeglichen && Math.abs(mehr) <= 2) ? "<b>Genau im Soll.</b>"
+    : `<b>${wer.ich ? "Du hast" : `${esc(wer.name)} hat`} ${Math.abs(mehr)} ${Math.abs(mehr) === 1 ? "Cleanie" : "Cleanies"} mehr</b> gemacht, als fair wäre.`;
+  if (f.vorher.gesamt) {
+    const a = fairAnteil(f.waage.je, p.id), v = fairAnteil(f.vorher.je, p.id);
+    const besser = Math.abs(v - soll) - Math.abs(a - soll);
+    satz += " " + (besser > 0 ? `Ausgeglichener als ${f.vorherText}, da stand es <b>${v} : ${100 - v}</b>.`
+      : besser < 0 ? `Schiefer als ${f.vorherText}, da stand es ${v} : ${100 - v}.` : `So wie ${f.vorherText}.`);
+  }
+  return satz;
+}
+
+function fairSollZeile(f) {
+  const o = f.sollOffen;
+  if (o) {
+    const ziel = f.personen.find((x) => x.id === o.ziel), andere = f.personen.find((x) => x.id !== o.ziel);
+    return `<button class="fair-sollzeile" data-go="wir">
+      <span>Abstimmung läuft: ${esc(ziel?.name)} ${o.neu} : ${esc(andere?.name)} ${100 - o.neu}</span><span>›</span></button>`;
+  }
+  if (!f.sollAenderbar || !ichErwachsen()) return "";
+  return `<button class="fair-sollzeile" data-fair-soll><span>Was fair heißt, stimmt ihr gemeinsam ab</span><span>ändern ›</span></button>`;
+}
+
+function fairWaage(f) {
+  const ps = f.personen;
+  const kopf = fairKopf("Die Waage", `${f.waage.gesamt} Cleanies zusammen`);
+  if (ps.length < 2) {
+    return `<div class="card fair-karte" data-fair-waage>${kopf}
+      <p class="fair-satz">Die Waage braucht zwei Erwachsene. Was die Kinder schaffen, steht unten.</p></div>`;
+  }
+  if (ps.length > 2) return fairWaageViele(f, kopf);
+
+  const [p, q] = ps;
+  const soll = f.soll[p.id];
+  const a = fairAnteil(f.waage.je, p.id);
+  if (a === null) {
+    return `<div class="card fair-karte" data-fair-waage>${kopf}
+      <p class="fair-satz">In diesem Zeitraum ist noch nichts bestätigt. Fair heißt bei euch ${soll} : ${100 - soll}.</p>
+      ${fairSollZeile(f)}</div>`;
+  }
+  const u = fairUrteil(a, soll);
+  return `
+    <div class="card fair-karte" data-fair-waage>
+      ${kopf}
+      <div class="fair-held"><span class="fair-zahl" data-fair-anteil>${a}<small> : </small>${100 - a}</span>
+        <span class="fair-urteil" data-u="${u.u}">${u.zeichen} ${u.text}</span></div>
+      <div class="fair-balken" role="img"
+        aria-label="${esc(p.name)} ${a} Prozent, ${esc(q.name)} ${100 - a} Prozent. Fair wäre ${soll} zu ${100 - soll}.">
+        <span class="f1" style="width:${a}%"></span><span class="f2" style="width:${100 - a}%"></span>
+        <span class="fair-sollstrich" style="left:${soll}%"></span>
+      </div>
+      <div class="fair-enden">
+        <span><i class="f1"></i><b>${esc(p.name)}</b> ${f.waage.je[p.id]}</span>
+        <span class="fair-sollwert" data-fair-soll-text>fair: ${soll} : ${100 - soll}</span>
+        <span><b>${esc(q.name)}</b> ${f.waage.je[q.id]}<i class="f2"></i></span>
+      </div>
+      <p class="fair-satz">${fairSatz(f)}</p>
+      ${fairSollZeile(f)}
+    </div>`;
+}
+
+/** Zu dritt oder mehr: eine Zeile je Person, ein Strich für den fairen Anteil. */
+function fairWaageViele(f, kopf) {
+  const soll = f.soll[f.personen[0].id];
+  const zeilen = f.personen.map((p) => {
+    const a = fairAnteil(f.waage.je, p.id) ?? 0;
+    return `<div class="fair-person">
+      <span class="n">${esc(p.name)}${p.ich ? " (du)" : ""}</span>
+      <span class="fair-einzel" role="img" aria-label="${esc(p.name)} ${a} Prozent"><span style="width:${a}%"></span>
+        <span class="fair-sollstrich" style="left:${f.soll[p.id]}%"></span></span>
+      <span class="w">${a} %</span></div>`;
+  }).join("");
+  return `<div class="card fair-karte" data-fair-waage>${kopf}
+    <div class="fair-personen">${zeilen}</div>
+    <p class="fair-satz">Fair heißt bei euch: alle gleich, je ${String(soll).replace(".", ",")} %. Der Strich zeigt es.</p></div>`;
+}
+
+/** 100-%-Säulen je Abschnitt: unten die erste Person, oben die anderen. */
+function fairVerlauf(f) {
+  const { p, andere, von } = fairSeiten(f);
+  const B = 320, H = 150, oben = 8, unten = 22, links = 30;
+  const n = f.faecher.length;
+  const breite = (B - links) / n;
+  const dicke = Math.min(22, breite - 4);
+  const y = (v) => oben + (H - oben - unten) * (1 - v / 100);
+  let svg = "";
+  for (const v of [0, 50, 100]) {
+    svg += `<line class="gitter" x1="${links}" x2="${B}" y1="${y(v)}" y2="${y(v)}"/><text class="achse" x="0" y="${y(v) + 3}">${v} %</text>`;
+  }
+  const zeilen = [];
+  f.faecher.forEach((fa, i) => {
+    const x = links + i * breite + (breite - dicke) / 2;
+    if (n <= 7 || i % 2 === 0 || i === n - 1) {
+      svg += `<text class="achse" text-anchor="middle" x="${x + dicke / 2}" y="${H - 6}">${esc(fa.label)}</text>`;
+    }
+    const a = fa.je[p.id], b = von(fa.je);
+    const ziel = `<rect class="ziel" x="${x - 3}" y="${y(100)}" width="${dicke + 6}" height="${y(0) - y(100)}" data-fair-fach="${i}" tabindex="0"/>`;
+    if (fa.zukunft || !(a + b)) {
+      svg += `<rect class="leer" x="${x}" y="${y(100)}" width="${dicke}" height="${y(0) - y(100)}" rx="4"/>${ziel}`;
+      return;
+    }
+    const an = Math.round(a / (a + b) * 100);
+    svg += `<g class="saeule" data-fach="${i}">`
+      + (an ? `<rect class="f1" x="${x}" y="${y(an)}" width="${dicke}" height="${y(0) - y(an)}" rx="2"/>` : "")
+      + (an < 100 ? `<rect class="f2" x="${x}" y="${y(100)}" width="${dicke}" height="${Math.max(0, y(an) - y(100) - (an ? 2 : 0))}" rx="2"/>` : "")
+      + `</g>${ziel}`;
+    zeilen.push(`<tr><td>${esc(fa.lang)}</td><td>${a}</td><td>${b}</td><td>${an} %</td></tr>`);
+  });
+  svg += `<line class="sollinie" x1="${links}" x2="${B}" y1="${y(f.soll[p.id])}" y2="${y(f.soll[p.id])}"/>`;
+  return `
+    <div class="card fair-karte">
+      ${fairKopf("Verlauf")}
+      <div class="legende"><span><i class="f1"></i>${esc(p.name)}</span><span><i class="f2"></i>${esc(andere)}</span>
+        <span><i class="strich"></i>fair</span></div>
+      <svg class="fair-saeulen" viewBox="0 0 ${B} ${H}" role="img" aria-label="Anteil von ${esc(p.name)} je Abschnitt">${svg}</svg>
+      <div id="fair-hinweis" class="fair-hinweis">Tippe auf eine Säule für die Zahlen.</div>
+      <details class="tabelle"><summary>Als Tabelle anzeigen</summary>
+        <table class="tabellenansicht"><thead><tr><th>Abschnitt</th><th>${esc(p.name)}</th><th>${esc(andere)}</th><th>${esc(p.name)} %</th></tr></thead>
+        <tbody>${zeilen.join("") || '<tr><td colspan="4" style="text-align:left;color:var(--ink-3)">Noch nichts in diesem Zeitraum.</td></tr>'}</tbody></table>
+      </details>
+    </div>`;
+}
+
+function fairHinweis(i) {
+  const f = fair;
+  const fa = f?.faecher?.[i];
+  const hinweis = document.getElementById("fair-hinweis");
+  if (!fa || !hinweis) return;
+  const { p, andere, von } = fairSeiten(f);
+  document.querySelectorAll(".fair-saeulen .saeule").forEach((g) => g.toggleAttribute("data-aus", g.dataset.fach !== String(i)));
+  const a = fa.je[p.id], b = von(fa.je);
+  hinweis.innerHTML = fa.zukunft ? `<b>${esc(fa.lang)}</b> — noch offen`
+    : !(a + b) ? `<b>${esc(fa.lang)}</b> — nichts bestätigt`
+    : `<b>${esc(fa.lang)}</b> — ${esc(p.name)} ${a} (${Math.round(a / (a + b) * 100)} %), ${esc(andere)} ${b} (${100 - Math.round(a / (a + b) * 100)} %)`;
+}
+
+function fairRaeume(f) {
+  if (!f.raeume.length) return "";
+  const { p, andere, von } = fairSeiten(f);
+  return `
+    <div class="card fair-karte">
+      ${fairKopf("Wer macht was", "nach Raum")}
+      <div class="legende"><span><i class="f1"></i>${esc(p.name)}</span><span><i class="f2"></i>${esc(andere)}</span></div>
+      <div class="fair-raeume">${f.raeume.map((r) => {
+        const a = r.je[p.id], b = von(r.je), an = Math.round(a / ((a + b) || 1) * 100);
+        // Die Zahlen stehen neben dem Balken in Schrift, nicht weiß im Balken:
+        // auf dem Rot wäre kleine weiße Schrift zu schwach.
+        return `<div class="fair-raum" data-fair-raum="${esc(r.name)}">
+          <span class="n">${esc(r.name)}<small>${a + b} Cleanies</small></span>
+          <span class="fair-split" role="img" aria-label="${esc(r.name)}: ${esc(p.name)} ${an} Prozent, ${esc(andere)} ${100 - an} Prozent">
+            ${an ? `<span class="f1" style="width:${an}%"></span>` : ""}${an < 100 ? `<span class="f2" style="width:${100 - an}%"></span>` : ""}</span>
+          <span class="anteil">${an} : ${100 - an}</span></div>`;
+      }).join("")}</div>
+    </div>`;
+}
+
+const FAIR_UNSICHTBAR = [
+  ["bestaetigt", "Bestätigt", "Meldungen der anderen freigegeben"],
+  ["vorgeschlagen", "Vorgeschlagen", "Quests, Werte, Pläne"],
+  ["uebernommen", "Übernommen", "Runden, die jemand anderem gehörten"],
+  ["eingeloest", "Eingelöst", "Cleanies für Belohnungen"]
+];
+
+function fairUnsichtbar(f) {
+  const ps = f.personen;
+  if (!ps.length) return "";
+  return `
+    <div class="card fair-karte">
+      ${fairKopf("Was man nicht sieht", "zählt nicht in die Waage")}
+      <table class="fair-paare">
+        <thead><tr><th></th>${ps.map((p) => `<th>${esc(p.name)}</th>`).join("")}</tr></thead>
+        <tbody>${FAIR_UNSICHTBAR.map(([k, titel, sub]) => `
+          <tr data-fair-unsichtbar="${k}"><td><span class="m">${titel}</span><small>${sub}</small></td>${
+            ps.map((p) => `<td>${f.unsichtbar[k][p.id]}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function fairAufgefallen(f) {
+  const kacheln = f.personen.flatMap((p) => {
+    const x = f.aufgefallen[p.id];
+    if (!x?.quest) return [];
+    const [jj, mm, tt] = x.tag.tag.split("-");
+    return [
+      `<div class="fair-hl"><span class="w">Am häufigsten</span><b>${esc(x.quest.name)}</b><span class="wer">${esc(p.name)} · ${x.quest.mal}×</span></div>`,
+      `<div class="fair-hl"><span class="w">Bester Tag</span><b>${x.tag.n} Cleanies am ${Number(tt)}.${Number(mm)}.</b><span class="wer">${esc(p.name)}</span></div>`
+    ];
+  });
+  if (!kacheln.length) return "";
+  return `<div class="card fair-karte">${fairKopf("Aufgefallen")}<div class="fair-hls">${kacheln.join("")}</div></div>`;
+}
+
+function fairKinder(f) {
+  if (!f.kinder.length) return "";
+  return `
+    <div class="card flat fair-karte" data-fair-kinder>
+      ${fairKopf(f.kinder.length === 1 ? "Das Kind" : "Die Kinder", "nicht in der Waage")}
+      ${f.kinder.map((k) => `
+        <div class="fair-kind">${bild({ ...mitglied(k.id), tier: k.tier, name: k.name }, "sm")}
+          <span class="grow"><b>${esc(k.name)}</b>
+            <small>${k.aufgaben} ${k.aufgaben === 1 ? "Aufgabe" : "Aufgaben"} · ${k.cleanies} Cleanies</small></span></div>`).join("")}
+    </div>`;
+}
+
+/** Ohne Plus: eine Attrappe unter Milchglas, damit man sieht, was es gäbe. */
+function fairSchloss(f) {
+  const attrappe = `
+    <div class="card fair-karte">${fairKopf("Verlauf")}
+      <svg class="fair-saeulen" viewBox="0 0 320 150">${[62, 48, 55, 40, 58, 51, 45].map((v, i) => `
+        <rect class="f1" x="${40 + i * 40}" y="${128 - v}" width="22" height="${v}" rx="2"/>
+        <rect class="f2" x="${40 + i * 40}" y="8" width="22" height="${118 - v}" rx="2"/>`).join("")}</svg></div>
+    <div class="card fair-karte">${fairKopf("Wer macht was")}
+      ${[64, 38, 71, 30].map((v) => `<div class="fair-raum"><span class="n">· · ·</span>
+        <span class="fair-split"><span class="f1" style="width:${v}%"></span><span class="f2" style="width:${100 - v}%"></span></span>
+        <span class="anteil">·· : ··</span></div>`).join("")}</div>`;
+  return `
+    <div class="fair-gesperrt" data-fair-schloss>
+      <div class="fair-attrappe" aria-hidden="true" inert>${attrappe}</div>
+      <div class="fair-schloss">
+        <span class="plus-chip">Plus</span>
+        <b>Der ganze Bericht</b>
+        <p>Monate und Jahr, zurückblättern, wer welchen Raum macht, was man nicht sieht, und der Export.</p>
+        ${f.testen && ichErwachsen() ? '<button class="btn primary block" data-fair-testen>14 Tage kostenlos testen</button>'
+          : f.testen ? "<p>Testen können die Erwachsenen.</p>" : "<p>Euer Test ist vorbei. Plus gibt es bald.</p>"}
+      </div>
+    </div>`;
+}
+
+const MONATSNAMEN = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const vormonat = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d; };
+const monatsSchluessel = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+function schirmFair() {
+  const kopf = (sub) => `
+    <div class="appbar">
+      <button class="iconbtn links" data-go="start" aria-label="Zurück">‹</button>
+      <div><div class="title">Fair-Bericht</div><div class="sub">${sub}</div></div>
+    </div>`;
+  if (!fair) {
+    return kopf("wird geladen …") + `<div class="body"><div class="lader"><img src="/logo.webp" alt="" width="110"></div></div>`;
+  }
+  const f = fair;
+  const namen = f.personen.map((p) => p.name).join(" und ");
+  return kopf(`${esc(f.titel)}${namen ? ` · ${esc(namen)}` : ""}`) + `
+    <div class="body fair" data-fair-zeitraum-ist="${f.zeitraum}">
+      ${fairZeitraum(f)}
+      ${fairWaage(f)}
+      ${f.gesperrt ? fairSchloss(f)
+        // Allein unter Erwachsenen gibt es nichts zu vergleichen — dann nur, was man tut.
+        : (f.personen.length >= 2 ? fairVerlauf(f) + fairRaeume(f) : "") + fairUnsichtbar(f) + fairAufgefallen(f)}
+      ${fairKinder(f)}
+      ${f.plus ? `
+      <button class="rowlink" data-fair-rueckblick>
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-kalender", 17)}</span>
+        <span class="grow"><span class="t">Rückblick auf ${MONATSNAMEN[vormonat().getMonth()]}</span>
+          <span class="m">Der Monat in Karten, zum Durchtippen</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
+      <div class="fair-export">
+        <button class="btn ghost" data-fair-pdf>Als PDF</button>
+        <button class="btn ghost" data-fair-csv>Als Tabelle</button>
+      </div>` : ""}
+      ${f.testBis ? `<p class="fair-fuss">Plus zum Testen bis ${new Date(f.testBis.replace(" ", "T") + "Z").toLocaleDateString("de-DE")}.</p>` : ""}
+    </div>`;
+}
+
+/* ---------- Was fair heißt: ein neues Soll zur Abstimmung ---------- */
+
+function sheetFairSoll() {
+  const f = fair;
+  if (!f?.sollAenderbar) return;
+  const [p, q] = f.personen;
+  const jetzt = f.soll[p.id];
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Was heißt bei euch fair?</h3>
+    <p style="margin:0;font-size:13.5px;color:var(--ink-2)">Nicht jeder Haushalt ist 50 : 50 — wer Vollzeit arbeitet,
+      macht zu Hause vielleicht weniger. Das Soll gilt erst, wenn alle zustimmen.</p>
+    <div class="field"><label>${esc(p.name)} : ${esc(q.name)}</label>
+      <div class="stepper">
+        <button data-fair-soll-schritt="-5" aria-label="weniger für ${esc(p.name)}">−</button>
+        <span class="val" id="fairsoll" data-wert="${jetzt}">${jetzt} : ${100 - jetzt}</span>
+        <button data-fair-soll-schritt="5" aria-label="mehr für ${esc(p.name)}">+</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--ink-3)">heute ${jetzt} : ${100 - jetzt}</span>
+      </div>
+    </div>
+    <div class="field"><label for="grund">Warum? (optional)</label>
+      <textarea id="grund" rows="2" maxlength="300" placeholder="Zum Beispiel: Ich arbeite gerade Vollzeit"></textarea></div>
+    <button class="btn dark block" data-fair-soll-ok>Zur Abstimmung stellen</button>`);
+}
+
+/* ---------- Der Rückblick: der Vormonat in Karten ---------- */
+
+const rueckblick = { daten: null, karte: 0, vorschau: null, geprueft: false };
+
+function rueckblickGesehen(schluessel) {
+  try { return localStorage.getItem("hq-rueckblick") === schluessel; } catch { return false; }
+}
+function rueckblickMerken() {
+  try { localStorage.setItem("hq-rueckblick", monatsSchluessel(vormonat())); } catch { /* dann zeigt er sich noch mal */ }
+}
+
+/** Auf der Startseite in der ersten Woche des Monats — einmal, bis man ihn ansieht. */
+function rueckblickKarte() {
+  if (new Date().getDate() > 7 || !S?.haushalt?.plus || istKindM(S.ich)) return "";
+  if (rueckblickGesehen(monatsSchluessel(vormonat()))) return "";
+  if (!rueckblick.geprueft) {
+    rueckblick.geprueft = true;
+    api(`fair?zeitraum=monat&zurueck=1&versatz=${fairVersatz()}`)
+      .then((d) => { if (d.waage.gesamt > 0 && !d.gesperrt) { rueckblick.vorschau = d; zeichne(); } })
+      .catch(() => {});
+    return "";
+  }
+  const d = rueckblick.vorschau;
+  if (!d) return "";
+  return `
+    <div class="rueckblick-karte">
+      <button class="rk-auf" data-fair-rueckblick="start">
+        <span class="rk-klein">Euer ${esc(d.titel)}</span>
+        <b>Der Rückblick ist da</b>
+        <span class="rk-unter">${d.waage.gesamt} Cleanies · zum Durchtippen ›</span>
+      </button>
+      <button class="rk-weg" data-rb-weg aria-label="Rückblick ausblenden">✕</button>
+    </div>`;
+}
+
+function rueckblickKarten(d) {
+  const ps = d.personen;
+  const karten = [];
+  const aufgaben = d.waage.aufgaben;
+  karten.push(`<span class="rb-klein">${esc(d.titel)}</span><span class="rb-gross">${d.waage.gesamt}</span>
+    <span class="rb-text">Cleanies habt ihr zusammen verdient${aufgaben ? ` — in <b>${aufgaben} ${aufgaben === 1 ? "Aufgabe" : "Aufgaben"}</b>` : ""}.</span><span class="rb-bild">🧹</span>`);
+  if (ps.length === 2 && d.waage.gesamt) {
+    const [p, q] = ps;
+    const a = fairAnteil(d.waage.je, p.id), soll = d.soll[p.id], u = fairUrteil(a, soll);
+    karten.push(`<span class="rb-klein">Die Waage</span><span class="rb-gross">${a} : ${100 - a}</span>
+      <span class="rb-text">${esc(p.name)} ${d.waage.je[p.id]}, ${esc(q.name)} ${d.waage.je[q.id]} Cleanies — fair heißt bei euch ${soll} : ${100 - soll}.</span>
+      <span class="rb-text">${u.u === "gut" ? "<b>Fair verteilt.</b> So darf es bleiben."
+        : `<b>${esc(a > soll ? p.name : q.name)}</b> hat mehr getragen, als ihr ausgemacht habt.`}</span><span class="rb-bild">⚖️</span>`);
+    const raeume = (d.raeume || []).filter((r) => fairSumme(r.je) >= 5)
+      .map((r) => ({ name: r.name, an: Math.round(r.je[p.id] / fairSumme(r.je) * 100) }));
+    if (raeume.length >= 2) {
+      const meins = [...raeume].sort((x, y) => y.an - x.an)[0], deins = [...raeume].sort((x, y) => x.an - y.an)[0];
+      karten.push(`<span class="rb-klein">Wer macht was</span>
+        <span class="rb-mittel">${esc(meins.name)}: ${meins.an} % von ${esc(p.name)}.</span>
+        ${deins.name !== meins.name ? `<span class="rb-text">Und ${esc(deins.name)}: <b>${100 - deins.an} % von ${esc(q.name)}</b>.</span>` : ""}<span class="rb-bild">🧽</span>`);
+    }
+    const u2 = d.unsichtbar;
+    if (u2 && (u2.bestaetigt[p.id] + u2.bestaetigt[q.id])) {
+      const mehr = u2.bestaetigt[p.id] >= u2.bestaetigt[q.id] ? p : q;
+      karten.push(`<span class="rb-klein">Was man nicht sieht</span>
+        <span class="rb-mittel">${esc(mehr.name)} hat ${u2.bestaetigt[mehr.id]}× nachgeschaut und bestätigt.</span>
+        <span class="rb-text">${esc(p.name)} ${u2.bestaetigt[p.id]}×, ${esc(q.name)} ${u2.bestaetigt[q.id]}×. Auch das ist Arbeit — sie zählt nur nicht in die Waage.</span><span class="rb-bild">👀</span>`);
+    }
+    if (d.vorher.gesamt) {
+      const v = fairAnteil(d.vorher.je, p.id), besser = Math.abs(v - soll) - Math.abs(a - soll);
+      karten.push(`<span class="rb-klein">Im Vergleich</span>
+        <span class="rb-mittel">${besser > 0 ? "Fairer" : besser < 0 ? "Schiefer" : "Genauso"} als ${esc(d.vorherText.replace(/^im /, "der "))}.</span>
+        <span class="rb-text">Da stand die Waage bei <b>${v} : ${100 - v}</b>, jetzt bei <b>${a} : ${100 - a}</b>.</span><span class="rb-bild">${besser >= 0 ? "📈" : "📉"}</span>`);
+    }
+    if (u2 && (u2.eingeloest[p.id] + u2.eingeloest[q.id])) {
+      const mehr = u2.eingeloest[p.id] >= u2.eingeloest[q.id] ? p : q;
+      karten.push(`<span class="rb-klein">Gegönnt</span>
+        <span class="rb-mittel">${esc(mehr.name)} hat sich am meisten gegönnt: ${u2.eingeloest[mehr.id]} Cleanies.</span>
+        <span class="rb-text">${esc(p.name)} ${u2.eingeloest[p.id]}, ${esc(q.name)} ${u2.eingeloest[q.id]} Cleanies für Belohnungen.</span><span class="rb-bild">🎁</span>`);
+    }
+  }
+  for (const k of d.kinder.filter((k) => k.cleanies)) {
+    karten.push(`<span class="rb-klein">Und ${esc(k.name)}</span>
+      <span class="rb-mittel">${k.cleanies} Cleanies, ${k.aufgaben} ${k.aufgaben === 1 ? "Aufgabe" : "Aufgaben"}.</span>
+      <span class="rb-text">Nicht in der Waage — aber ein guter Grund, stolz zu sein.</span><span class="rb-bild">${esc(k.tier || "⭐")}</span>`);
+  }
+  return karten;
+}
+
+function rueckblickZeichnen() {
+  const d = rueckblick.daten;
+  if (!d) return;
+  const karten = rueckblickKarten(d);
+  rueckblick.karte = Math.min(rueckblick.karte, karten.length - 1);
+  const letzte = rueckblick.karte === karten.length - 1;
+  let el = document.getElementById("rueckblick");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "rueckblick";
+    el.className = "rueckblick";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-label", `Rückblick ${d.titel}`);
+    document.body.append(el);
+  }
+  el.innerHTML = `
+    <div class="rb-oben">
+      <div class="rb-punkte">${karten.map((_, i) => `<i${i <= rueckblick.karte ? ' class="an"' : ""}></i>`).join("")}</div>
+      <div class="rb-kopf"><div><b>Euer Rückblick</b><span>${esc(d.titel)} · tippen zum Weiterblättern</span></div>
+        <button class="rb-zu" data-rb-zu aria-label="Schließen">✕</button></div>
+    </div>
+    <button class="rb-karte" data-rb-weiter aria-label="${letzte ? "Von vorn" : "Nächste Karte"}">
+      ${karten[rueckblick.karte]}
+      <span class="rb-weiter">${letzte ? "Das war's." : "Tippen für mehr ›"}</span>
+    </button>
+    ${letzte ? '<button class="btn dark block rb-teilen" data-rb-teilen>Teilen</button>' : ""}`;
+  el.querySelector("[data-rb-weiter]")?.focus({ preventScroll: true });
+}
+
+async function rueckblickOeffnen() {
+  rueckblick.daten = rueckblick.vorschau
+    || await api(`fair?zeitraum=monat&zurueck=1&versatz=${fairVersatz()}`);
+  rueckblick.karte = 0;
+  rueckblickMerken();
+  rueckblickZeichnen();
+}
+
+function rueckblickZu() {
+  document.getElementById("rueckblick")?.remove();
+  rueckblick.vorschau = null;
+  zeichne();
+}
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && document.getElementById("rueckblick")) rueckblickZu();
+});
+
+/* ---------- Export ---------- */
+
+function fairTabelle(f) {
+  const zelle = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const zeile = (...werte) => werte.map(zelle).join(";");
+  const ps = f.personen, namen = ps.map((p) => p.name);
+  const z = [zeile("Homi Point Fair-Bericht", f.titel, `${f.von} bis ${f.bis}`), ""];
+  z.push(zeile("Abschnitt", ...namen));
+  for (const fa of f.faecher.filter((x) => !x.zukunft)) z.push(zeile(fa.lang, ...ps.map((p) => fa.je[p.id])));
+  z.push(zeile("Zusammen", ...ps.map((p) => f.waage.je[p.id])));
+  z.push(zeile("Anteil in %", ...ps.map((p) => fairAnteil(f.waage.je, p.id) ?? "")));
+  z.push(zeile("Fair heißt in %", ...ps.map((p) => f.soll[p.id])), "");
+  z.push(zeile("Raum", ...namen));
+  for (const r of f.raeume) z.push(zeile(r.name, ...ps.map((p) => r.je[p.id])));
+  z.push("", zeile("Was man nicht sieht", ...namen));
+  for (const [k, titel] of FAIR_UNSICHTBAR) z.push(zeile(titel, ...ps.map((p) => f.unsichtbar[k][p.id])));
+  if (f.kinder.length) {
+    z.push("", zeile("Kinder (nicht in der Waage)", "Aufgaben", "Cleanies"));
+    for (const k of f.kinder) z.push(zeile(k.name, k.aufgaben, k.cleanies));
+  }
+  return "﻿" + z.join("\r\n") + "\r\n";
+}
+
+function fairHerunterladen(text, name) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Drucken heißt hier: als PDF sichern. Immer hell, alle Tabellen offen. */
+function fairDrucken() {
+  const thema = document.documentElement.dataset.theme;
+  const zu = [...document.querySelectorAll(".fair details:not([open])")];
+  document.documentElement.dataset.theme = "hell";
+  zu.forEach((d) => d.setAttribute("open", ""));
+  addEventListener("afterprint", () => {
+    document.documentElement.dataset.theme = thema;
+    zu.forEach((d) => d.removeAttribute("open"));
+  }, { once: true });
+  print();
+}
+
+/* ---------- Bedienen ---------- */
+
+const FAIR_KLICKS = "[data-fair-zeitraum],[data-fair-blaettern],[data-fair-fach],[data-fair-soll],[data-fair-soll-schritt],"
+  + "[data-fair-soll-ok],[data-fair-testen],[data-fair-pdf],[data-fair-csv],[data-fair-rueckblick],[data-rb-weiter],"
+  + "[data-rb-zu],[data-rb-teilen],[data-rb-weg]";
+
+async function fairNeu() {
+  await fairLaden();
+  zeichne();
+}
+
+async function fairKlick(el) {
+  if (!el.matches(FAIR_KLICKS)) return false;
+  const d = el.dataset;
+
+  if (d.fairZeitraum) {
+    if (el.hasAttribute("data-zu")) { toast("Monate und Jahr gibt es mit Plus."); return true; }
+    fairWahl.zeitraum = d.fairZeitraum;
+    fairWahl.zurueck = 0;
+    try { localStorage.setItem("hq-fair-zeitraum", d.fairZeitraum); } catch { /* nur für dieses Mal */ }
+    await fairNeu();
+    return true;
+  }
+  if (d.fairBlaettern) {
+    fairWahl.zurueck = Math.max(0, fairWahl.zurueck + Number(d.fairBlaettern));
+    await fairNeu();
+    return true;
+  }
+  if (d.fairFach !== undefined) { fairHinweis(Number(d.fairFach)); return true; }
+  if (el.hasAttribute("data-fair-soll")) { sheetFairSoll(); return true; }
+  if (d.fairSollSchritt) {
+    const feld = document.getElementById("fairsoll");
+    const wert = Math.max(10, Math.min(90, Number(feld.dataset.wert) + Number(d.fairSollSchritt)));
+    feld.dataset.wert = wert;
+    feld.textContent = `${wert} : ${100 - wert}`;
+    return true;
+  }
+  if (el.hasAttribute("data-fair-soll-ok")) {
+    const wert = Number(document.getElementById("fairsoll").dataset.wert);
+    await api("proposals", { art: "fair_soll", zielId: fair.personen[0].id, wert,
+                             grund: document.getElementById("grund")?.value || "" });
+    sheetZu();
+    toast("Steht zur Abstimmung. Es gilt, sobald alle zustimmen.");
+    await laden(true);
+    await fairNeu();
+    return true;
+  }
+  if (el.hasAttribute("data-fair-testen")) {
+    await api("fair/testen", {});
+    toast("14 Tage Plus — viel Spaß beim Nachschauen.");
+    await laden(true);
+    await fairNeu();
+    return true;
+  }
+  if (el.hasAttribute("data-fair-pdf")) { fairDrucken(); return true; }
+  if (el.hasAttribute("data-fair-csv")) {
+    fairHerunterladen(fairTabelle(fair), `fair-bericht-${fair.von}-bis-${fair.bis}.csv`);
+    toast("Tabelle gespeichert.");
+    return true;
+  }
+  if (el.hasAttribute("data-fair-rueckblick")) { await rueckblickOeffnen(); return true; }
+  if (el.hasAttribute("data-rb-weiter")) {
+    const anzahl = rueckblickKarten(rueckblick.daten).length;
+    rueckblick.karte = (rueckblick.karte + 1) % anzahl;
+    rueckblickZeichnen();
+    return true;
+  }
+  if (el.hasAttribute("data-rb-zu")) { rueckblickZu(); return true; }
+  if (el.hasAttribute("data-rb-weg")) { rueckblickMerken(); rueckblick.vorschau = null; zeichne(); return true; }
+  if (el.hasAttribute("data-rb-teilen")) {
+    const d = rueckblick.daten;
+    const [p, q] = d.personen;
+    const a = p && q ? fairAnteil(d.waage.je, p.id) : null;
+    const text = `Unser ${d.titel} bei Homi Point: ${d.waage.gesamt} Cleanies zusammen${
+      a !== null ? `, ${p.name} ${a} : ${100 - a} ${q.name}` : ""}.`;
+    if (navigator.share) await navigator.share({ text }).catch(() => {});
+    else { await navigator.clipboard.writeText(text); toast("Kopiert."); }
+    return true;
+  }
+  return false;
+}
 
 /* ------------------------------------------------------------------ Diagramm antippen */
 

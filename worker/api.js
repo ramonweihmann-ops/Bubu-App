@@ -27,6 +27,7 @@ import {
   konfigPruefen, eventAnlegen, eventAendern, eventAus,
   eventsNachziehen, eventsVon, eventPruefen
 } from "./events.js";
+import { fairBericht, plusTesten, plusLage, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -97,6 +98,11 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "transfers" && teile[2] === "decide") return json(await uebertragungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
+    if (pfad === "fair") {
+      const f = url.searchParams;
+      return json(await fairBericht(env, ich, { zeitraum: f.get("zeitraum"), zurueck: f.get("zurueck"), versatz: f.get("versatz") }));
+    }
+    if (pfad === "fair/testen") return json(await plusTesten(env, ich));
     if (pfad === "phasen") return json(await phasenAendern(env, ich, koerper));
     if (pfad === "wochenziel") return json(await wochenzielSetzen(env, ich, koerper));
     if (pfad === "gifs") return json(await gifAnlegen(env, ich, koerper));
@@ -766,6 +772,7 @@ async function zustand(env, ich, versatz = 0) {
       belegt: mit.length, ichVerwalte: mein.rolle === "verwalter",
       strafe: !!haus.strafe_an,
       kurs: haus.kurs, pin: !!haus.eltern_pin,
+      plus: (await plusLage(env, paar)).plus,
       // Die zwei Grenzen des Jubels. Die dritte Stufe ist nach oben offen.
       phasen: { leise: haus.phase_leise, mittel: haus.phase_mittel }
     },
@@ -808,6 +815,8 @@ async function zustand(env, ich, versatz = 0) {
            : p.kind === "ruecktritt" ? `${vorname(namenJe[p.created_by] || "")} tritt zurück`
            : p.name,
       aufgabe: p.kind === "ruecktritt" ? p.name : null,
+      // Beim Soll: wessen Anteil sich ändert.
+      ziel: p.kind === "fair_soll" ? p.target_id : null,
       alt: p.old_value,
       neu: p.new_value,
       grund: p.reason,
@@ -881,9 +890,9 @@ async function melden(env, ich, daten, { still = false } = {}) {
 
   const meldung = id();
   await env.DB.prepare(
-    `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note)
-     values (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung).run();
+    `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note, uebernommen_von)
+     values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+  ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung, besonders?.fremd || null).run();
   if (still) return { ok: true, id: meldung };
 
   // Allein unter kleinen Kindern bestätigt niemand — dann zählt es gleich.
@@ -1195,11 +1204,12 @@ async function vorschlagen(env, ich, daten) {
   const arten = ["quest_points", "new_quest", "reward_cost", "new_reward", "delete_quest", "delete_reward",
                  "neue_aktion", "neue_aufgabe", "aufgabe_aendern", "delete_aufgabe",
                  "urlaub_person", "urlaub_haushalt", "ruecktritt",
-                 "neues_event", "event_aendern", "event_aus", "kurs"];
+                 "neues_event", "event_aendern", "event_aus", "kurs", "fair_soll"];
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
   if (istKindProfil(ich)) throw new Fehler("Vorschlagen dürfen die Großen", 403);
   if (art === "kurs") return kursVorschlagen(env, ich, daten);
+  if (art === "fair_soll") return fairSollVorschlagen(env, ich, daten);
   if (art === "neues_event" || art === "event_aendern") return eventVorschlagen(env, ich, daten);
   if (art === "event_aus") return eventEndeVorschlagen(env, ich, daten);
   if (art === "ruecktritt") return ruecktrittVorschlagen(env, ich, daten);
@@ -1692,6 +1702,7 @@ async function uebernehmen(env, vorschlag) {
       .bind(vorschlag.target_id, vorschlag.couple_id),
     kurs: () => env.DB.prepare("update couples set kurs = ?1 where id = ?2")
       .bind(vorschlag.new_value, vorschlag.couple_id),
+    fair_soll: () => fairSollUebernehmen(env, vorschlag),
     urlaub_person: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
     urlaub_haushalt: () => urlaubAnlegen(env, vorschlag, anhang(vorschlag)),
     // Die Zuteilung fällt weg, die Frist bleibt stehen: der Haushalt braucht

@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Haus-Quest Fair-Bericht</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen zum Anfassen. Farben und Schrift wie in der App;
+ * die zwei Personen tragen das Blau und das Rot der Auswertung. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --p1:#2f6fd0; --p2:#ec0f06; --p1-tint:#dbe7fa; --p2-tint:#fcdcd9; --neutral-zelle:#eef1f6;
+  --gitter:#e8edf6;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45); --schatten:rgba(21,44,79,.45);
+  --tip-bg:#152c4f; --tip-ink:#fff;
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --p1:#4f86e0; --p2:#ec4a42; --p1-tint:#1d3358; --p2-tint:#46201f; --neutral-zelle:#22324d;
+    --gitter:#26385a;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+    --tip-bg:#e8eef8; --tip-ink:#0f1c31;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --p1:#4f86e0; --p2:#ec4a42; --p1-tint:#1d3358; --p2-tint:#46201f; --neutral-zelle:#22324d;
+  --gitter:#26385a;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+  --tip-bg:#e8eef8; --tip-ink:#0f1c31;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:70ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);border-radius:999px;padding:2px 9px}
+.vorbild.tipp{color:var(--frei);background:var(--frei-tint)}
+.bu{font-size:13px;color:var(--ink-2);margin:0}
+.bu b{color:var(--ink)}
+
+/* ---------- Die Schalter über allen Telefonen ---------- */
+.regler{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--bg);border:1px solid var(--line);
+  border-radius:16px;padding:12px 14px;margin:0 0 22px;position:sticky;top:env(safe-area-inset-top,0px);z-index:30}
+@media (max-width: 720px){ .regler{position:static} }
+.regler .gruppe{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.regler .marke{white-space:nowrap}
+.schalter{display:inline-flex;background:var(--tint);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.schalter button{font:inherit;font-size:12.5px;font-weight:600;border:none;background:none;border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:736px;background:var(--bg);border:9px solid var(--rahmen);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px var(--schatten);display:flex;flex-direction:column;margin:0 auto}
+.kopf{flex:none;padding:14px 14px 6px;display:flex;align-items:center;gap:8px}
+.kopf .titel{font-family:var(--font-display);font-weight:800;font-size:21px;letter-spacing:-.025em;line-height:1.1}
+.kopf .sub{font-size:11.5px;color:var(--ink-3)}
+.knopf{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);
+  background:var(--bg);cursor:pointer;flex:none;padding:0;font:inherit;font-size:15px;margin-left:auto}
+.zeitraum{flex:none;display:flex;gap:5px;padding:0 14px 8px;overflow-x:auto;scrollbar-width:none}
+.zeitraum::-webkit-scrollbar{display:none}
+.zeitraum button{flex:none;font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink-2);
+  border-radius:999px;padding:5px 11px;cursor:pointer}
+.zeitraum button[aria-pressed="true"]{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.zeitraum button[data-zu]{opacity:.55}
+.inhalt{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 14px 18px;display:flex;flex-direction:column;gap:12px;min-height:0;position:relative}
+.inhalt>*{flex-shrink:0}
+.karte{border:1px solid var(--line);border-radius:16px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:9px}
+.karte.flach{background:var(--tint);border-color:transparent}
+.ktitel{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.ktitel .rechts{margin-left:auto;font-family:var(--font-ui);letter-spacing:0;text-transform:none;font-size:11px}
+.satz{font-size:13px;color:var(--ink-2);margin:0;line-height:1.45}
+.satz b{color:var(--ink)}
+.legende{display:flex;gap:12px;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+.legende span{display:inline-flex;align-items:center;gap:5px}
+.legende i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legende i.strich{width:14px;height:0;border-top:2px solid var(--ink);border-radius:0}
+.p1{background:var(--p1)} .p2{background:var(--p2)}
+
+/* Die Waage: ein Balken, an der Soll-Marke gemessen. */
+.held{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.held .zahl{font-family:var(--font-display);font-weight:800;font-size:48px;letter-spacing:-.03em;line-height:1}
+.held .zahl small{font-size:26px;color:var(--ink-3);font-weight:700}
+.urteil{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;margin-left:auto}
+.urteil[data-u="gut"]{background:var(--frei-tint);color:var(--frei)}
+.urteil[data-u="leicht"]{background:var(--bald-tint);color:var(--bald)}
+.urteil[data-u="schief"]{background:var(--bald);color:var(--bg)}
+.waage{position:relative;padding:16px 0 18px}
+.waage .balken{display:flex;gap:2px;height:22px}
+.waage .balken span{display:block;height:100%}
+.waage .balken span:first-child{border-radius:6px 0 0 6px}
+.waage .balken span:last-child{border-radius:0 6px 6px 0}
+.waage .soll{position:absolute;top:8px;bottom:10px;width:2px;background:var(--ink);transform:translateX(-1px)}
+.waage .soll b{position:absolute;bottom:-17px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.waage .enden{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);margin-top:20px}
+.waage .enden b{color:var(--ink)}
+
+/* Säulen: jede Säule ist 100 %, geteilt bei Annas Anteil; die Linie ist das Soll. */
+.saeulen{position:relative}
+.saeulen svg{display:block;width:100%;height:auto;overflow:visible}
+.saeulen .achse{fill:var(--ink-3);font-size:9.5px;font-family:var(--font-ui)}
+.saeulen .gitter{stroke:var(--gitter);stroke-width:1}
+.saeulen .solllinie{stroke:var(--ink);stroke-width:1.5}
+.saeulen .s1{fill:var(--p1)} .saeulen .s2{fill:var(--p2)} .saeulen .leer{fill:var(--tint-2)}
+.saeulen .ziel{cursor:default;fill:transparent}
+.saeulen .ziel:hover+.sicht,.saeulen .ziel:focus+.sicht{opacity:.82}
+.saeulen .wert{fill:var(--ink);font-size:10px;font-weight:700;font-family:var(--font-ui)}
+details.tabelle{font-size:12px;color:var(--ink-2)}
+details.tabelle summary{cursor:pointer;font-weight:600;color:var(--ruhig)}
+details.tabelle table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}
+details.tabelle th,details.tabelle td{text-align:right;padding:3px 4px;border-bottom:1px solid var(--line)}
+details.tabelle th:first-child,details.tabelle td:first-child{text-align:left}
+details.tabelle th{font-weight:600;color:var(--ink-3)}
+
+/* Wer macht was: ein 100-%-Balken je Raum. */
+.raeume{display:flex;flex-direction:column;gap:9px}
+.raum{display:grid;grid-template-columns:92px 1fr 44px;align-items:center;gap:8px}
+.raum .n{font-size:12.5px;font-weight:600;line-height:1.2;min-width:0}
+.raum .n span{font-family:var(--emoji);margin-right:4px}
+.raum .bar{display:flex;gap:2px;height:16px}
+.raum .bar span{display:flex;align-items:center;font-size:10px;font-weight:700;color:#fff;padding:0 5px;min-width:0;overflow:hidden;white-space:nowrap}
+.raum .bar span:first-child{border-radius:4px 0 0 4px}
+.raum .bar span:last-child{border-radius:0 4px 4px 0;justify-content:flex-end}
+.raum .summe{font-size:11px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+
+/* Zwei Zahlen nebeneinander, je Person. */
+.paare{display:flex;flex-direction:column;gap:2px}
+.paar{display:grid;grid-template-columns:1fr 52px 52px;gap:6px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
+.paar:last-child{border-bottom:none}
+.paar.kopf{font-size:11px;color:var(--ink-3);padding-top:0;display:grid}
+.paar b{font-family:var(--font-display);font-weight:800;font-size:15px;text-align:right}
+.paar .k{display:flex;align-items:center;justify-content:flex-end;gap:5px}
+.paar .k i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.paar .m{color:var(--ink-2)}
+.paar .m small{display:block;font-size:11px;color:var(--ink-3)}
+.highlights{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hl{background:var(--tint);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.hl .w{font-size:11px;color:var(--ink-3)}
+.hl b{font-size:13px;line-height:1.25}
+.hl .wer{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-2)}
+.hl .wer i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.kind{display:flex;align-items:center;gap:10px;font-size:13px}
+.kind .tier{width:34px;height:34px;border-radius:50%;background:var(--bald-tint);display:grid;place-items:center;font-family:var(--emoji);font-size:19px;flex:none}
+.kind .grow{flex:1;min-width:0}
+.kind small{display:block;font-size:11.5px;color:var(--ink-3)}
+.knoepfe{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;font:inherit;font-size:13px;font-weight:700;border-radius:12px;padding:10px;border:1px solid var(--line);cursor:pointer;background:var(--bg);color:var(--ink);text-align:center;white-space:nowrap}
+.btn.dunkel{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.btn.rot{background:var(--akzent-flaeche);border-color:var(--akzent-flaeche);color:var(--auf-akzent)}
+
+/* Ohne Plus: der Rest liegt hinter einem Schleier. */
+.gesperrt{position:relative}
+.gesperrt>.verdeckt{filter:blur(5px);opacity:.55;pointer-events:none;user-select:none}
+.schloss{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-align:center;padding:28px 16px 16px}
+.schloss .box{position:sticky;top:12px}
+.storykarte .schloss{justify-content:center}
+.story>.btn{flex:0 0 auto}
+.schloss .box{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 12px 30px -16px var(--schatten);max-width:280px}
+.schloss b{font-size:15px}
+.schloss p{margin:0;font-size:12.5px;color:var(--ink-2)}
+.plus-chip{display:inline-flex;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;background:var(--accent-tint);color:var(--accent);align-self:center}
+
+/* B: Story — eine Erkenntnis je Karte */
+.story{flex:1;display:flex;flex-direction:column;min-height:0;padding:4px 14px 16px;gap:10px}
+.punkte{display:flex;gap:4px}
+.punkte i{flex:1;height:3px;border-radius:2px;background:var(--tint-2)}
+.punkte i.an{background:var(--ink)}
+.storykarte{flex:1;border-radius:24px;padding:22px 20px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;
+  background:var(--kontrast-bg);color:var(--kontrast-ink);cursor:pointer;border:none;font:inherit;text-align:left;min-height:0}
+.storykarte .klein{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--kontrast-ink-2)}
+.storykarte .gross{font-family:var(--font-display);font-weight:800;font-size:56px;letter-spacing:-.04em;line-height:1}
+.storykarte .mittel{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+.storykarte .text{font-size:15px;line-height:1.45;color:var(--kontrast-ink-2)}
+.storykarte .text b{color:var(--kontrast-ink)}
+.storykarte .bild{font-family:var(--emoji);font-size:64px;line-height:1;margin-top:auto}
+.storykarte .waage .soll{background:var(--kontrast-ink)}
+.storykarte .waage .soll b,.storykarte .waage .enden{color:var(--kontrast-ink-2)}
+.storykarte .waage .enden b{color:var(--kontrast-ink)}
+.storykarte .weiter{margin-top:auto;font-size:12px;color:var(--kontrast-ink-2)}
+.storykarte .schloss .box{color:var(--ink)}
+
+/* C: Kompakt — alles auf einen Blick */
+.kacheln{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kachel{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.kachel .k{font-size:11px;color:var(--ink-3)}
+.kachel .v{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.02em;line-height:1.1}
+.kachel .z{font-size:11px;color:var(--ink-2)}
+.kachel svg{display:block;width:100%;height:34px;overflow:visible}
+.kachel .linie{fill:none;stroke:var(--p1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.kachel .basis{stroke:var(--ink-3);stroke-width:1}
+.kachel .punkt{fill:var(--p1);stroke:var(--bg);stroke-width:2}
+.karte-raster{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.zelle{border-radius:10px;padding:8px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;font-size:11px;color:var(--ink);border:none;font:inherit}
+.zelle span{font-family:var(--emoji);font-size:20px;line-height:1}
+.zelle b{font-size:12px}
+.zelle small{font-size:9.5px;color:var(--ink-2);text-align:center;line-height:1.2}
+.skala{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink-3)}
+.skala .verlauf{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--p2),var(--neutral-zelle),var(--p1))}
+
+/* Der Tooltip — einer je Telefon */
+.tip{position:absolute;z-index:40;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);border-radius:10px;padding:7px 9px;font-size:11.5px;
+  line-height:1.35;box-shadow:0 8px 20px -8px var(--schatten);display:none;max-width:200px}
+.tip[data-an]{display:block}
+.tip .zeile{display:flex;align-items:center;gap:6px}
+.tip .zeile i{width:12px;height:0;border-top:2px solid;display:inline-block}
+.tip b{font-weight:800}
+
+/* ---------- Text ---------- */
+table.doku{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+table.doku th,table.doku td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.doku th{font-family:var(--font-data);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+table.doku tr:last-child td{border-bottom:none}
+.tabelle-huelle{overflow-x:auto}
+.tabelle-huelle table{min-width:560px}
+.empfehlung{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:20px;padding:18px 20px}
+.empfehlung h3{color:var(--kontrast-ink);margin-bottom:8px}
+.empfehlung p{margin:0 0 8px;color:var(--kontrast-ink-2);font-size:14px;max-width:80ch}
+.empfehlung p:last-child{margin:0}
+.empfehlung b{color:var(--kontrast-ink)}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0;max-width:80ch}
+.frage b{display:block}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Fair-Bericht</h1>
+  <p class="lead">Wer macht wie viel — nicht nur diese Woche, sondern über Monate. Nach Räumen, mit der
+    Arbeit, die man nicht sieht, und gemessen an dem, was ihr gemeinsam für <b>fair</b> haltet. Der Bericht
+    ist der Grund für Plus: Er löst den Streit mit Zahlen statt mit Gefühl.</p>
+  <p class="lead">Alle drei Telefone zeigen dieselben Beispieldaten von <b>Anna und Ben</b>, heute ist
+    Donnerstag, der 22. Oktober. Die Schalter darunter gelten für alle drei: Zeitraum, Plus an oder aus, was fair
+    heißt, und ob Lena (7) mit im Haushalt ist.</p>
+
+  <div class="regler" id="regler">
+    <div class="gruppe"><span class="marke">Zeitraum</span>
+      <div class="schalter" data-gruppe="zeitraum">
+        <button data-zeitraum="woche" aria-pressed="false">Woche</button>
+        <button data-zeitraum="monat" aria-pressed="true">Monat</button>
+        <button data-zeitraum="quartal" aria-pressed="false">13 Wochen</button>
+        <button data-zeitraum="jahr" aria-pressed="false">Jahr</button>
+      </div></div>
+    <div class="gruppe"><span class="marke">Fair heißt</span>
+      <div class="schalter" data-gruppe="soll">
+        <button data-soll="50" aria-pressed="true">50 : 50</button>
+        <button data-soll="55" aria-pressed="false">55 : 45</button>
+        <button data-soll="60" aria-pressed="false">60 : 40</button>
+        <button data-soll="40" aria-pressed="false">40 : 60</button>
+      </div></div>
+    <div class="gruppe"><span class="marke">Plus</span>
+      <div class="schalter" data-gruppe="plus">
+        <button data-plus="an" aria-pressed="true">mit Plus</button>
+        <button data-plus="aus" aria-pressed="false">ohne Plus</button>
+      </div></div>
+    <div class="gruppe"><span class="marke">Lena</span>
+      <div class="schalter" data-gruppe="kind">
+        <button data-kind="an" aria-pressed="true">dabei</button>
+        <button data-kind="aus" aria-pressed="false">nicht dabei</button>
+      </div></div>
+  </div>
+
+  <div class="reihe" id="varianten">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Bericht</h3><span class="vorbild tipp">wie ein Kontoauszug</span></div>
+      <div class="phone" id="pa"></div>
+      <p class="bu">Eine Seite zum Durchscrollen: oben die <b>Waage</b>, darunter der Verlauf, wer welchen
+        Raum macht, was man nicht sieht, und unten der Export. Jede Grafik hat ihre Tabelle.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Monatsgeschichte</h3><span class="vorbild">wie ein Jahresrückblick</span></div>
+      <div class="phone" id="pb"></div>
+      <p class="bu">Eine Erkenntnis je Karte, zum Durchtippen. Weniger Zahlen, mehr Gespräch — und am Ende
+        als Bild zum Teilen. Passt gut zum Monatsende.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · Auf einen Blick</h3><span class="vorbild">wie ein Armaturenbrett</span></div>
+      <div class="phone" id="pc"></div>
+      <p class="bu">Alles auf einem Schirm: Anteil, Trend, eine Karte der Räume. Schnell gelesen, aber
+        ohne Erklärung — wer nachfragen will, muss in den ganzen Bericht.</p>
+    </div>
+  </div>
+
+  <h2>Woraus der Bericht rechnet</h2>
+  <p class="lead">Alles kommt aus Buchungen, die es heute schon gibt. Neu ist nur, wie sie zusammengezählt werden.</p>
+  <div class="tabelle-huelle"><table class="doku">
+    <tr><th style="width:24%">Im Bericht</th><th>Woraus</th><th style="width:26%">Zählt zur Waage?</th></tr>
+    <tr><td><b>Cleanies</b></td><td>bestätigte Quests der Person im Zeitraum</td><td>ja — das ist die Waage</td></tr>
+    <tr><td><b>Wer macht was</b></td><td>dieselben Cleanies, nach dem Raum der Quest</td><td>ja, aufgeteilt</td></tr>
+    <tr><td><b>Bestätigt</b></td><td>Meldungen der anderen, die die Person freigegeben hat</td><td>nein, eigene Zeile</td></tr>
+    <tr><td><b>Vorgeschlagen</b></td><td>Abstimmungen, die die Person gestartet hat: neue Quests, Werte, Pläne</td><td>nein, eigene Zeile</td></tr>
+    <tr><td><b>Übernommen</b></td><td>Runden aus dem Haushaltsplan, die eigentlich jemand anderem gehörten</td><td>nein, eigene Zeile</td></tr>
+    <tr><td><b>Eingelöst</b></td><td>Belohnungen, die sich die Person gegönnt hat</td><td>nein, eigene Zeile</td></tr>
+    <tr><td><b>Kinder</b></td><td>ihre Cleanies und Aufgaben, für sich</td><td>nein — die Waage ist für die Großen</td></tr>
+  </table></div>
+
+  <h2>Ohne Plus und mit Plus</h2>
+  <div class="tabelle-huelle"><table class="doku">
+    <tr><th style="width:24%"></th><th>Ohne Plus</th><th>Mit Plus</th></tr>
+    <tr><td><b>Zeitraum</b></td><td>diese Woche</td><td>Woche, Monat, 13 Wochen, Jahr — und zurückblättern</td></tr>
+    <tr><td><b>Waage</b></td><td>ja</td><td>ja, mit eurem Soll</td></tr>
+    <tr><td><b>Verlauf, Räume, unsichtbare Arbeit</b></td><td>verdeckt, mit Vorschau</td><td>ja</td></tr>
+    <tr><td><b>Export</b></td><td>—</td><td>als PDF und als Tabelle</td></tr>
+    <tr><td><b>Ausprobieren</b></td><td>ein kurzes Video: 24 Stunden alles</td><td>14 Tage kostenlos, dann Plus</td></tr>
+  </table></div>
+
+  <h2>Entschieden und gebaut</h2>
+  <div class="empfehlung">
+    <h3>A · Bericht als Seite, B · Rückblick zum Monatsanfang.</h3>
+    <p><b>Der Bericht (A)</b> liegt hinter der Kachel „Diese Woche“ auf der Startseite und unter „Wir“:
+      Waage, Verlauf, wer welchen Raum macht, was man nicht sieht, Aufgefallen, die Kinder — jede Grafik mit
+      Tabelle, dazu Export als PDF und als Tabelle.</p>
+    <p><b>Der Rückblick (B)</b> liegt in der ersten Woche eines Monats als Karte auf der Startseite und ist
+      jederzeit aus dem Bericht zu öffnen.</p>
+    <p><b>Fair heißt, was ihr ausmacht:</b> zu zweit per Abstimmung, Start bei 50 : 50, in Fünferschritten.
+      In einer WG zu dritt zählt gleich verteilt. <b>Die unsichtbare Arbeit</b> steht daneben, nicht in der Waage.
+      <b>Ohne Plus</b> gibt es die Waage der laufenden Woche, der Rest liegt sichtbar hinter dem Schloss, 14 Tage
+      zum Testen. <b>Kinder</b> stehen in einer eigenen Zeile, nicht in der Waage.</p>
+    <p><b>So ist es gebaut:</b> Gerechnet wird aus den Buchungen, die es schon gibt (worker/fair.js). Bis Plus
+      sich kaufen lässt, haben es alle Haushalte.</p>
+  </div>
+
+</div>
+
+<script>
+/* ---------------------------------------------------------------- Beispieldaten
+ * Ein Jahr Anna und Ben, Tag für Tag, bis Donnerstag, 22. Oktober 2026. Fester
+ * Zufall, damit bei jedem Laden dasselbe dasteht. Anna machte vor einem Jahr gut
+ * 60 %, heute knapp 55 % — es wird fairer, aber langsam. */
+const P = [{ id: "a", name: "Anna" }, { id: "b", name: "Ben" }];
+const RAEUME = [
+  { id: "kueche", name: "Küche", icon: "🍳", a: 0.68, w: 0.32, quest: "Küche reinigen nach Kochen" },
+  { id: "waesche", name: "Wäsche", icon: "🧺", a: 0.74, w: 0.2, quest: "Wäsche aufhängen + zusammenlegen" },
+  { id: "wohnen", name: "Wohnen", icon: "🛋️", a: 0.5, w: 0.2, quest: "Staubsaugen ganze Wohnung" },
+  { id: "bad", name: "Bad", icon: "🛁", a: 0.36, w: 0.16, quest: "Bad reinigen" },
+  { id: "draussen", name: "Müll & Draußen", icon: "🗑️", a: 0.2, w: 0.12, quest: "Restmüll entsorgen" }
+];
+const HEUTE = new Date(Date.UTC(2026, 9, 22));
+const TAG = 86400000;
+const MONATE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+const MONATE_LANG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const WTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+function zufall(saat) { return () => { saat |= 0; saat = saat + 0x6D2B79F5 | 0; let t = Math.imul(saat ^ saat >>> 15, 1 | saat); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const r = zufall(43);
+const TAGE = [];
+for (let i = 364; i >= 0; i--) {
+  const datum = new Date(HEUTE.getTime() - i * TAG);
+  const wochenende = [0, 6].includes(datum.getUTCDay());
+  const fortschritt = (364 - i) / 364;
+  const anteil = Math.min(.92, Math.max(.12, .62 - .08 * fortschritt + (r() - .5) * .42));
+  const gesamt = Math.round((8 + r() * 7) * (wochenende ? 1.45 : 1));
+  const tag = { datum, a: {}, b: {}, aufgabenA: 0, aufgabenB: 0, vorschlagA: 0, vorschlagB: 0, uebernommenA: 0, uebernommenB: 0,
+                einA: 0, einB: 0, kind: 0, kindAufgaben: 0 };
+  for (const raum of RAEUME) {
+    const teil = gesamt * raum.w;
+    const a = Math.min(.95, Math.max(.05, raum.a + (anteil - .56)));
+    tag.a[raum.id] = Math.round(teil * a + (r() - .5) * .8);
+    tag.b[raum.id] = Math.round(teil * (1 - a) + (r() - .5) * .8);
+    if (tag.a[raum.id] < 0) tag.a[raum.id] = 0;
+    if (tag.b[raum.id] < 0) tag.b[raum.id] = 0;
+  }
+  const summe = (p) => Object.values(tag[p]).reduce((n, v) => n + v, 0);
+  tag.aufgabenA = Math.round(summe("a") / 2.6);
+  tag.aufgabenB = Math.round(summe("b") / 2.6);
+  tag.vorschlagA = r() < .05 ? 1 : 0;
+  tag.vorschlagB = r() < .025 ? 1 : 0;
+  tag.uebernommenA = r() < .06 ? 1 : 0;
+  tag.uebernommenB = r() < .03 ? 1 : 0;
+  tag.einA = r() < .07 ? [3, 4, 5, 8][Math.floor(r() * 4)] : 0;
+  tag.einB = r() < .09 ? [3, 4, 5, 8, 15][Math.floor(r() * 5)] : 0;
+  tag.kind = i < 120 ? Math.round(r() * 3.4) : 0;
+  tag.kindAufgaben = tag.kind ? Math.max(1, Math.round(tag.kind / 1.6)) : 0;
+  TAGE.push(tag);
+}
+
+/* ---------------------------------------------------------------- Zeiträume */
+const tagIndex = (d) => Math.round((d.getTime() - TAGE[0].datum.getTime()) / TAG);
+const kw = (d) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + 3 - ((x.getUTCDay() + 6) % 7)); const j = new Date(Date.UTC(x.getUTCFullYear(), 0, 4)); return 1 + Math.round(((x - j) / TAG - 3 + ((j.getUTCDay() + 6) % 7)) / 7); };
+const datumKurz = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
+
+/** Die Fächer eines Zeitraums: Tage einer Woche, Wochen eines Monats, … */
+function faecher(zeitraum, versatz = 0) {
+  const heute = tagIndex(HEUTE);
+  if (zeitraum === "woche") {
+    const montag = heute - ((HEUTE.getUTCDay() + 6) % 7) - 7 * versatz;
+    return Array.from({ length: 7 }, (_, i) => {
+      const t = montag + i;
+      const d = new Date(TAGE[0].datum.getTime() + t * TAG);
+      return { label: WTAGE[d.getUTCDay()], lang: `${WTAGE[d.getUTCDay()]} ${datumKurz(d)}`, von: t, bis: t, zukunft: t > heute };
+    });
+  }
+  if (zeitraum === "monat") {
+    const m = (HEUTE.getUTCMonth() - versatz + 12) % 12, j = HEUTE.getUTCFullYear() - (HEUTE.getUTCMonth() - versatz < 0 ? 1 : 0);
+    const erster = tagIndex(new Date(Date.UTC(j, m, 1))), letzter = tagIndex(new Date(Date.UTC(j, m + 1, 0)));
+    const liste = [];
+    let start = erster;
+    while (start <= letzter) {
+      const d = new Date(TAGE[0].datum.getTime() + start * TAG);
+      const ende = Math.min(letzter, start + (6 - ((d.getUTCDay() + 6) % 7)));
+      liste.push({ label: `KW ${kw(d)}`, lang: `KW ${kw(d)} · ${datumKurz(d)}–${datumKurz(new Date(TAGE[0].datum.getTime() + ende * TAG))}`,
+                   von: start, bis: Math.min(ende, heute), zukunft: start > heute });
+      start = ende + 1;
+    }
+    return liste;
+  }
+  if (zeitraum === "quartal") {
+    const montag = heute - ((HEUTE.getUTCDay() + 6) % 7) - 7 * 13 * versatz;
+    return Array.from({ length: 13 }, (_, i) => {
+      const von = montag - 7 * (12 - i);
+      const d = new Date(TAGE[0].datum.getTime() + von * TAG);
+      return { label: `${kw(d)}`, lang: `KW ${kw(d)} · ab ${datumKurz(d)}`, von, bis: Math.min(von + 6, heute), zukunft: false };
+    });
+  }
+  return Array.from({ length: 12 }, (_, i) => {
+    const m = (HEUTE.getUTCMonth() - 11 + i + 12) % 12, j = HEUTE.getUTCFullYear() - (HEUTE.getUTCMonth() - 11 + i < 0 ? 1 : 0);
+    const von = Math.max(0, tagIndex(new Date(Date.UTC(j, m, 1)))), bis = Math.min(heute, tagIndex(new Date(Date.UTC(j, m + 1, 0))));
+    return { label: MONATE[m].slice(0, 1), lang: `${MONATE_LANG[m]} ${j}`, von, bis, zukunft: false };
+  });
+}
+
+const ZEITRAUM_TEXT = { woche: "Diese Woche", monat: "Oktober", quartal: "Letzte 13 Wochen", jahr: "Letzte 12 Monate" };
+const VORHER_TEXT = { woche: "letzte Woche", monat: "im September", quartal: "die 13 Wochen davor", jahr: "das Jahr davor" };
+
+/** Alles, was der Bericht für einen Bereich von Tagen braucht. */
+function summen(von, bis) {
+  const s = { a: 0, b: 0, raum: {}, aufgabenA: 0, aufgabenB: 0, vorschlagA: 0, vorschlagB: 0, uebernommenA: 0, uebernommenB: 0,
+              einA: 0, einB: 0, kind: 0, kindAufgaben: 0, besterA: null, besterB: null };
+  for (const raum of RAEUME) s.raum[raum.id] = { a: 0, b: 0 };
+  for (let t = Math.max(0, von); t <= Math.min(bis, TAGE.length - 1); t++) {
+    const tag = TAGE[t];
+    let a = 0, b = 0;
+    for (const raum of RAEUME) { a += tag.a[raum.id]; b += tag.b[raum.id]; s.raum[raum.id].a += tag.a[raum.id]; s.raum[raum.id].b += tag.b[raum.id]; }
+    s.a += a; s.b += b;
+    for (const k of ["aufgabenA", "aufgabenB", "vorschlagA", "vorschlagB", "uebernommenA", "uebernommenB", "einA", "einB", "kind", "kindAufgaben"]) s[k] += tag[k];
+    if (!s.besterA || a > s.besterA.n) s.besterA = { n: a, datum: tag.datum };
+    if (!s.besterB || b > s.besterB.n) s.besterB = { n: b, datum: tag.datum };
+  }
+  // Bestätigt hat, wer die Meldungen der anderen freigibt — zu zweit also die andere Person.
+  s.bestaetigtA = s.aufgabenB; s.bestaetigtB = s.aufgabenA;
+  return s;
+}
+const anteilA = (s) => s.a + s.b ? Math.round(s.a / (s.a + s.b) * 100) : 50;
+
+function urteil(anteil, soll) {
+  const d = Math.abs(anteil - soll);
+  return d <= 5 ? { u: "gut", text: "ausgeglichen", zeichen: "✓" }
+       : d <= 12 ? { u: "leicht", text: "leicht schief", zeichen: "◐" }
+       : { u: "schief", text: "schief", zeichen: "!" };
+}
+
+/* ---------------------------------------------------------------- Zustand */
+const Z = { zeitraum: "monat", soll: 50, plus: true, kind: true, story: 0 };
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const prozent = (n) => `${n} %`;
+
+/** Was gerade gilt: ohne Plus immer diese Woche. */
+function lage() {
+  const zeitraum = Z.plus ? Z.zeitraum : "woche";
+  const f = faecher(zeitraum).filter((x) => !x.zukunft);
+  const alle = faecher(zeitraum);
+  const s = summen(f[0].von, f[f.length - 1].bis);
+  const vf = faecher(zeitraum, 1);
+  const vorher = summen(vf[0].von, vf[vf.length - 1].bis);
+  return { zeitraum, faecher: alle, s, vorher, anteil: anteilA(s), anteilVorher: anteilA(vorher) };
+}
+
+/* ---------------------------------------------------------------- Bausteine */
+function waageHtml(L) {
+  const u = urteil(L.anteil, Z.soll);
+  return `
+    <div class="held"><span class="zahl">${L.anteil}<small> : </small>${100 - L.anteil}</span>
+      <span class="urteil" data-u="${u.u}" data-urteil>${u.zeichen} ${u.text}</span></div>
+    <div class="waage" role="img" aria-label="Anna ${L.anteil} Prozent, Ben ${100 - L.anteil} Prozent, fair wäre ${Z.soll} zu ${100 - Z.soll}">
+      <div class="balken"><span class="p1" style="width:${L.anteil}%" data-tip="Anna|${L.s.a} Cleanies · ${L.anteil} %"></span>
+        <span class="p2" style="width:${100 - L.anteil}%" data-tip="Ben|${L.s.b} Cleanies · ${100 - L.anteil} %"></span></div>
+      <span class="soll" style="left:${Z.soll}%"><b>fair: ${Z.soll} : ${100 - Z.soll}</b></span>
+      <div class="enden"><span><i class="p1" style="width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px"></i><b>Anna</b> ${L.s.a} Cleanies</span>
+        <span><b>Ben</b> ${L.s.b} Cleanies<i class="p2" style="width:9px;height:9px;border-radius:2px;display:inline-block;margin-left:5px"></i></span></div>
+    </div>`;
+}
+
+function waageSatz(L) {
+  const gesamt = L.s.a + L.s.b;
+  const fairA = Math.round(gesamt * Z.soll / 100);
+  const mehr = L.s.a - fairA;
+  const wer = mehr >= 0 ? "Anna" : "Ben";
+  const n = Math.abs(mehr);
+  const vergleich = Math.abs(L.anteilVorher - Z.soll) - Math.abs(L.anteil - Z.soll);
+  return `<p class="satz">${n <= 2 ? "<b>Genau im Soll.</b>" : `<b>${wer}</b> hat <b>${n} Cleanies</b> mehr gemacht, als fair wäre.`}
+    ${vergleich > 0 ? `Ausgeglichener als ${VORHER_TEXT[L.zeitraum]}, da stand es <b>${L.anteilVorher} : ${100 - L.anteilVorher}</b>.`
+      : vergleich < 0 ? `Schiefer als ${VORHER_TEXT[L.zeitraum]}, da stand es ${L.anteilVorher} : ${100 - L.anteilVorher}.` : `So wie ${VORHER_TEXT[L.zeitraum]}.`}</p>`;
+}
+
+/** Säulen je Fach, jede bei Annas Anteil geteilt. Die Linie ist das Soll. */
+function saeulenHtml(L) {
+  const B = 312, H = 140, oben = 8, unten = 22, links = 26;
+  const breite = (B - links) / L.faecher.length;
+  const dicke = Math.min(22, breite - 4);
+  const y = (p) => oben + (H - oben - unten) * (1 - p / 100);
+  let svg = "";
+  for (const p of [0, 50, 100]) svg += `<line class="gitter" x1="${links}" x2="${B}" y1="${y(p)}" y2="${y(p)}"/><text class="achse" x="0" y="${y(p) + 3}">${p} %</text>`;
+  const zeilen = [];
+  L.faecher.forEach((f, i) => {
+    const x = links + i * breite + (breite - dicke) / 2;
+    const zeigen = L.faecher.length <= 7 || i % 2 === 0 || i === L.faecher.length - 1;
+    if (zeigen) svg += `<text class="achse" text-anchor="middle" x="${x + dicke / 2}" y="${H - 7}">${esc(f.label)}</text>`;
+    if (f.zukunft) { svg += `<rect class="leer" x="${x}" y="${y(100)}" width="${dicke}" height="${y(0) - y(100)}" rx="4" tabindex="0" data-tip="${esc(f.lang)}|noch offen"/>`; return; }
+    const s = summen(f.von, f.bis);
+    if (!s.a && !s.b) { svg += `<rect class="leer" x="${x}" y="${y(100)}" width="${dicke}" height="${y(0) - y(100)}" rx="4"/>`; return; }
+    const a = anteilA(s);
+    const tip = `${f.lang}|Anna ${s.a} · ${a} %|Ben ${s.b} · ${100 - a} %`;
+    const hA = y(0) - y(a);
+    svg += `<rect class="ziel" x="${x - 2}" y="${y(100)}" width="${dicke + 4}" height="${y(0) - y(100)}" tabindex="0" data-tip="${esc(tip)}"/>`;
+    svg += `<g class="sicht"><rect class="s1" x="${x}" y="${y(a)}" width="${dicke}" height="${Math.max(0, hA)}" rx="2"/>`;
+    svg += `<rect class="s2" x="${x}" y="${y(100)}" width="${dicke}" height="${Math.max(0, y(a) - y(100) - 2)}" rx="2"/></g>`;
+    zeilen.push(`<tr><td>${esc(f.lang)}</td><td>${s.a}</td><td>${s.b}</td><td>${a} %</td></tr>`);
+  });
+  svg += `<line class="solllinie" x1="${links}" x2="${B}" y1="${y(Z.soll)}" y2="${y(Z.soll)}"/>`;
+  return `
+    <div class="legende"><span><i class="p1"></i>Anna</span><span><i class="p2"></i>Ben</span><span><i class="strich"></i>fair</span></div>
+    <div class="saeulen" data-diagramm="verlauf"><svg viewBox="0 0 ${B} ${H}" role="img" aria-label="Annas Anteil je Abschnitt">${svg}</svg></div>
+    <details class="tabelle"><summary>Als Tabelle</summary><table><tr><th>Abschnitt</th><th>Anna</th><th>Ben</th><th>Anna %</th></tr>${zeilen.join("")}</table></details>`;
+}
+
+function raeumeHtml(L) {
+  const liste = RAEUME.map((r) => ({ ...r, ...L.s.raum[r.id] })).sort((x, y) => (y.a + y.b) - (x.a + x.b));
+  return `<div class="legende"><span><i class="p1"></i>Anna</span><span><i class="p2"></i>Ben</span></div>
+    <div class="raeume">${liste.map((r) => {
+      const ges = r.a + r.b, a = ges ? Math.round(r.a / ges * 100) : 50;
+      return `<div class="raum"><span class="n"><span>${r.icon}</span>${esc(r.name)}</span>
+        <span class="bar" tabindex="0" data-tip="${esc(`${r.name}|Anna ${r.a} · ${a} %|Ben ${r.b} · ${100 - a} %`)}">
+          <span class="p1" style="width:${a}%">${a >= 28 ? `${a} %` : ""}</span><span class="p2" style="width:${100 - a}%">${100 - a >= 28 ? `${100 - a} %` : ""}</span></span>
+        <span class="summe">${ges}</span></div>`;
+    }).join("")}</div>
+    <p class="satz">Rechts: Cleanies im Raum zusammen.</p>`;
+}
+
+function unsichtbarHtml(L) {
+  const s = L.s;
+  const zeile = (titel, sub, a, b) => `<div class="paar"><span class="m">${titel}<small>${sub}</small></span><b>${a}</b><b>${b}</b></div>`;
+  return `<div class="paare">
+    <div class="paar kopf"><span></span><span class="k"><i class="p1"></i>Anna</span><span class="k"><i class="p2"></i>Ben</span></div>
+    ${zeile("Bestätigt", "Meldungen der anderen freigegeben", s.bestaetigtA, s.bestaetigtB)}
+    ${zeile("Vorgeschlagen", "Quests, Werte, Pläne", s.vorschlagA, s.vorschlagB)}
+    ${zeile("Übernommen", "Runden, die jemand anderem gehörten", s.uebernommenA, s.uebernommenB)}
+    ${zeile("Eingelöst", "Cleanies für Belohnungen", s.einA, s.einB)}
+  </div>`;
+}
+
+function highlightsHtml(L) {
+  const s = L.s;
+  const lieblingsraum = (p) => RAEUME.map((r) => ({ r, n: s.raum[r.id][p] })).sort((x, y) => y.n - x.n)[0].r;
+  const la = lieblingsraum("a"), lb = lieblingsraum("b");
+  return `<div class="highlights">
+    <div class="hl"><span class="w">Am häufigsten</span><b>${esc(la.quest)}</b><span class="wer"><i class="p1"></i>Anna</span></div>
+    <div class="hl"><span class="w">Am häufigsten</span><b>${esc(lb.quest)}</b><span class="wer"><i class="p2"></i>Ben</span></div>
+    <div class="hl"><span class="w">Bester Tag</span><b>${s.besterA ? `${s.besterA.n} Cleanies am ${datumKurz(s.besterA.datum)}` : "–"}</b><span class="wer"><i class="p1"></i>Anna</span></div>
+    <div class="hl"><span class="w">Bester Tag</span><b>${s.besterB ? `${s.besterB.n} Cleanies am ${datumKurz(s.besterB.datum)}` : "–"}</b><span class="wer"><i class="p2"></i>Ben</span></div>
+  </div>`;
+}
+
+const kindHtml = (L) => !Z.kind ? "" : `
+    <div class="karte flach"><span class="ktitel">Die Kinder <span class="rechts">nicht in der Waage</span></span>
+      <div class="kind"><span class="tier">🦊</span><span class="grow"><b>Lena</b><small>${L.s.kindAufgaben} Aufgaben · ${L.s.kind} Cleanies</small></span></div></div>`;
+
+function schloss(inhalt, wofuer) {
+  if (Z.plus) return inhalt;
+  return `<div class="gesperrt"><div class="verdeckt" aria-hidden="true" inert>${inhalt}</div>
+    <div class="schloss"><div class="box"><span class="plus-chip">Plus</span><b>${wofuer}</b>
+      <p>Monate und Jahr, Räume, was man nicht sieht, Export. 14 Tage kostenlos testen.</p>
+      <button class="btn rot" data-test>14 Tage testen</button>
+      <button class="btn" data-video>Video ansehen: 24 Stunden alles</button></div></div></div>`;
+}
+
+const zeitraumLeiste = () => `<div class="zeitraum">${["woche", "monat", "quartal", "jahr"].map((z) =>
+  `<button data-zeitraum="${z}" aria-pressed="${(Z.plus ? Z.zeitraum : "woche") === z}" ${!Z.plus && z !== "woche" ? "data-zu" : ""}>${
+    { woche: "Woche", monat: "Monat", quartal: "13 Wochen", jahr: "Jahr" }[z]}${!Z.plus && z !== "woche" ? " 🔒" : ""}</button>`).join("")}</div>`;
+
+/* ---------------------------------------------------------------- A · Bericht */
+function telefonA() {
+  const L = lage();
+  return `<div class="kopf"><div><div class="titel">Fair-Bericht</div><div class="sub">${ZEITRAUM_TEXT[L.zeitraum]} · Anna und Ben</div></div>
+      <button class="knopf" aria-label="Teilen">⤴</button></div>
+    ${zeitraumLeiste()}
+    <div class="inhalt">
+      <div class="karte"><span class="ktitel">Die Waage <span class="rechts">${L.s.a + L.s.b} Cleanies zusammen</span></span>
+        ${waageHtml(L)}${waageSatz(L)}</div>
+      ${schloss(`
+      <div class="karte"><span class="ktitel">Verlauf</span>${saeulenHtml(L)}</div>
+      <div class="karte"><span class="ktitel">Wer macht was</span>${raeumeHtml(L)}</div>
+      <div class="karte"><span class="ktitel">Was man nicht sieht</span>${unsichtbarHtml(L)}</div>
+      <div class="karte"><span class="ktitel">Aufgefallen</span>${highlightsHtml(L)}</div>`, "Der ganze Bericht")}
+      ${kindHtml(L)}
+      ${Z.plus ? `<div class="knoepfe"><button class="btn" data-export="pdf">Als PDF</button><button class="btn" data-export="csv">Als Tabelle</button></div>` : ""}
+    </div>`;
+}
+
+/* ---------------------------------------------------------------- B · Geschichte */
+function storyKarten(L) {
+  const s = L.s;
+  const u = urteil(L.anteil, Z.soll);
+  const raeume = RAEUME.map((r) => ({ r, a: s.raum[r.id].a + s.raum[r.id].b ? Math.round(s.raum[r.id].a / (s.raum[r.id].a + s.raum[r.id].b) * 100) : 50 }));
+  const annaRaum = [...raeume].sort((x, y) => y.a - x.a)[0];
+  const benRaum = [...raeume].sort((x, y) => x.a - y.a)[0];
+  const vergleich = Math.abs(L.anteilVorher - Z.soll) - Math.abs(L.anteil - Z.soll);
+  const karten = [
+    `<span class="klein">${ZEITRAUM_TEXT[L.zeitraum]}</span><span class="gross">${s.a + s.b}</span>
+     <span class="text">Cleanies habt ihr zusammen verdient — in <b>${s.aufgabenA + s.aufgabenB} Aufgaben</b>.</span><span class="bild">🧹</span>`,
+    `<span class="klein">Die Waage</span>${waageHtml(L)}
+     <span class="text">${u.u === "gut" ? "<b>Fair verteilt.</b> So darf es bleiben." : `<b>${L.anteil > Z.soll ? "Anna" : "Ben"}</b> hat mehr getragen, als ihr ausgemacht habt.`}</span>`,
+    `<span class="klein">Wer macht was</span><span class="mittel">Anna ist die Seele der ${esc(annaRaum.r.name)}: ${annaRaum.a} %.</span>
+     <span class="text">Und Ben hält <b>${esc(benRaum.r.name)}</b> im Griff — ${100 - benRaum.a} % davon sind seins.</span><span class="bild">${annaRaum.r.icon}${benRaum.r.icon}</span>`,
+    `<span class="klein">Was man nicht sieht</span><span class="mittel">${s.bestaetigtB > s.bestaetigtA ? "Ben" : "Anna"} hat ${Math.max(s.bestaetigtA, s.bestaetigtB)}× nachgeschaut und bestätigt.</span>
+     <span class="text">Anna ${s.bestaetigtA}×, Ben ${s.bestaetigtB}×. Auch das ist Arbeit — sie zählt nur nicht in die Waage.</span><span class="bild">👀</span>`,
+    `<span class="klein">Im Vergleich</span><span class="mittel">${vergleich > 0 ? `Fairer als ${VORHER_TEXT[L.zeitraum]} (${L.anteilVorher} : ${100 - L.anteilVorher}).`
+      : vergleich < 0 ? `Schiefer als ${VORHER_TEXT[L.zeitraum]} (${L.anteilVorher} : ${100 - L.anteilVorher}).` : `So wie ${VORHER_TEXT[L.zeitraum]}.`}</span>
+     <span class="text">${VORHER_TEXT[L.zeitraum].replace(/^./, (c) => c.toUpperCase())} stand die Waage bei <b>${L.anteilVorher} : ${100 - L.anteilVorher}</b>.</span><span class="bild">${vergleich >= 0 ? "📈" : "📉"}</span>`,
+    `<span class="klein">Gegönnt</span><span class="mittel">${s.einB >= s.einA ? "Ben" : "Anna"} hat sich am meisten gegönnt: ${Math.max(s.einA, s.einB)} Cleanies.</span>
+     <span class="text">Anna ${s.einA}, Ben ${s.einB} Cleanies für Belohnungen.</span><span class="bild">🎁</span>`
+  ];
+  if (Z.kind) karten.push(`<span class="klein">Und Lena</span><span class="mittel">${s.kind} Cleanies, ${s.kindAufgaben} Aufgaben.</span>
+     <span class="text">Nicht in der Waage — aber ein guter Grund, stolz zu sein.</span><span class="bild">🦊</span>`);
+  return karten;
+}
+
+function telefonB() {
+  const L = lage();
+  const karten = storyKarten(L);
+  const frei = Z.plus ? karten.length : 2;
+  const gesamt = Z.plus ? karten.length : 3;
+  Z.story = Math.min(Z.story, gesamt - 1);
+  const offen = Z.story < frei;
+  return `<div class="kopf"><div><div class="titel">Euer ${L.zeitraum === "woche" ? "Wochenrückblick" : "Rückblick"}</div>
+      <div class="sub">${ZEITRAUM_TEXT[L.zeitraum]} · tippen zum Weiterblättern</div></div>
+      <button class="knopf" aria-label="Schließen">✕</button></div>
+    <div class="story">
+      <div class="punkte">${Array.from({ length: gesamt }, (_, i) => `<i class="${i <= Z.story ? "an" : ""}"></i>`).join("")}</div>
+      <div class="storykarte" data-story role="button" tabindex="0" aria-label="Nächste Karte">
+        ${offen ? karten[Z.story] + `<span class="weiter">${Z.story < gesamt - 1 ? "Tippen für mehr ›" : "Das war's."}</span>`
+          : schloss(`<span class="mittel">Wer macht was, was man nicht sieht, und wie es vorher war.</span>`, "Der ganze Rückblick")}
+      </div>
+      ${Z.plus && Z.story === gesamt - 1 ? '<button class="btn dunkel" data-export="bild">Als Bild teilen</button>' : ""}
+    </div>`;
+}
+
+/* ---------------------------------------------------------------- C · Kompakt */
+function telefonC() {
+  const L = lage();
+  const u = urteil(L.anteil, Z.soll);
+  const punkte = L.faecher.filter((f) => !f.zukunft).map((f) => { const s = summen(f.von, f.bis); return s.a + s.b ? anteilA(s) : null; });
+  const B = 130, H = 34, n = punkte.length;
+  const xs = (i) => n === 1 ? B / 2 : 4 + i * (B - 8) / (n - 1);
+  // Ausschnitt ±25 um das Soll, damit man Bewegung sieht
+  const ys = (p) => 3 + (H - 6) * (1 - (Math.max(-25, Math.min(25, p - Z.soll)) + 25) / 50);
+  const pfad = punkte.map((p, i) => p === null ? "" : `${i && punkte[i - 1] !== null ? "L" : "M"}${xs(i).toFixed(1)} ${ys(p).toFixed(1)}`).join(" ");
+  const letzte = punkte.length - 1 - [...punkte].reverse().findIndex((p) => p !== null);
+  const zelleFarbe = (a) => {
+    const d = a - Z.soll;
+    if (Math.abs(d) <= 5) return "background:var(--neutral-zelle)";
+    const staerke = Math.min(1, (Math.abs(d) - 5) / 30);
+    return `background:color-mix(in srgb, var(${d > 0 ? "--p1" : "--p2"}) ${Math.round(18 + staerke * 50)}%, var(--neutral-zelle))`;
+  };
+  return `<div class="kopf"><div><div class="titel">Fair auf einen Blick</div><div class="sub">${ZEITRAUM_TEXT[L.zeitraum]}</div></div>
+      <button class="knopf" aria-label="Ganzer Bericht">›</button></div>
+    ${zeitraumLeiste()}
+    <div class="inhalt">
+      <div class="kacheln">
+        <div class="kachel"><span class="k">Anna : Ben</span><span class="v">${L.anteil} : ${100 - L.anteil}</span>
+          <span class="urteil" data-u="${u.u}" style="margin:2px 0 0;align-self:flex-start">${u.zeichen} ${u.text}</span></div>
+        ${Z.plus ? `<div class="kachel"><span class="k">Annas Anteil im Verlauf</span>
+          <svg viewBox="0 0 ${B} ${H}" role="img" aria-label="Annas Anteil im Verlauf"><line class="basis" x1="0" x2="${B}" y1="${ys(Z.soll)}" y2="${ys(Z.soll)}"/>
+            <path class="linie" d="${pfad}"/>${punkte[letzte] !== null ? `<circle class="punkt" r="4" cx="${xs(letzte)}" cy="${ys(punkte[letzte])}" tabindex="0" data-tip="Zuletzt|Anna ${punkte[letzte]} %"/>` : ""}</svg>
+          <span class="z">Linie: fair (${Z.soll} %)</span></div>`
+          : `<div class="kachel"><span class="k">Zusammen</span><span class="v">${L.s.a + L.s.b}</span><span class="z">Cleanies diese Woche</span></div>`}
+      </div>
+      ${schloss(`
+      <div class="karte"><span class="ktitel">Wer macht was <span class="rechts">Anteil von Anna</span></span>
+        <div class="karte-raster">${RAEUME.map((r) => { const x = L.s.raum[r.id]; const a = x.a + x.b ? Math.round(x.a / (x.a + x.b) * 100) : 50;
+          return `<div class="zelle" style="${zelleFarbe(a)}" tabindex="0" data-tip="${esc(`${r.name}|Anna ${x.a} · ${a} %|Ben ${x.b} · ${100 - a} %`)}"><span>${r.icon}</span><b>${a} %</b><small>${esc(r.name)}</small></div>`; }).join("")}</div>
+        <div class="skala"><span>mehr Ben</span><span class="verlauf"></span><span>mehr Anna</span></div></div>
+      <div class="kacheln">
+        <div class="kachel"><span class="k">Bestätigt</span><span class="v">${L.s.bestaetigtA} · ${L.s.bestaetigtB}</span><span class="z">Anna · Ben</span></div>
+        <div class="kachel"><span class="k">Eingelöst</span><span class="v">${L.s.einA} · ${L.s.einB}</span><span class="z">Anna · Ben</span></div>
+      </div>`, "Mehr auf einen Blick")}
+      ${Z.kind ? `<div class="kind"><span class="tier">🦊</span><span class="grow"><b>Lena</b><small>${L.s.kind} Cleanies · nicht in der Waage</small></span></div>` : ""}
+    </div>`;
+}
+
+/* ---------------------------------------------------------------- Zeichnen und Bedienen */
+const TELEFONE = { pa: telefonA, pb: telefonB, pc: telefonC };
+function zeichne(id) {
+  const t = document.getElementById(id);
+  const alt = t.querySelector(".inhalt");
+  const oben = alt ? alt.scrollTop : 0;
+  t.innerHTML = TELEFONE[id]() + '<div class="tip" role="tooltip"></div>';
+  const neu = t.querySelector(".inhalt");
+  if (neu) neu.scrollTop = oben;
+}
+function allesNeu() {
+  for (const id of Object.keys(TELEFONE)) zeichne(id);
+  for (const g of document.querySelectorAll("#regler [data-gruppe]")) {
+    for (const b of g.querySelectorAll("button")) {
+      const [k, v] = Object.entries(b.dataset)[0];
+      const ist = { zeitraum: Z.zeitraum, soll: String(Z.soll), plus: Z.plus ? "an" : "aus", kind: Z.kind ? "an" : "aus" }[k];
+      b.setAttribute("aria-pressed", String(ist === v));
+    }
+  }
+}
+
+function setzen(d) {
+  if (d.zeitraum) { if (!Z.plus && d.zeitraum !== "woche") return false; Z.zeitraum = d.zeitraum; Z.story = 0; return true; }
+  if (d.soll) { Z.soll = Number(d.soll); return true; }
+  if (d.plus) { Z.plus = d.plus === "an"; Z.story = 0; return true; }
+  if (d.kind) { Z.kind = d.kind === "an"; return true; }
+  return false;
+}
+
+document.getElementById("regler").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b && setzen(b.dataset)) allesNeu();
+});
+
+/** Der Tooltip: Wert zuerst, Name dahinter, ein Strich in der Farbe. */
+function tipZeigen(t, el) {
+  const tip = t.querySelector(".tip");
+  const [kopf, ...zeilen] = el.dataset.tip.split("|");
+  tip.replaceChildren();
+  const k = document.createElement("div");
+  k.textContent = kopf;
+  k.style.cssText = "font-weight:700;margin-bottom:2px";
+  tip.append(k);
+  for (const z of zeilen) {
+    const zeile = document.createElement("div");
+    zeile.className = "zeile";
+    const strich = document.createElement("i");
+    strich.style.borderColor = z.startsWith("Anna") ? "var(--p1)" : z.startsWith("Ben") ? "var(--p2)" : "currentColor";
+    const text = document.createElement("span");
+    text.textContent = z;
+    zeile.append(strich, text);
+    tip.append(zeile);
+  }
+  const a = el.getBoundingClientRect(), p = t.getBoundingClientRect();
+  tip.setAttribute("data-an", "");
+  const x = Math.min(p.width - tip.offsetWidth - 10, Math.max(10, a.left - p.left + a.width / 2 - tip.offsetWidth / 2));
+  const y = a.top - p.top - tip.offsetHeight - 8;
+  tip.style.left = `${x}px`;
+  tip.style.top = `${y < 10 ? a.bottom - p.top + 8 : y}px`;
+}
+function tipWeg(t) { t.querySelector(".tip")?.removeAttribute("data-an"); }
+
+for (const id of Object.keys(TELEFONE)) {
+  const t = document.getElementById(id);
+  const weiterBlaettern = () => {
+    const karten = storyKarten(lage()).length;
+    const gesamt = Z.plus ? karten : 3;
+    Z.story = (Z.story + 1) % gesamt;
+    zeichne("pb");
+    t.querySelector("[data-story]")?.focus({ preventScroll: true });
+  };
+  t.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b && t.contains(b)) {
+      if (b.dataset.zeitraum) { if (setzen(b.dataset)) allesNeu(); return; }
+      if ("test" in b.dataset || "video" in b.dataset) { Z.plus = true; allesNeu(); return; }
+      return;
+    }
+    if (e.target.closest("[data-story]") && !e.target.closest(".schloss")) weiterBlaettern();
+  });
+  t.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-story]")) { e.preventDefault(); weiterBlaettern(); }
+  });
+  t.addEventListener("pointerover", (e) => { const el = e.target.closest("[data-tip]"); if (el && t.contains(el)) tipZeigen(t, el); });
+  t.addEventListener("pointerout", (e) => { if (e.target.closest("[data-tip]")) tipWeg(t); });
+  t.addEventListener("focusin", (e) => { const el = e.target.closest("[data-tip]"); if (el) tipZeigen(t, el); });
+  t.addEventListener("focusout", () => tipWeg(t));
+}
+
+allesNeu();
+</script>
+</body>
+</html>
