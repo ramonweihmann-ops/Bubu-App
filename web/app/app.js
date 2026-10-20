@@ -63,6 +63,7 @@ const beugung = (einzahl, mehrzahl) => mehrere() ? mehrzahl : einzahl;
 const gross = (text) => String(text).charAt(0).toUpperCase() + String(text).slice(1);
 const allein = () => andere().length === 0;
 const nameVon = (id) => id === S?.ich?.id ? "Du"
+  : String(id || "").startsWith("ehemalig-") ? "Ehemaliges Mitglied"
   : vorname((S?.mitglieder || []).find((m) => m.id === id)?.name) || "jemand";
 const mitglied = (id) => (S?.mitglieder || []).find((m) => m.id === id) || { id };
 
@@ -390,6 +391,10 @@ function anmelden() {
     <div class="mitte">
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
       <h1>Homi Point</h1>
+      ${new URLSearchParams(location.search).has("geloescht") ? `
+      <div class="card flat geloescht" data-geloescht><b>Dein Konto ist gelöscht.</b>
+        <span>Danke, dass du dabei warst. Dein Google-Konto bleibt; die Verbindung zu Homi Point trennst du bei
+          Google unter „Drittanbieter-Apps“.</span></div>` : ""}
       <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
       <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
       <button class="btn text" data-kind-code-eingeben>Ich bin ein Kind</button>
@@ -3091,6 +3096,17 @@ function schirmEinstellungen() {
         <span class="grow"><span class="t">Alles exportieren</span>
           <span class="m">Kompletter Stand als Datei</span></span><span style="color:var(--ink-3)">›</span>
       </button>
+      ${istKindM(S.ich) && S.ich.stufe !== "gross" ? "" : `
+      <button class="rowlink" data-haushalt-verlassen>
+        <span class="avatar sm" style="background:var(--tint)">${icon("i-out", 17)}</span>
+        <span class="grow"><span class="t">Haushalt verlassen</span>
+          <span class="m">Dein Konto bleibt</span></span><span style="color:var(--ink-3)">›</span>
+      </button>
+      <button class="rowlink rot" data-konto-loeschen>
+        <span class="avatar sm">✕</span>
+        <span class="grow"><span class="t">Konto löschen</span>
+          <span class="m">Endgültig, mit allem, was dir gehört</span></span><span style="color:var(--ink-3)">›</span>
+      </button>`}
       <button class="btn text block" data-abmelden>Abmelden</button>
     </div>`;
 }
@@ -4770,11 +4786,12 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS);
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS);
   if (!el) return;
   if (await familieKlick(el)) return;
   try {
     if (await fairKlick(el)) return;
+    if (await kontoKlick(el)) return;
   } catch (fehler) {
     toast(fehler.message, true);
     return;
@@ -6421,6 +6438,145 @@ async function fairKlick(el) {
   return false;
 }
 
+/* ------------------------------------------------------------------ Konto löschen und Haushalt verlassen */
+//
+// Beides unter Einstellungen → Konto. Was genau passiert, rechnet der Server
+// (worker/konto.js); das Blatt zeigt es, bevor man bestätigt. Gelöscht wird
+// sofort und endgültig — dafür tippt man „löschen“ ein.
+
+const KONTO_KLICKS = "[data-konto-loeschen],[data-konto-weiter],[data-konto-endgueltig],[data-haushalt-verlassen],[data-verlassen-ok]";
+
+const folgenListe = (zeilen) => `<ul class="folgen">${zeilen.map(([art, text]) => `
+  <li class="${art}"><span class="zeichen" aria-hidden="true">${art === "weg" ? "✕" : art === "bleibt" ? "✓" : "i"}</span><span>${text}</span></li>`).join("")}</ul>`;
+
+const undListe = (namen) => namen.length < 2 ? namen.join("") : `${namen.slice(0, -1).join(", ")} und ${namen.at(-1)}`;
+
+async function sheetKontoLoeschen() {
+  const v = await api("konto/vorschau");
+  const zeilen = [["weg", "<b>Dein Name, deine E-Mail, dein Bild</b> und deine Anmeldung auf allen Geräten."]];
+  let oben = "", tipp = "";
+  if (v.haushalt) {
+    const punkte = S?.ich?.punkte || 0;
+    const offen = meineOffenenSachen().length;
+    if (punkte) zeilen.push(["weg", `<b>Deine ${punkte} Cleanies</b> verfallen.`]);
+    zeilen.push(["weg", `<b>Deine Meldungen, Anträge und Erledigungen</b>${v.letzteErwachsene ? "" : " — auch im Fair-Bericht der anderen"}.`]);
+    if (offen) zeilen.push(["weg", `<b>${offen} offene ${offen === 1 ? "Anfrage" : "Anfragen"}</b> ${offen === 1 ? "wird" : "werden"} zurückgenommen.`]);
+    if (v.letzteErwachsene) {
+      zeilen.push(["weg", "<b>Der ganze Haushalt</b> mit Quests, Belohnungen, Plan und Verlauf."]);
+      if (v.jugendliche.length) zeilen.push(["", `<b>${esc(undListe(v.jugendliche))}</b> ${v.jugendliche.length === 1 ? "behält das eigene Konto, ist" : "behalten ihre Konten, sind"} dann aber in keinem Haushalt.`]);
+      const kinder = v.kinder.map((id) => mitglied(id));
+      if (kinder.length) {
+        oben = `<div class="hinweis"><b>Du bist die letzte erwachsene Person.</b> Mit dir gehen auch die Profile von
+          <span class="kinderchips">${kinder.map((k) => `<span>${esc(vorname(k.name))} ${esc(k.tier || "")}</span>`).join("")}</span></div>`;
+      }
+    } else {
+      zeilen.push(["bleibt", `<b>Der Haushalt bleibt</b> für ${esc(undListe(v.andere))}. Was du verschenkt oder bestätigt hast, bleibt dort — ohne deinen Namen.`]);
+      if (v.nachfolge) zeilen.push(["", `<b>${esc(v.nachfolge)}</b> verwaltet den Haushalt ab dann.`]);
+      if (v.kannGehen) {
+        oben = `<div class="hinweis ruhig">Du willst nur woanders weitermachen?
+          <button class="linkknopf" data-haushalt-verlassen>Nur den Haushalt verlassen ›</button></div>`;
+      }
+      if (punkte) tipp = `<p class="blatt-text">Tipp: Deine Cleanies kannst du vorher
+        <button class="linkknopf" data-sheet="transfer">verschenken ›</button></p>`;
+    }
+  }
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Konto löschen</h3>
+    ${oben}
+    ${folgenListe(zeilen)}
+    ${tipp}
+    ${v.haushalt ? '<button class="btn ghost block" data-export>Erst alles exportieren</button>' : ""}
+    <button class="btn dark block" data-konto-weiter>Weiter</button>
+    <button class="btn text block" data-bleiben>Abbrechen</button>`);
+}
+
+function sheetKontoBestaetigen() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Wirklich löschen?</h3>
+    <p class="blatt-text">Das lässt sich nicht rückgängig machen. Tippe zum Bestätigen <b>löschen</b>.</p>
+    <div class="field"><input id="konto-wort" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="löschen" aria-label="Zum Bestätigen löschen eintippen"></div>
+    <button class="btn primary block" data-konto-endgueltig disabled>Konto endgültig löschen</button>
+    <button class="btn text block" data-bleiben>Abbrechen</button>`);
+  document.getElementById("konto-wort")?.focus();
+}
+
+async function sheetHaushaltVerlassen() {
+  const v = await api("konto/vorschau");
+  if (!v.haushalt) return;
+  if (!v.kannGehen) {
+    sheet(`
+      <div class="grabber"></div>
+      <h3>Haushalt verlassen</h3>
+      <div class="hinweis"><b>Als letzte erwachsene Person kannst du nicht gehen</b> — die Kinder stünden sonst allein da.
+        Lade erst jemanden ein, der übernimmt, oder lösch das Konto mit dem ganzen Haushalt.</div>
+      <button class="btn dark block" data-bleiben>Verstanden</button>`);
+    return;
+  }
+  const punkte = S?.ich?.punkte || 0;
+  const offen = meineOffenenSachen().length;
+  const zeilen = [
+    ["bleibt", "<b>Dein Konto bleibt.</b> Danach gründest du einen neuen Haushalt oder trittst mit einem Code einem bei."]
+  ];
+  if (punkte) zeilen.push(["weg", `<b>Deine ${punkte} Cleanies</b> bleiben hier und verfallen.`]);
+  if (v.andere.length) {
+    zeilen.push(["bleibt", `<b>Der Haushalt bleibt</b> für ${esc(undListe(v.andere))}.`]);
+    if (v.nachfolge) zeilen.push(["", `<b>${esc(v.nachfolge)}</b> verwaltet den Haushalt ab dann.`]);
+  } else {
+    zeilen.push(["weg", "<b>Der Haushalt</b> wird gelöscht — es ist sonst niemand mehr da."]);
+  }
+  if (offen) zeilen.push(["weg", `<b>${offen} offene ${offen === 1 ? "Anfrage" : "Anfragen"}</b> ${offen === 1 ? "wird" : "werden"} zurückgenommen.`]);
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Haushalt verlassen</h3>
+    ${folgenListe(zeilen)}
+    <button class="btn primary block" data-verlassen-ok>Haushalt verlassen</button>
+    <button class="btn text block" data-bleiben>Abbrechen</button>`);
+}
+
+async function kontoKlick(el) {
+  if (!el.matches(KONTO_KLICKS)) return false;
+  if (el.hasAttribute("data-konto-loeschen")) { await sheetKontoLoeschen(); return true; }
+  if (el.hasAttribute("data-konto-weiter")) { sheetKontoBestaetigen(); return true; }
+  if (el.hasAttribute("data-haushalt-verlassen")) { await sheetHaushaltVerlassen(); return true; }
+  if (el.hasAttribute("data-konto-endgueltig")) {
+    el.disabled = true;
+    await api("konto/loeschen", { bestaetigung: document.getElementById("konto-wort")?.value || "" });
+    try { localStorage.removeItem("hq-kindmodus"); localStorage.removeItem("hq-loeschen"); } catch { /* egal */ }
+    // Ganz neu laden: ohne Sitzung landet man bei der Anmeldung, mit einem Gruß.
+    location.replace("/app/?geloescht");
+    return true;
+  }
+  if (el.hasAttribute("data-verlassen-ok")) {
+    el.disabled = true;
+    await api("haushalt/verlassen", {});
+    sheetZu();
+    ansicht = "start";
+    await laden(true);
+    toast("Du hast den Haushalt verlassen.");
+    return true;
+  }
+  return false;
+}
+
+// „löschen“ macht den Knopf scharf.
+document.addEventListener("input", (ev) => {
+  if (ev.target.id !== "konto-wort") return;
+  const knopf = document.querySelector("[data-konto-endgueltig]");
+  if (knopf) knopf.disabled = ev.target.value.trim().toLowerCase() !== "löschen";
+});
+
+/** Von der Löschseite auf haus-quest.com: nach der Anmeldung gleich das Blatt. */
+function loeschWunschPruefen() {
+  let wunsch = false;
+  try { wunsch = localStorage.getItem("hq-loeschen") === "1"; } catch { /* ohne Speicher kein Merken */ }
+  if (!wunsch || !S?.angemeldet) return;
+  try { localStorage.removeItem("hq-loeschen"); } catch { /* egal */ }
+  sheetKontoLoeschen().catch((f) => toast(f.message, true));
+}
+
 /* ------------------------------------------------------------------ Diagramm antippen */
 
 document.addEventListener("click", (ev) => {
@@ -6522,8 +6678,12 @@ window.addEventListener("popstate", () => {
 waechterSetzen();
 // Ein QR-Code vom Handy der Eltern bringt den Code für das Gerät eines Kindes mit.
 const kindLink = new URLSearchParams(location.search).get("kind");
+// Von der Löschseite auf haus-quest.com: den Wunsch über die Google-Anmeldung hinweg merken.
+if (new URLSearchParams(location.search).has("konto-loeschen")) {
+  try { localStorage.setItem("hq-loeschen", "1"); } catch { /* dann eben über die Einstellungen */ }
+}
 if (kindLink) kindLinkPruefen(kindLink);
-else laden();
+else laden().then(loeschWunschPruefen).catch(() => {});
 
 // Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen.
 setInterval(() => { if (!document.hidden && !scrim.hasAttribute("data-open")) laden(true); }, 25000);

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Konto löschen — Homi Point</title>
+<meta name="description" content="So löschst du dein Konto bei Homi Point — in der App oder hier, ohne App.">
+<meta name="theme-color" content="#152c4f">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+/* Die Löschseite, die Google Play im Store-Eintrag verlangt: ein Weg zum Löschen,
+ * auch ohne installierte App. Farben wie auf der Startseite. */
+:root {
+  --ground: #ffffff;
+  --tint: #f4f7fc;
+  --line: #dbe3f0;
+  --ink: #152c4f;
+  --ink-2: #55688a;
+  --ink-3: #8899b3;
+  --accent: #ec0f06;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0b1830; --tint: #11223d; --line: #24395c;
+    --ink: #e9f0fb; --ink-2: #a5b6d1; --ink-3: #7488a6; --accent: #ff4b42;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased; line-height: 1.55;
+}
+main {
+  max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding-block: 40px 56px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+a.zurueck { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+.logo { width: 72px; height: 72px; border-radius: 24%; }
+h1 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em; font-size: clamp(28px, 7vw, 38px); margin: 4px 0 0; line-height: 1.1; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -.02em; margin: 14px 0 0; }
+p, li { color: var(--ink-2); font-size: 16px; margin: 0; }
+b { color: var(--ink); }
+ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.btn {
+  align-self: flex-start; font: inherit; font-size: 16px; font-weight: 700; border-radius: 14px; padding: 14px 20px;
+  background: var(--ink); color: var(--ground); text-decoration: none; margin-top: 4px;
+}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.kasten { background: var(--tint); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="zurueck" href="/">‹ Homi Point</a>
+  <img class="logo" src="/icons/icon-192.png" alt="Homi Point" width="72" height="72">
+  <h1>Dein Konto bei Homi Point löschen</h1>
+  <p>Du kannst dein Konto jederzeit selbst löschen — in der App oder hier, auch ohne installierte App.</p>
+
+  <ol>
+    <li><b>In der App:</b> Einstellungen → Konto → Konto löschen.</li>
+    <li><b>Ohne App:</b> mit dem Knopf unten mit Google anmelden. Danach öffnet sich das Blatt zum Löschen.</li>
+  </ol>
+  <a class="btn" href="/app/?konto-loeschen" data-loeschen-start>Mit Google anmelden und löschen</a>
+
+  <h2>Was gelöscht wird</h2>
+  <div class="kasten">
+    <p>Dein Name, deine E-Mail-Adresse, dein Bild und deine Anmeldungen. Deine Cleanies, Meldungen, Anträge und
+      Erledigungen. Offene Anfragen werden zurückgenommen.</p>
+    <p>Bist du die letzte erwachsene Person im Haushalt, geht der ganze Haushalt mit — auch die Profile der Kinder.</p>
+  </div>
+
+  <h2>Was bleibt</h2>
+  <p>Was du verschenkt oder für andere bestätigt hast, bleibt im Haushalt — ohne deinen Namen, als
+    „ehemaliges Mitglied“.</p>
+
+  <h2>Wie schnell</h2>
+  <p>Sofort. Sicherungskopien der Datenbank laufen nach spätestens 30 Tagen aus.</p>
+
+  <h2>Nur den Haushalt verlassen</h2>
+  <p>Wer nur woanders weitermachen will, behält sein Konto: Einstellungen → Konto → Haushalt verlassen.</p>
+</main>
+</body>
+</html>

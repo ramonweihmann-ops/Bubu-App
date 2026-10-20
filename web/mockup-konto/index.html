@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point Konto löschen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen zum Durchklicken. Farben und Schrift wie in der App,
+ * hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45); --schatten:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66); --schatten:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:70ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;color:var(--ruhig);background:var(--ruhig-tint);border-radius:999px;padding:2px 9px}
+.bu{font-size:13px;color:var(--ink-2);margin:0;max-width:60ch}
+.bu b{color:var(--ink)}
+p{max-width:75ch}
+
+/* ---------- Schalter ---------- */
+.regler{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;background:var(--bg);border:1px solid var(--line);
+  border-radius:16px;padding:12px 14px;margin:0 0 22px}
+.regler .gruppe{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.schalter{display:inline-flex;background:var(--tint);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.schalter button{font:inherit;font-size:12.5px;font-weight:600;border:none;background:none;border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* ---------- Telefon ---------- */
+.phone{width:340px;max-width:100%;height:700px;background:var(--bg);border:9px solid var(--rahmen);border-radius:38px;
+  overflow:hidden;position:relative;box-shadow:0 26px 52px -28px var(--schatten);margin:0 auto;display:flex;flex-direction:column}
+.appbar{flex:none;padding:16px 16px 10px;display:flex;align-items:center;gap:8px}
+.appbar .titel{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.025em}
+.zurueck{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+.inhalt{flex:1;overflow-y:auto;padding:0 14px 18px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.inhalt>*{flex-shrink:0}
+.label{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:10px 0 0}
+.zeile{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:11px 12px;background:var(--bg);
+  font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.zeile .ico{width:34px;height:34px;border-radius:10px;background:var(--tint);display:grid;place-items:center;flex:none;font-size:15px;color:var(--ink-2)}
+.zeile .t{display:block;font-size:14px;font-weight:600}
+.zeile .m{display:block;font-size:11.5px;color:var(--ink-3)}
+.zeile .grow{flex:1;min-width:0}
+.zeile.rot .t{color:var(--accent)}
+.zeile.rot .ico{background:var(--accent-tint);color:var(--accent)}
+.zeile.platz{cursor:default}
+.platzhalter{height:38px;border-radius:12px;background:var(--tint)}
+
+/* Das Blatt von unten, wie in der App. */
+.schleier{position:absolute;inset:0;background:var(--schleier);display:flex;align-items:flex-end;z-index:5}
+.schleier[hidden]{display:none}
+.blatt{width:100%;max-height:92%;overflow-y:auto;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 16px 18px;display:flex;flex-direction:column;gap:12px}
+.blatt>*{flex-shrink:0}
+.griff{width:40px;height:4px;border-radius:99px;background:var(--line);margin:2px auto 2px}
+.blatt h4{font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-.02em;margin:0}
+.blatt p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.blatt p b{color:var(--ink)}
+.folgen{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.folgen li{display:flex;gap:10px;font-size:13px;color:var(--ink-2);line-height:1.4}
+.folgen li b{color:var(--ink)}
+.folgen .zeichen{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;background:var(--tint);color:var(--ink-2)}
+.folgen .weg .zeichen{background:var(--accent-tint);color:var(--accent)}
+.folgen .bleibt .zeichen{background:var(--frei-tint);color:var(--frei)}
+.hinweis{border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.4;background:var(--bald-tint);color:var(--ink)}
+.hinweis.ruhig{background:var(--ruhig-tint)}
+.kinder{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.kinder span{background:var(--bg);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+.btn{font:inherit;font-size:14px;font-weight:700;border-radius:12px;padding:12px;border:1px solid var(--line);cursor:pointer;
+  background:var(--bg);color:var(--ink);width:100%;text-align:center}
+.btn.rot{background:var(--akzent-flaeche);border-color:var(--akzent-flaeche);color:var(--auf-akzent)}
+.btn.dunkel{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.btn.text{border:none;background:none;color:var(--ink-2);font-weight:600;padding:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.feld{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:12px;padding:12px;width:100%;background:var(--bg);color:var(--ink)}
+/* B: gedrückt halten — der Balken füllt sich in zwei Sekunden. */
+.halten{position:relative;overflow:hidden;user-select:none;touch-action:none}
+.halten .fuellung{position:absolute;inset:0;width:0;background:rgba(255,255,255,.28);pointer-events:none}
+.halten[data-haelt] .fuellung{width:100%;transition:width 2s linear}
+.halten span{position:relative}
+
+/* Fertig, und ohne Haushalt. */
+.mitte{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:24px}
+.mitte .gross{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;background:var(--frei-tint);color:var(--frei)}
+.mitte .gross.pause{background:var(--bald-tint);color:var(--bald)}
+.mitte h4{font-family:var(--font-display);font-weight:800;font-size:21px;margin:0;letter-spacing:-.02em}
+.mitte p{margin:0;font-size:13.5px;color:var(--ink-2);max-width:30ch}
+.mitte .logo{width:96px;height:96px;border-radius:24%;background:#fff url(/icons/icon-512.png) center/100% no-repeat}
+.knoepfe{display:flex;flex-direction:column;gap:8px;width:100%}
+.toast{position:absolute;left:12px;right:12px;bottom:14px;background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:12px;
+  padding:10px 12px;font-size:13px;z-index:9}
+.toast[hidden]{display:none}
+
+/* Bei Ben danach: Hinweis und Verlauf. */
+.karte{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.karte.hinweiskarte{background:var(--ruhig-tint);border-color:transparent}
+.karte b{font-size:14px}
+.karte small{font-size:12.5px;color:var(--ink-2)}
+.verlauf{display:flex;flex-direction:column}
+.verlauf div{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line)}
+.verlauf div span:first-child{min-width:0}
+.verlauf small{display:block;color:var(--ink-3);font-size:11.5px}
+.verlauf .ehemalig{font-style:italic}
+.verlauf b{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Die Webseite fürs Löschen ohne App. */
+.browser{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--bg);box-shadow:0 20px 40px -30px var(--schatten)}
+.adresse{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--tint-2);font-family:var(--font-data);font-size:12px;color:var(--ink-2)}
+.adresse i{width:9px;height:9px;border-radius:50%;background:var(--line);display:inline-block}
+.seite{padding:22px 20px 26px;display:flex;flex-direction:column;gap:12px}
+.seite h4{font-family:var(--font-display);font-weight:800;font-size:22px;margin:0;letter-spacing:-.02em}
+.seite ol{margin:0;padding-left:20px;font-size:14px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+.seite ol b{color:var(--ink)}
+.seite p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.seite .btn{width:auto;align-self:flex-start;padding:10px 16px}
+
+/* ---------- Tabelle und Fragen ---------- */
+.tabelle{overflow-x:auto;max-width:980px}
+table{width:100%;border-collapse:collapse;background:var(--bg);border:1px solid var(--line);font-size:13.5px;min-width:620px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+td.weg{color:var(--accent);font-weight:600}
+td.bleibt{color:var(--frei);font-weight:600}
+td span{display:block;color:var(--ink-2);font-weight:400;font-size:12.5px}
+.empfehlung{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:18px;padding:18px 20px;max-width:860px;display:flex;flex-direction:column;gap:8px}
+.empfehlung p{margin:0;color:var(--kontrast-ink-2);font-size:14px}
+.empfehlung p b{color:var(--kontrast-ink)}
+.frage{border-left:3px solid var(--accent);padding-left:12px;margin:14px 0;max-width:80ch}
+.frage b{display:block}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Konto löschen und Haushalt verlassen</h1>
+  <p class="lead">Apple und Google lassen eine App nur in den Store, wenn man sein Konto <b>in der App</b> löschen kann —
+    Google will zusätzlich <b>eine Webseite</b> dafür. Der Datenschutz verlangt es ohnehin. Dazu kommt <b>Haushalt
+    verlassen</b>: wer auszieht oder sich trennt, will sein Konto behalten und woanders weitermachen.</p>
+  <p class="lead">Beides liegt in den Einstellungen unter „Konto“. Oben stellt ihr ein, <b>wer</b> löscht — davon hängt
+    ab, was mit dem Haushalt passiert. Die drei Telefone unterscheiden sich nur im letzten Schritt: <b>wie man
+    bestätigt</b>.</p>
+
+  <div class="regler" id="regler">
+    <div class="gruppe"><span class="marke">Wer löscht</span>
+      <div class="schalter" data-gruppe="wer">
+        <button data-wer="paar" aria-pressed="true">Anna, Ben bleibt</button>
+        <button data-wer="familie" aria-pressed="false">Mama, letzte Erwachsene</button>
+        <button data-wer="allein" aria-pressed="false">Sina, allein</button>
+        <button data-wer="jugend" aria-pressed="false">Jule, 15</button>
+      </div></div>
+  </div>
+
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · „löschen“ eintippen</h3><span class="vorbild">wie GitHub</span></div>
+      <div class="phone" id="pa" data-variante="a"></div>
+      <p class="bu">Man muss das Wort schreiben. Versehentlich passiert das nicht, und es geht auch mit Vorleser.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Gedrückt halten</h3><span class="vorbild">wie eine Banking-App</span></div>
+      <div class="phone" id="pb" data-variante="b"></div>
+      <p class="bu">Zwei Sekunden auf dem Knopf bleiben. Schnell, aber für manche schwer zu finden.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>C · 14 Tage Bedenkzeit</h3><span class="vorbild">wie Instagram</span></div>
+      <div class="phone" id="pc" data-variante="c"></div>
+      <p class="bu">Das Konto wird sofort stillgelegt und erst nach 14 Tagen gelöscht. Wieder anmelden holt alles zurück.</p>
+    </div>
+  </div>
+
+  <h2>Danach — bei den anderen und ohne App</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Bei Ben danach</h3><span class="vorbild">was die anderen sehen</span></div>
+      <div class="phone" id="pd"></div>
+      <p class="bu">Eine Nachricht, und im Verlauf steht „ehemaliges Mitglied“, wo Anna vorkam.</p>
+    </div>
+    <div class="spalte" style="grid-column:span 2;min-width:0">
+      <div class="kopfzeile"><h3>Ohne App: die Löschseite</h3><span class="vorbild">verlangt Google Play</span></div>
+      <div class="browser">
+        <div class="adresse"><i></i><i></i><i></i><span>haus-quest.com/konto-loeschen</span></div>
+        <div class="seite">
+          <h4>Dein Konto bei Homi Point löschen</h4>
+          <p>Du kannst dein Konto jederzeit selbst löschen — in der App oder hier.</p>
+          <ol>
+            <li><b>In der App:</b> Einstellungen → Konto → Konto löschen.</li>
+            <li><b>Ohne App:</b> hier mit Google anmelden, dann „Konto löschen“ bestätigen.</li>
+          </ol>
+          <button class="btn dunkel" data-web-anmelden>Mit Google anmelden und löschen</button>
+          <p><b>Was gelöscht wird:</b> dein Name, deine E-Mail-Adresse, dein Bild, deine Anmeldungen, deine Cleanies,
+            Meldungen und Anträge. Bist du die letzte erwachsene Person im Haushalt, geht der ganze Haushalt mit,
+            auch die Profile der Kinder.</p>
+          <p><b>Was bleibt:</b> was du verschenkt oder für andere bestätigt hast — ohne deinen Namen, als
+            „ehemaliges Mitglied“.</p>
+          <p><b>Wie schnell:</b> sofort. Sicherungskopien der Datenbank laufen nach spätestens 30 Tagen aus.</p>
+          <p data-web-status></p>
+        </div>
+      </div>
+      <p class="bu">Eine einfache Seite auf haus-quest.com. Google Play verlangt den Link im Store-Eintrag, damit man auch
+        ohne installierte App löschen kann.</p>
+    </div>
+  </div>
+
+  <h2>Was passiert mit …</h2>
+  <div class="tabelle">
+    <table>
+      <tr><th></th><th>Andere bleiben</th><th>Letzte Erwachsene mit Kindern</th><th>Allein</th></tr>
+      <tr><td>Name, E-Mail, Bild, Anmeldungen</td><td class="weg">gelöscht</td><td class="weg">gelöscht</td><td class="weg">gelöscht</td></tr>
+      <tr><td>Deine Cleanies</td><td class="weg">verfallen<span>vorher verschenken geht</span></td><td class="weg">verfallen</td><td class="weg">verfallen</td></tr>
+      <tr><td>Deine Meldungen, Anträge, Erledigungen</td><td class="weg">gelöscht<span>auch im Fair-Bericht der anderen</span></td><td class="weg">gelöscht</td><td class="weg">gelöscht</td></tr>
+      <tr><td>Offene Anfragen und Vorschläge</td><td class="weg">zurückgenommen</td><td class="weg">gelöscht</td><td class="weg">gelöscht</td></tr>
+      <tr><td>Was du anderen geschenkt oder bestätigt hast</td><td class="bleibt">bleibt<span>als „ehemaliges Mitglied“</span></td><td>—</td><td>—</td></tr>
+      <tr><td>Haushalt, Quests, Belohnungen, Plan</td><td class="bleibt">bleibt<span>Verwaltung geht an die nächste erwachsene Person</span></td><td class="weg">gelöscht</td><td class="weg">gelöscht</td></tr>
+      <tr><td>Profile der Kinder</td><td class="bleibt">bleiben</td><td class="weg">gelöscht<span>vorher deutlich genannt</span></td><td>—</td></tr>
+      <tr><td>Sicherungskopien</td><td colspan="3">laufen nach spätestens 30 Tagen aus</td></tr>
+    </table>
+  </div>
+  <p class="bu" style="margin-top:10px"><b>Kinder ohne eigenes Konto</b> löschen die Eltern wie bisher unter „Wir“ → Kind →
+    Löschen. <b>Jugendliche mit Google-Konto</b> löschen sich selbst oder verlassen den Haushalt selbst — genau den Weg
+    gibt es bisher nicht.</p>
+
+  <h2>Entschieden und gebaut</h2>
+  <div class="empfehlung">
+    <h3>A · „löschen“ eintippen, sofort und endgültig — dazu „Haushalt verlassen“.</h3>
+    <p><b>Konto löschen</b> unter Einstellungen → Konto: erst das Blatt mit den Folgen und dem Angebot zu exportieren,
+      dann „löschen“ eintippen. Danach landet man auf der Anmeldung mit einem Gruß.</p>
+    <p><b>Deine Sachen gehen mit,</b> auch aus dem Fair-Bericht der anderen. Was andere betrifft, bleibt als
+      „ehemaliges Mitglied“. <b>Cleanies verfallen</b>, vorher verschenken geht.</p>
+    <p><b>Haushalt verlassen</b> behält das Konto; die letzte Erwachsene kann nicht gehen, solange Kinder da sind.
+      Die Löschseite liegt unter haus-quest.com/konto-loeschen.</p>
+  </div>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------ Wer löscht */
+const LEUTE = {
+  paar:    { ich: "Anna", andere: ["Ben"], kinder: [], cleanies: 128, offen: 2, verwaltung: "Ben", kannGehen: true },
+  familie: { ich: "Mama", andere: [], kinder: ["Lena 🦊", "Tom 🐼"], cleanies: 64, offen: 1, verwaltung: null, kannGehen: false },
+  allein:  { ich: "Sina", andere: [], kinder: [], cleanies: 22, offen: 0, verwaltung: null, kannGehen: true },
+  jugend:  { ich: "Jule", andere: ["Mama", "Papa"], kinder: [], cleanies: 40, offen: 1, verwaltung: null, kannGehen: true }
+};
+const Z = { wer: "paar" };
+const L = () => LEUTE[Z.wer];
+const ESC = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const WEG = "✕", BLEIBT = "✓", INFO = "i";
+
+function folgenLoeschen() {
+  const l = L();
+  const zeilen = [
+    ["weg", WEG, "<b>Dein Name, deine E-Mail, dein Bild</b> und deine Anmeldung auf allen Geräten."],
+    ["weg", WEG, `<b>Deine ${l.cleanies} Cleanies</b> verfallen.`],
+    ["weg", WEG, `<b>Deine Meldungen, Anträge und Erledigungen</b>${l.andere.length ? " — auch im Fair-Bericht der anderen" : ""}.`]
+  ];
+  if (l.offen) zeilen.push(["weg", WEG, `<b>${l.offen} offene ${l.offen === 1 ? "Anfrage" : "Anfragen"}</b> ${l.offen === 1 ? "wird" : "werden"} zurückgenommen.`]);
+  if (l.andere.length) {
+    zeilen.push(["bleibt", BLEIBT, `<b>Der Haushalt bleibt</b> für ${ESC(l.andere.join(" und "))}. Was du verschenkt oder bestätigt hast, bleibt dort — ohne deinen Namen.`]);
+    if (l.verwaltung) zeilen.push(["", INFO, `<b>${ESC(l.verwaltung)}</b> verwaltet den Haushalt ab dann.`]);
+  } else {
+    zeilen.push(["weg", WEG, "<b>Der ganze Haushalt</b> mit Quests, Belohnungen, Plan und Verlauf."]);
+  }
+  return `<ul class="folgen">${zeilen.map(([k, z, t]) => `<li class="${k}"><span class="zeichen">${z}</span><span>${t}</span></li>`).join("")}</ul>`;
+}
+
+/* ------------------------------------------------------------------ Telefone */
+function einstellungen(t) {
+  return `
+    <div class="appbar"><button class="zurueck" aria-label="Zurück">‹</button><span class="titel">Einstellungen</span></div>
+    <div class="inhalt">
+      <p class="label">Dein Name</p><div class="platzhalter"></div>
+      <p class="label">Darstellung</p><div class="platzhalter"></div>
+      <p class="label">Benachrichtigungen</p><div class="platzhalter"></div>
+      <p class="label">Konto</p>
+      <button class="zeile" data-export><span class="ico">↓</span><span class="grow"><span class="t">Alles exportieren</span><span class="m">Kompletter Stand als Datei</span></span><span>›</span></button>
+      <button class="zeile" data-verlassen><span class="ico">⇥</span><span class="grow"><span class="t">Haushalt verlassen</span><span class="m">Dein Konto bleibt</span></span><span>›</span></button>
+      <button class="zeile rot" data-loeschen><span class="ico">✕</span><span class="grow"><span class="t">Konto löschen</span><span class="m">Endgültig, mit allem, was dir gehört</span></span><span>›</span></button>
+      <button class="btn text">Abmelden</button>
+    </div>
+    <div class="schleier" data-schleier hidden><div class="blatt" data-blatt></div></div>
+    <div class="toast" data-toast hidden></div>`;
+}
+
+function blatt(t, html) {
+  const s = t.querySelector("[data-schleier]");
+  s.querySelector("[data-blatt]").innerHTML = `<div class="griff"></div>${html}`;
+  s.hidden = false;
+}
+function blattZu(t) { const s = t.querySelector("[data-schleier]"); if (s) s.hidden = true; }
+function toast(t, text) {
+  const el = t.querySelector("[data-toast]");
+  el.textContent = text; el.hidden = false;
+  clearTimeout(t._toast); t._toast = setTimeout(() => { el.hidden = true; }, 1800);
+}
+
+function schrittWas(t) {
+  const l = L();
+  blatt(t, `
+    <h4>Konto löschen</h4>
+    ${l.kinder.length ? `<div class="hinweis"><b>Du bist die letzte erwachsene Person.</b> Mit dir gehen auch die Profile von
+      <div class="kinder">${l.kinder.map((k) => `<span>${ESC(k)}</span>`).join("")}</div></div>` : ""}
+    ${l.andere.length ? `<div class="hinweis ruhig">Du willst nur woanders weitermachen? <button class="btn text" style="padding:0;display:inline;width:auto;color:var(--ruhig)" data-verlassen>Nur den Haushalt verlassen ›</button></div>` : ""}
+    ${folgenLoeschen()}
+    ${l.cleanies && l.andere.length ? `<p>Tipp: Deine Cleanies kannst du vorher <b>${ESC(l.andere[0])}</b> schenken.</p>` : ""}
+    <button class="btn" data-export>Erst alles exportieren</button>
+    <button class="btn dunkel" data-weiter>Weiter</button>
+    <button class="btn text" data-abbrechen>Abbrechen</button>`);
+}
+
+function schrittBestaetigen(t) {
+  const v = t.dataset.variante;
+  if (v === "a") {
+    blatt(t, `
+      <h4>Wirklich löschen?</h4>
+      <p>Das lässt sich nicht rückgängig machen. Tippe zum Bestätigen <b>löschen</b>.</p>
+      <input class="feld" data-wort autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Zum Bestätigen löschen eintippen" placeholder="löschen">
+      <button class="btn rot" data-endgueltig disabled>Konto endgültig löschen</button>
+      <button class="btn text" data-abbrechen>Abbrechen</button>`);
+    t.querySelector("[data-wort]").focus({ preventScroll: true });
+  } else if (v === "b") {
+    blatt(t, `
+      <h4>Wirklich löschen?</h4>
+      <p>Das lässt sich nicht rückgängig machen. Halte den Knopf <b>zwei Sekunden</b> gedrückt.</p>
+      <button class="btn rot halten" data-halten><span class="fuellung"></span><span>Gedrückt halten zum Löschen</span></button>
+      <button class="btn text" data-abbrechen>Abbrechen</button>`);
+  } else {
+    const bis = new Date(2026, 9, 20 + 14).toLocaleDateString("de-DE", { day: "numeric", month: "long" });
+    blatt(t, `
+      <h4>Konto stilllegen</h4>
+      <p>Du wirst sofort abgemeldet, die anderen sehen dich nicht mehr. <b>Bis zum ${bis}</b> holst du alles zurück, wenn du
+        dich wieder anmeldest. Danach ist es endgültig weg.</p>
+      <button class="btn rot" data-stilllegen>Konto stilllegen</button>
+      <button class="btn text" data-abbrechen>Abbrechen</button>`);
+  }
+}
+
+function fertig(t, art) {
+  blattZu(t);
+  const bis = new Date(2026, 9, 20 + 14).toLocaleDateString("de-DE", { day: "numeric", month: "long" });
+  t.dataset.zustand = art;
+  t.innerHTML = art === "geloescht" ? `
+    <div class="mitte" data-fertig>
+      <span class="gross">✓</span>
+      <h4>Dein Konto ist gelöscht</h4>
+      <p>Danke, dass du dabei warst. Dein Google-Konto bleibt; die Verbindung zu Homi Point trennst du bei Google unter
+        „Drittanbieter-Apps“.</p>
+      <div class="knoepfe"><button class="btn dunkel" data-neu>Zur Anmeldung</button></div>
+    </div>` : art === "stillgelegt" ? `
+    <div class="mitte" data-fertig>
+      <span class="gross pause">⏸</span>
+      <h4>Dein Konto ist stillgelegt</h4>
+      <p>Bis zum ${bis} kannst du es zurückholen — einfach wieder mit Google anmelden. Danach ist es endgültig gelöscht.</p>
+      <div class="knoepfe"><button class="btn dunkel" data-zurueckholen>Wieder anmelden</button></div>
+    </div>` : art === "verlassen" ? `
+    <div class="mitte" data-fertig>
+      <span class="logo" role="img" aria-label="Homi Point"></span>
+      <h4>Du bist in keinem Haushalt</h4>
+      <p>Dein Konto bleibt. Gründe einen neuen Haushalt oder tritt mit einem Code einem bei.</p>
+      <div class="knoepfe"><button class="btn dunkel">Neuen Haushalt gründen</button><button class="btn">Mit Code beitreten</button>
+        <button class="btn text" data-neu>Zurück zum Anfang des Mockups</button></div>
+    </div>` : `
+    <div class="mitte" data-fertig>
+      <span class="logo" role="img" aria-label="Homi Point"></span>
+      <h4>Homi Point</h4>
+      <p>Cleanies für erledigte Aufgaben. Freigegeben nur gemeinsam.</p>
+      <div class="knoepfe"><button class="btn" data-neu>Mit Google anmelden</button></div>
+    </div>`;
+}
+
+function verlassen(t) {
+  const l = L();
+  if (!l.kannGehen) {
+    blatt(t, `
+      <h4>Haushalt verlassen</h4>
+      <div class="hinweis"><b>Als letzte erwachsene Person kannst du nicht gehen</b> — die Kinder stünden sonst allein da.
+        Lade erst jemanden ein, der übernimmt, oder lösch das Konto mit dem ganzen Haushalt.</div>
+      <button class="btn dunkel" data-abbrechen>Verstanden</button>`);
+    return;
+  }
+  const allein = !l.andere.length;
+  blatt(t, `
+    <h4>Haushalt verlassen</h4>
+    <ul class="folgen">
+      <li class="bleibt"><span class="zeichen">${BLEIBT}</span><span><b>Dein Konto bleibt.</b> Danach gründest du einen neuen Haushalt oder trittst einem bei.</span></li>
+      <li class="weg"><span class="zeichen">${WEG}</span><span><b>Deine ${l.cleanies} Cleanies</b> bleiben hier und verfallen.</span></li>
+      ${allein ? `<li class="weg"><span class="zeichen">${WEG}</span><span><b>Der Haushalt</b> wird gelöscht — es ist sonst niemand mehr da.</span></li>`
+        : `<li class="bleibt"><span class="zeichen">${BLEIBT}</span><span><b>Der Haushalt bleibt</b> für ${ESC(l.andere.join(" und "))}.</span></li>`}
+      ${l.offen ? `<li class="weg"><span class="zeichen">${WEG}</span><span><b>${l.offen} offene ${l.offen === 1 ? "Anfrage" : "Anfragen"}</b> ${l.offen === 1 ? "wird" : "werden"} zurückgenommen.</span></li>` : ""}
+    </ul>
+    <button class="btn rot" data-verlassen-ok>Haushalt verlassen</button>
+    <button class="btn text" data-abbrechen>Abbrechen</button>`);
+}
+
+function start(t) {
+  t.dataset.zustand = "einstellungen";
+  t.innerHTML = einstellungen(t);
+}
+
+/* Bei Ben danach. */
+function ben() {
+  const t = document.getElementById("pd");
+  const l = L();
+  if (!l.andere.length) {
+    t.innerHTML = `<div class="mitte"><span class="gross pause">—</span><h4>Niemand bleibt</h4>
+      <p>${Z.wer === "familie" ? "Mit Mama geht der Haushalt, auch die Profile von Lena und Tom." : "Sina war allein — mit ihr geht der Haushalt."}
+      Es gibt niemanden, der eine Nachricht bekommt.</p></div>`;
+    return;
+  }
+  const wer = l.andere[0], weg = l.ich;
+  t.innerHTML = `
+    <div class="appbar"><span class="titel">Hallo ${ESC(wer)}</span></div>
+    <div class="inhalt">
+      <div class="karte hinweiskarte"><b>${ESC(weg)} ist nicht mehr dabei</b>
+        <small>${ESC(weg)} hat ${Z.wer === "jugend" ? "den Haushalt verlassen oder das Konto gelöscht" : "das Konto gelöscht"}. Offene Anfragen sind zurückgenommen${
+          l.verwaltung ? ", den Haushalt verwaltest jetzt du" : ""}.</small></div>
+      <p class="label">Verlauf</p>
+      <div class="verlauf">
+        <div><span>Bad reinigen<small>bestätigt von <span class="ehemalig">ehemaligem Mitglied</span> · 14.10.</small></span><b>+4</b></div>
+        <div><span>Geschenk<small>von <span class="ehemalig">ehemaligem Mitglied</span> · 12.10.</small></span><b>+20</b></div>
+        <div><span>Staubsaugen ganze Wohnung<small>bestätigt von <span class="ehemalig">ehemaligem Mitglied</span> · 9.10.</small></span><b>+10</b></div>
+        <div><span>Kino-Abend<small>Belohnung, eingelöst · 3.10.</small></span><b>−15</b></div>
+      </div>
+      <p class="bu">Was ${ESC(weg)} selbst erledigt hat, steht hier nicht mehr — auch nicht im Fair-Bericht.</p>
+    </div>`;
+}
+
+const TELEFONE = ["pa", "pb", "pc"].map((id) => document.getElementById(id));
+function allesNeu() { TELEFONE.forEach(start); ben(); document.querySelector("[data-web-status]").textContent = ""; }
+allesNeu();
+
+/* ------------------------------------------------------------------ Bedienen */
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.wer) {
+    Z.wer = b.dataset.wer;
+    for (const x of document.querySelectorAll("[data-wer]")) x.setAttribute("aria-pressed", String(x === b));
+    allesNeu();
+    return;
+  }
+  if (b.hasAttribute("data-web-anmelden")) {
+    document.querySelector("[data-web-status]").innerHTML = "<b>Im Mockup endet es hier</b> — nach der Anmeldung käme dasselbe Blatt wie in der App.";
+    return;
+  }
+  const t = b.closest(".phone");
+  if (!t || t.id === "pd") return;
+  if (b.hasAttribute("data-loeschen")) return schrittWas(t);
+  if (b.hasAttribute("data-weiter")) return schrittBestaetigen(t);
+  if (b.hasAttribute("data-abbrechen")) return blattZu(t);
+  if (b.hasAttribute("data-export")) return toast(t, "Datei gespeichert.");
+  if (b.hasAttribute("data-verlassen")) return verlassen(t);
+  if (b.hasAttribute("data-verlassen-ok")) return fertig(t, "verlassen");
+  if (b.hasAttribute("data-endgueltig")) return fertig(t, "geloescht");
+  if (b.hasAttribute("data-stilllegen")) return fertig(t, "stillgelegt");
+  if (b.hasAttribute("data-zurueckholen")) { start(t); toast(t, "Willkommen zurück — alles ist wieder da."); return; }
+  if (b.hasAttribute("data-neu")) return t.dataset.zustand === "geloescht" ? fertig(t, "anmeldung") : start(t);
+});
+
+/* A: der Knopf wird erst mit dem Wort scharf. */
+document.addEventListener("input", (e) => {
+  if (!e.target.matches("[data-wort]")) return;
+  const t = e.target.closest(".phone");
+  t.querySelector("[data-endgueltig]").disabled = e.target.value.trim().toLowerCase() !== "löschen";
+});
+
+/* B: zwei Sekunden halten — mit Finger, Maus oder Leertaste. */
+function haltenStart(b) {
+  if (b._timer) return;
+  b.setAttribute("data-haelt", "");
+  b._timer = setTimeout(() => { b._timer = null; fertig(b.closest(".phone"), "geloescht"); }, 2000);
+}
+function haltenStopp(b) {
+  if (!b || !b._timer) return;
+  clearTimeout(b._timer); b._timer = null;
+  b.removeAttribute("data-haelt");
+}
+document.addEventListener("pointerdown", (e) => { const b = e.target.closest("[data-halten]"); if (b) haltenStart(b); });
+document.addEventListener("pointerup", () => document.querySelectorAll("[data-halten]").forEach(haltenStopp));
+document.addEventListener("pointercancel", () => document.querySelectorAll("[data-halten]").forEach(haltenStopp));
+document.addEventListener("keydown", (e) => { const b = e.target.closest?.("[data-halten]"); if (b && (e.key === " " || e.key === "Enter")) { e.preventDefault(); haltenStart(b); } });
+document.addEventListener("keyup", (e) => { const b = e.target.closest?.("[data-halten]"); if (b) haltenStopp(b); });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 // Die App schickt nur Absichten („ich habe X erledigt“). Ob daraus eine Buchung
 // wird, entscheiden diese Prüfungen und die Regeln in der Datenbank — nicht das Handy.
 
-import { angemeldet, sitzungAnlegen } from "./auth.js";
+import { angemeldet, sitzungAnlegen, abmeldeKeks } from "./auth.js";
 import { QUESTS, BELOHNUNGEN, ANFANGSBESTAND, RAUMVORSCHLAEGE } from "./startdaten.js";
 import { vapid } from "./push.js";
 import { melde, meldeAlle } from "./melden.js";
@@ -28,6 +28,7 @@ import {
   eventsNachziehen, eventsVon, eventPruefen
 } from "./events.js";
 import { fairBericht, plusTesten, plusLage, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
+import { kontoVorschau, kontoLoeschen, haushaltVerlassen } from "./konto.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -86,6 +87,18 @@ export async function handleApi(request, env, url) {
     if (pfad === "profil") return json(await profilAendern(env, ich, koerper));
     if (pfad === "haushalt/einrichten") return json(await haushaltEinrichten(env, ich, koerper));
 
+    // Konto löschen geht auch ohne Haushalt — und nur mit POST.
+    if (pfad === "konto/vorschau") return json(await kontoVorschau(env, ich));
+    if (pfad === "konto/loeschen") {
+      if (request.method !== "POST") throw new Fehler("Nur mit POST", 405);
+      const paar = ich.couple_id;
+      const ergebnis = await kontoLoeschen(env, ich, koerper);
+      if (paar && !ergebnis.haushaltWeg) await abstimmungenNachziehen(env, paar);
+      return new Response(JSON.stringify(ergebnis), {
+        headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "Set-Cookie": abmeldeKeks() }
+      });
+    }
+
     if (!ich.couple_id) throw new Fehler("Noch kein Haushalt eingerichtet", 409);
 
     if (pfad === "claims") return json(koerper.fuer ? await fuerKindEintragen(env, ich, koerper) : await melden(env, ich, koerper));
@@ -98,6 +111,13 @@ export async function handleApi(request, env, url) {
     if (teile[0] === "transfers" && teile[2] === "decide") return json(await uebertragungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "haushalt") return json(await haushaltAendern(env, ich, koerper));
+    if (pfad === "haushalt/verlassen") {
+      if (request.method !== "POST") throw new Fehler("Nur mit POST", 405);
+      const paar = ich.couple_id;
+      const ergebnis = await haushaltVerlassen(env, ich);
+      if (!ergebnis.haushaltWeg) await abstimmungenNachziehen(env, paar);
+      return json(ergebnis);
+    }
     if (pfad === "fair") {
       const f = url.searchParams;
       return json(await fairBericht(env, ich, { zeitraum: f.get("zeitraum"), zurueck: f.get("zurueck"), versatz: f.get("versatz") }));

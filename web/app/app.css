@@ -1302,3 +1302,25 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   text-align: center; font-size: 12px; color: var(--ink-3);
 }
 .startbild[data-weg] { opacity: 0; pointer-events: none; }
+
+/* ---------- Konto löschen und Haushalt verlassen ---------- */
+.rowlink.rot .t { color: var(--accent); }
+.rowlink.rot .avatar { background: var(--accent-tint); color: var(--accent); font-size: 14px; font-weight: 700; }
+.folgen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.folgen li { display: flex; gap: 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+.folgen li b { color: var(--ink); }
+.folgen .zeichen {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--tint); color: var(--ink-2);
+}
+.folgen .weg .zeichen { background: var(--accent-tint); color: var(--accent); }
+.folgen .bleibt .zeichen { background: var(--urlaub-tint); color: var(--urlaub); }
+.hinweis { border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; background: var(--bald-tint); color: var(--ink); }
+.hinweis.ruhig { background: var(--tint); }
+.kinderchips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.kinderchips span { background: var(--bg); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600; }
+.linkknopf { font: inherit; font-weight: 700; color: var(--ruhig); background: none; border: none; padding: 0; cursor: pointer; }
+.blatt-text { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.blatt-text b { color: var(--ink); }
+.geloescht { text-align: left; gap: 4px; max-width: 34ch; font-size: 13px; color: var(--ink-2); }
+.geloescht b { color: var(--ink); font-size: 14px; }

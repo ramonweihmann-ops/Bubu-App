@@ -55,6 +55,9 @@ export async function angemeldet(request, env) {
 
 /** Eine Sitzung für jemanden, der sich ohne Google anmeldet — das Gerät eines
  *  Kindes mit seinem Code. Zurück kommt der Keks dafür. */
+/** Das Cookie, das die Sitzung im Browser beendet — nach Abmelden oder Konto löschen. */
+export const abmeldeKeks = () => setzeKeks(SITZUNG, "", 0);
+
 export async function sitzungAnlegen(env, wer) {
   const token = zufall(32);
   await env.DB.prepare(

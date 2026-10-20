@@ -50,6 +50,10 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   `haus-quest.com/mockup-startbild/`. Das Homi-Point-Logo eine Sekunde beim echten Start der App, nicht beim
   Zurückholen aus dem Hintergrund oder beim Neuladen — drei Varianten zum Antippen, hell und dunkel.
   Gebaut wurde A: nur das Icon, im Dunkeln dunkel, mindestens 1 und höchstens 2,5 Sekunden.
+- **Mockup „Konto löschen":** [`web/mockup-konto/`](./web/mockup-konto) — live unter
+  `haus-quest.com/mockup-konto/`. Konto löschen und Haushalt verlassen: drei Arten zu bestätigen, was mit Haushalt,
+  Kindern und Cleanies passiert, was die anderen danach sehen, und die Löschseite im Web für Google Play.
+  Gebaut wurde A: „löschen“ eintippen, sofort und endgültig, dazu „Haushalt verlassen“.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -110,6 +114,20 @@ Woche“ und unter „Wir“. Gerechnet wird aus den Buchungen, die es schon gib
 Zeiträume: Woche, Monat, 13 Wochen, Jahr, zurückblättern; Export als PDF und als Tabelle (CSV). Ohne
 Plus gibt es nur die Waage der laufenden Woche, der Rest liegt hinter dem Schloss, einmal 14 Tage zum
 Testen. Bis Plus sich kaufen lässt, haben es alle Haushalte (`couples.plus` steht auf 1).
+
+## Konto löschen und Haushalt verlassen
+
+Beides unter Einstellungen → Konto, ohne App unter `haus-quest.com/konto-loeschen/` (verlangt Google Play).
+Gelöscht wird sofort und endgültig, bestätigt durch Eintippen von „löschen“. Der Code steht in `worker/konto.js`.
+
+- **Was einem selbst gehört, geht:** Name, E-Mail, Bild, Anmeldungen, Cleanies, Meldungen, Anträge,
+  Erledigungen (auch aus dem Fair-Bericht der anderen), Nachrichten, offene Vorschläge und Stimmen.
+- **Was andere betrifft, bleibt ohne Namen:** Bestätigungen, Geschenke, Aktionen, Events, Haushaltsurlaube.
+  Sie zeigen auf einen Platzhalter „Ehemaliges Mitglied“ (`users.id` = `ehemalig-<Haushalt>-…`, ohne
+  E-Mail, in keinem Haushalt); der Name verschwindet auch aus Buchungstexten und Nachrichten.
+- **Die letzte Erwachsene** nimmt beim Löschen den Haushalt mit, samt Kinderprofilen; Jugendliche behalten
+  ihr Konto. Verlassen kann sie den Haushalt nicht, solange Kinder da sind.
+- **Haushalt verlassen** behält das Konto; danach neu gründen oder mit Code beitreten.
 
 ## Aufbau
 
