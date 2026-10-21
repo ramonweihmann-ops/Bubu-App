@@ -136,6 +136,25 @@ mit der Bezahlung). Verlinkt von der Startseite, der Anmeldung, den Einstellunge
 im Pilot eine Privatperson, wie bei Love Diary. Ändert sich, was die App speichert, muss die Tabelle in der
 Datenschutzerklärung mit.
 
+## Kostenlos bleiben
+
+Bis Homi Point wirklich im Betrieb ist, läuft alles im kostenlosen Plan von Cloudflare. Dessen knappste Grenze ist
+das Lesen: 5 Millionen Zeilen am Tag, gezählt wird jede Zeile, die eine Abfrage anfasst. Darüber wird nichts
+berechnet, sondern die Datenbank bis Mitternacht (UTC) gesperrt — die App stünde still. Deshalb:
+
+- **Die kleine Frage.** Die App fragt alle 25 Sekunden nur `/api/stand` ab, den Änderungszähler des Haushalts
+  (`couples.stand`, 4 Zeilen samt Anmeldung). Den ganzen Zustand lädt sie nur, wenn der Zähler weitergesprungen ist,
+  beim Zurückkehren in die App und spätestens alle fünf Minuten — damit nachkommt, was an der Uhr hängt. Den Zähler
+  pflegen Trigger auf allen Tabellen eines Haushalts (`d1/migrations/0024_stand.sql`); kein Code muss daran denken.
+- **Verzeichnisse** für die Abfragen, die sonst ganze Tabellen durchsuchten (`0023_lesen.sql`).
+- **„N× erledigt“** zählt die Datenbank per Trigger mit (`0025_genutzt.sql`), statt bei jedem Abruf nachzuzählen.
+  Die Cleanies-Stände bleiben bewusst ungespeichert (siehe „Die drei Regeln“).
+
+`tests/lesen.sh` misst das bei jedem Lauf der Suite und schlägt Alarm, wenn ein Abruf zu viel liest. Stand Oktober
+2026 im größten Testhaushalt: der ganze Zustand 575 Zeilen (vorher 10.891), die kleine Frage 4. Hochgerechnet auf
+100 Pilot-Personen mit je einer halben Stunde offener App sind das gut 1,5 Millionen Zeilen am Tag — ein knappes
+Drittel des freien Rahmens, obwohl alle so groß gerechnet sind wie der größte Testhaushalt.
+
 ## Datenbank in der EU
 
 Die Datenbank liegt in Cloudflare als `homi-point` und ist auf die EU festgelegt (Jurisdiction `eu`). Die

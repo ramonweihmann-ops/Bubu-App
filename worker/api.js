@@ -79,6 +79,9 @@ export async function handleApi(request, env, url) {
     }
 
     if (pfad === "state") return json(await zustand(env, ich, url.searchParams.get("versatz")));
+    // Die kleine Frage alle 25 Sekunden: Hat sich im Haushalt etwas getan? Eine
+    // Zeile statt des ganzen Zustands — den lädt die App nur, wenn ja.
+    if (pfad === "stand") return json({ stand: await standVon(env, ich.couple_id) });
     if (pfad === "pair/create") return json(await paarAnlegen(env, ich));
     if (pfad === "pair/join") return json(await paarBeitreten(env, ich, koerper.code));
     if (pfad === "export") return json(await ausgabe(env, ich));
@@ -204,7 +207,7 @@ function kindDarf(pfad, teile, aufElternHandy = false) {
   if (["claims", "requests", "kind/wunsch", "kind/ansicht"].includes(pfad)) return true;
   if (["claims", "requests"].includes(teile[0]) && ["antwort", "storno"].includes(teile[2])) return true;
   if (aufElternHandy) return false;
-  if (["state", "events/gelesen", "push/key", "push/subscribe"].includes(pfad)) return true;
+  if (["state", "stand", "events/gelesen", "push/key", "push/subscribe"].includes(pfad)) return true;
   if (["claims", "requests"].includes(teile[0]) && teile[2] === "decide") return true;
   return teile[0] === "bild";
 }
@@ -691,6 +694,13 @@ async function abstimmungenNachziehen(env, paarId) {
   }
 }
 
+/** Der Änderungszähler des Haushalts (siehe d1/migrations/0024_stand.sql). */
+async function standVon(env, paar) {
+  if (!paar) return null;
+  const haus = await env.DB.prepare("select stand from couples where id = ?1").bind(paar).first();
+  return haus?.stand ?? null;
+}
+
 async function zustand(env, ich, versatz = 0) {
   // Ohne Haushalt beginnt die Einrichtung. Sie ist der einzige Weg hinein —
   // erst danach gibt es Quests, Cleanies und alles Weitere.
@@ -717,6 +727,9 @@ async function zustand(env, ich, versatz = 0) {
   await abstimmungenNachziehen(env, paar);
   await planNachziehen(env, paar);
   await eventsNachziehen(env, paar);
+  // Vor allem anderen gelesen: Ändert sich etwas, während der Zustand entsteht,
+  // ist der Zähler danach schon weiter, und die App lädt beim nächsten Mal neu.
+  const stand = await standVon(env, paar);
 
   const [personen, staende, quests, belohnungen, meldungen, antraege, uebertragungen, vorschlaege, stimmen, verlauf, ereignisse, aktionen, raeume, gifs] =
     await Promise.all([
@@ -725,11 +738,11 @@ async function zustand(env, ich, versatz = 0) {
                         from members m join users u on u.id = m.user_id
                        where m.couple_id = ?1 order by m.joined_at`).bind(paar).all(),
       env.DB.prepare("select member_id, points from balances where couple_id = ?1").bind(paar).all(),
+      // „genutzt“ führt die Datenbank selbst mit (d1/migrations/0025_genutzt.sql).
       env.DB.prepare(`select q.id, q.name, q.category, q.points, q.wiederkehrend, q.rhythmus, q.faellig_am, q.event_id, q.icon, q.farbe, q.fuer,
-                             (select count(*) from claims c where c.quest_id = q.id and c.status = 'bestaetigt') as genutzt
+                             q.genutzt
                         from quests q where q.couple_id = ?1 and q.active = 1`).bind(paar).all(),
-      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id, b.icon, b.bild, b.fuer,
-                             (select count(*) from requests r where r.reward_id = b.id and r.status = 'bestaetigt') as genutzt
+      env.DB.prepare(`select b.id, b.name, b.cost, b.bestaetigen, b.event_id, b.icon, b.bild, b.fuer, b.genutzt
                         from rewards b where b.couple_id = ?1 and b.active = 1`).bind(paar).all(),
       env.DB.prepare(`select c.id, c.quest_id, c.claimed_by, c.quantity, c.points_each, c.note, c.created_at,
                              c.rueckfrage, c.rueckfrage_von, q.name as quest
@@ -787,6 +800,7 @@ async function zustand(env, ich, versatz = 0) {
   return {
     angemeldet: true,
     eingerichtet: true,
+    stand,
     verbunden: andere.length > 0,
     code: mit.length < haus.groesse ? haus.pair_code : null,
     haushalt: {

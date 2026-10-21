@@ -214,10 +214,14 @@ celebrate.addEventListener("click", (ev) => {
 
 /* ------------------------------------------------------------------ Laden */
 
+/** Wann der ganze Zustand zuletzt kam — siehe nachsehen(). */
+let zuletztGeladen = 0;
+
 async function laden(still = false) {
   try {
     // Die Woche fängt am Montag an — dort, wo man wohnt, nicht in Greenwich.
     S = await api(`state?versatz=${-new Date().getTimezoneOffset()}`);
+    zuletztGeladen = Date.now();
     zeichne();
     // In der Kinderansicht auf dem Handy der Eltern warten deren Nachrichten,
     // bis sie zurück sind. Ein Kind am eigenen Gerät sieht nur seinen Jubel.
@@ -6693,8 +6697,23 @@ if (new URLSearchParams(location.search).has("konto-loeschen")) {
 if (kindLink) kindLinkPruefen(kindLink);
 else laden().then(loeschWunschPruefen).catch(() => {});
 
-// Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen.
-setInterval(() => { if (!document.hidden && !scrim.hasAttribute("data-open")) laden(true); }, 25000);
+// Der Partner arbeitet auf einem anderen Gerät — regelmäßig nachsehen. Alle 25
+// Sekunden nur die kleine Frage, ob sich im Haushalt etwas getan hat: eine Zeile
+// in der Datenbank statt des ganzen Zustands. Den lädt die App nur, wenn ja —
+// und spätestens alle fünf Minuten, damit nachkommt, was an der Uhr hängt
+// (Fälligkeiten, Fristen von Abstimmungen, der neue Tag).
+const VOLL_SPAETESTENS = 5 * 60 * 1000;
+async function nachsehen() {
+  if (document.hidden || scrim.hasAttribute("data-open")) return;
+  if (S?.stand == null || Date.now() - zuletztGeladen > VOLL_SPAETESTENS) return laden(true);
+  try {
+    const { stand } = await api("stand");
+    if (stand !== S.stand) await laden(true);
+  } catch {
+    // Kein Netz oder kurz kein Server — beim nächsten Mal wieder.
+  }
+}
+setInterval(nachsehen, 25000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) laden(true); });
 
 if ("serviceWorker" in navigator) {

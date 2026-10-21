@@ -83,6 +83,8 @@ genau so, wie er es soll.
 | `ui-startbild.mjs` | Startbild und Name: Homi Point in Titel, Manifest, Anmeldung und Website; das Logo nur beim echten Start, mindestens 1 s, höchstens 2,5 s, nicht nach dem Neuladen, im Dunkeln dunkel |
 | `ui-konto.mjs` | Konto löschen und Haushalt verlassen im Browser: Folgen im Blatt, „löschen“ eintippen, Gruß auf der Anmeldung, Verlassen bis zur Einrichtung, letzte Erwachsene mit Kind, Löschseite im Web und der Weg über die Anmeldung |
 | `recht.mjs` | Impressum, Datenschutz, Teilnahmebedingungen: erreichbar, Pflichtangaben, Links untereinander und von Startseite, Anmeldung, Einstellungen und Löschseite, 375 px, dunkel |
+| `ui-stand.mjs` | Kostenlos bleiben im Browser: Alle 25 Sekunden nur die kleine Frage nach dem Änderungszähler, der ganze Zustand nur nach einer Änderung oder nach fünf Minuten, mit offenem Blatt gar nichts |
+| `lesen.sh` | Kostenlos bleiben in Zahlen: misst mit der Messhülle (`messen/`) auf einer Kopie der Testdatenbank, wie viele Zeilen ein Abruf liest (Zustand höchstens 1.500, kleine Frage höchstens 10), ob der Zähler springt, ob „N× erledigt“ stimmt, und rechnet den Pilot hoch. Läuft als Letztes |
 | `mockup-familie.mjs` | Das Familienmodus-Mockup: Kind meldet, Eltern bestätigen oder tragen ein, Wunsch, Kind anlegen, Taschengeld, PIN, hell und dunkel |
 | `mockup-fair.mjs` | Das Fair-Bericht-Mockup: Zeitraum, Soll, Plus und Kind wirken in allen drei Varianten, Tooltip per Tastatur, Tabellen, Geschichte blättert, Schloss ohne Plus, Handy und dunkel |
 | `mockup-startbild.mjs` | Das Startbild-Mockup: erster Start zeigt das Logo mindestens 1 s, Zurückholen und Neuladen nicht, ganz schließen setzt zurück, langsames Netz bis 2 s, dunkel, 375 px |

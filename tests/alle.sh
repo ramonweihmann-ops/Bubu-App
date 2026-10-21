@@ -79,7 +79,7 @@ lauf "konto-api.sh" bash konto-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto ui-stand; do
   lauf "$t.mjs" node "$t.mjs"
 done
 
@@ -87,6 +87,10 @@ echo
 echo "═════ Ersteinrichtung braucht frische Konten"
 bash reset-def.sh > /dev/null 2>&1
 lauf "ui3.mjs" node ui3.mjs
+
+echo
+echo "═════ Kostenlos bleiben: was die App liest"
+lauf "lesen.sh" bash lesen.sh
 
 echo
 echo "Fertig. Jede Zeile oben muss auf ALLES GRÜN oder „Keine Fehler“ enden."

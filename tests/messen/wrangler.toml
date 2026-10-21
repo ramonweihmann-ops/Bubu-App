@@ -1,0 +1,19 @@
+# Nur für tests/lesen.sh: der echte Worker in der Messhülle, auf einer Kopie der
+# lokalen Testdatenbank. Wird nie ausgerollt.
+name = "homi-point-messen"
+main = "huelle.js"
+compatibility_date = "2026-08-01"
+
+[assets]
+directory = "../../web"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "haus-quest"
+database_id = "6d3cf5e4-f2c8-4d32-a008-e93a3a1b283f"
+
+[vars]
+BASIS_URL = "http://127.0.0.1:8794"
+GOOGLE_CLIENT_ID = "600393178714-messen"
