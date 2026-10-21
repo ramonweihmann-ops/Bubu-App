@@ -1,0 +1,48 @@
+/* Die Rechtstexte: Impressum, Datenschutz, Teilnahmebedingungen.
+ * Eine ruhige Lesespalte in den Farben der Startseite, hell und dunkel. */
+:root {
+  --ground: #ffffff;
+  --tint: #f4f7fc;
+  --line: #dbe3f0;
+  --ink: #152c4f;
+  --ink-2: #55688a;
+  --ink-3: #8899b3;
+  --accent: #ec0f06;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0b1830; --tint: #11223d; --line: #24395c;
+    --ink: #e9f0fb; --ink-2: #a5b6d1; --ink-3: #7488a6; --accent: #ff4b42;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased; line-height: 1.6;
+}
+main {
+  max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px;
+  padding-block: 36px 56px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--ink); }
+a.zurueck { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+h1 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em; font-size: clamp(28px, 7vw, 38px); margin: 6px 0 0; line-height: 1.1; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -.02em; margin: 18px 0 0; text-wrap: balance; }
+.stand { font-size: 13px; color: var(--ink-3); margin: 0; }
+p, li { color: var(--ink-2); font-size: 15.5px; margin: 0; }
+b, strong { color: var(--ink); }
+ul, ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+address { font-style: normal; color: var(--ink); font-size: 15.5px; }
+.kasten { background: var(--tint); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.tabelle { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+td:first-child { color: var(--ink); }
+footer { margin-top: 18px; font-size: 14px; color: var(--ink-3); display: flex; gap: 14px; flex-wrap: wrap; }
+footer a { color: var(--ink-2); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

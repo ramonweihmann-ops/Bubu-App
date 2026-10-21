@@ -129,6 +129,13 @@ Gelöscht wird sofort und endgültig, bestätigt durch Eintippen von „löschen
   ihr Konto. Verlassen kann sie den Haushalt nicht, solange Kinder da sind.
 - **Haushalt verlassen** behält das Konto; danach neu gründen oder mit Code beitreten.
 
+## Rechtstexte
+
+`haus-quest.com/impressum/`, `/datenschutz/` und `/teilnahme/` (Teilnahmebedingungen für den Pilot; AGB kommen
+mit der Bezahlung). Verlinkt von der Startseite, der Anmeldung, den Einstellungen und der Löschseite. Anbieter ist
+im Pilot eine Privatperson, wie bei Love Diary. Ändert sich, was die App speichert, muss die Tabelle in der
+Datenschutzerklärung mit.
+
 ## Aufbau
 
 ```

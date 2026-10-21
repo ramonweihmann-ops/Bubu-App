@@ -399,7 +399,10 @@ function anmelden() {
       <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
       <button class="btn text" data-kind-code-eingeben>Ich bin ein Kind</button>
       <p style="font-size:12px;color:var(--ink-3);margin-top:18px;max-width:30ch">
-        Gespeichert werden Name, E-Mail und Profilbild aus deinem Google-Konto — sonst nichts.
+        Von Google kommen nur Name, E-Mail und Profilbild. Mit der Anmeldung nimmst du zu den
+        <a href="/teilnahme/" target="_blank" rel="noopener">Teilnahmebedingungen</a> am Pilot teil.
+        <span class="rechtslinks"><a href="/datenschutz/" target="_blank" rel="noopener">Datenschutz</a> ·
+          <a href="/impressum/" target="_blank" rel="noopener">Impressum</a></span>
       </p>
     </div>`;
 }
@@ -3108,6 +3111,10 @@ function schirmEinstellungen() {
           <span class="m">Endgültig, mit allem, was dir gehört</span></span><span style="color:var(--ink-3)">›</span>
       </button>`}
       <button class="btn text block" data-abmelden>Abmelden</button>
+      <p class="rechtslinks">
+        <a href="/datenschutz/" target="_blank" rel="noopener">Datenschutz</a> ·
+        <a href="/teilnahme/" target="_blank" rel="noopener">Teilnahmebedingungen</a> ·
+        <a href="/impressum/" target="_blank" rel="noopener">Impressum</a></p>
     </div>`;
 }
 
@@ -4414,7 +4421,8 @@ function sheetKindForm(k = null) {
     ${f.id ? "" : `
     <label class="kv-einwilligung"><input type="checkbox" id="einwilligung" ${f.einwilligung ? "checked" : ""}>
       <span>Ich bin sorgeberechtigt und willige ein, dass Homi Point den Vornamen und die Cleanies dieses
-      Kindes speichert. Keine E-Mail, kein Foto, keine Werbung.</span></label>`}
+      Kindes speichert. Keine E-Mail, kein Foto, keine Werbung.
+      <a href="/datenschutz/#kinder" target="_blank" rel="noopener">Mehr dazu</a></span></label>`}
     <button class="btn dark block" data-kind-speichern>${f.id ? "Speichern" : "Anlegen"}</button>`}`);
 }
 
