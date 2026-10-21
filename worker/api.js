@@ -29,6 +29,7 @@ import {
 } from "./events.js";
 import { fairBericht, plusTesten, plusLage, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
 import { kontoVorschau, kontoLoeschen, haushaltVerlassen } from "./konto.js";
+import { umzugsLage } from "./umzug.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -56,7 +57,8 @@ export async function handleApi(request, env, url) {
       ok: true,
       zeit: new Date().toISOString(),
       clientId: env.GOOGLE_CLIENT_ID ? env.GOOGLE_CLIENT_ID.split("-")[0] + "-…" : null,
-      clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET)
+      clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET),
+      ...(await umzugsLage(env))
     });
   }
   // Das Gerät eines Kindes meldet sich mit einem Code an — ohne Google.

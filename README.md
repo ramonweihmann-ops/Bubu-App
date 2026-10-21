@@ -136,6 +136,20 @@ mit der Bezahlung). Verlinkt von der Startseite, der Anmeldung, den Einstellunge
 im Pilot eine Privatperson, wie bei Love Diary. Ändert sich, was die App speichert, muss die Tabelle in der
 Datenschutzerklärung mit.
 
+## Datenbank in der EU
+
+Die Datenbank liegt in Cloudflare als `homi-point` und ist auf die EU festgelegt (Jurisdiction `eu`). Die
+Festlegung geht nur beim Anlegen; die erste Datenbank (`haus-quest`) hatte keine, deshalb der Umzug im Oktober 2026.
+
+Für den Umzug hängt die alte Datenbank als `ALT` neben `DB`. `worker/umzug.js` kopiert alles aus `ALT` nach `DB` —
+Eltern vor Kindern, Zeile für Zeile mit „insert or ignore“ — und setzt am Ende die Marke `umzug_eu` in
+`einstellungen`. Weil ein Aufruf im kostenlosen Plan nur 10 ms Rechenzeit hat, kopiert jeder Aufruf höchstens 100
+Zeilen und macht dort weiter, wo der letzte aufgehört hat; ein abgebrochener Aufruf verliert nichts. Bis die Marke
+steht, antwortet die Schnittstelle mit 503 „Homi Point zieht gerade um“. `/api/health` schiebt den Umzug an und
+zeigt, wie weit er ist, woran er scheitert und aus welcher Region die Datenbank antwortet — nach dem Ausrollen
+`/api/health` aufrufen, bis dort `umzug.am` steht. Ist alles geprüft, fliegen `ALT` und `umzug.js` raus, und
+die alte Datenbank wird gelöscht — spätestens 30 Tage nach dem Umzug, so steht es in der Datenschutzerklärung.
+
 ## Aufbau
 
 ```

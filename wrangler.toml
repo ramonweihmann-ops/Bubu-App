@@ -12,12 +12,25 @@ binding = "ASSETS"
 # und liefert die Startseite — auch für /api/auth/start. Der Worker läuft dann nie.
 run_worker_first = ["/api/*"]
 
-# Eigene Datenbank, ausschließlich für diese App.
+# Eigene Datenbank, ausschließlich für diese App — in Cloudflare „homi-point“,
+# auf die EU festgelegt (Jurisdiction: eu; lässt sich nachträglich nicht ändern).
+# Hier heißt sie weiter „haus-quest“: Unter diesem Namen sucht sie der
+# Deploy-Befehl in Cloudflare (`wrangler d1 migrations apply haus-quest --remote`)
+# und jedes Testskript. Wrangler nimmt für alles die ID, der Name dient nur zum Finden.
 [[d1_databases]]
 binding = "DB"
 database_name = "haus-quest"
-database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
+database_id = "6d3cf5e4-f2c8-4d32-a008-e93a3a1b283f"
 migrations_dir = "d1/migrations"
+
+# Nur für den Umzug: die alte Datenbank ohne EU-Festlegung (in Cloudflare
+# „haus-quest“). worker/umzug.js kopiert beim ersten Aufruf alles daraus nach DB.
+# Ist der Umzug geprüft, fliegt dieser Block samt umzug.js raus und die alte
+# Datenbank wird in Cloudflare gelöscht.
+[[d1_databases]]
+binding = "ALT"
+database_name = "haus-quest-alt"
+database_id = "a0688e8f-82e6-432e-b98c-e68a944381f8"
 
 # Der Wecker für den Haushaltsplan: jeden Morgen um 6 Uhr UTC, also 7 bzw. 8 Uhr
 # bei uns. Er zieht Vergabe, Mahnungen und Gruppenstrafe nach, damit das nicht
