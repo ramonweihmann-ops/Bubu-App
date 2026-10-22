@@ -33,9 +33,34 @@ async function api(pfad, daten) {
     body: daten ? JSON.stringify(daten) : undefined
   });
   const ergebnis = await antwort.json().catch(() => ({}));
-  if (!antwort.ok) throw new Error(ergebnis.fehler || "Da ist etwas schiefgegangen");
+  if (!antwort.ok) {
+    const fehler = new Error(ergebnis.fehler || "Da ist etwas schiefgegangen");
+    fehler.name = "Antwort"; // eine Absage der Schnittstelle, kein Absturz — siehe fehlerMelden()
+    throw fehler;
+  }
   return ergebnis;
 }
+
+/* ------------------------------------------------------------------ Abstürze melden */
+//
+// Was in der App schiefgeht, landet im Betriebs-Dashboard: nur die technische
+// Meldung und der Bereich, in dem man gerade war — keine Inhalte. Je Besuch
+// höchstens fünf verschiedene Meldungen. Absagen der Schnittstelle („Diese
+// Quest gibt es nicht“) und Netzaussetzer sind keine Abstürze.
+const gemeldeteFehler = new Set();
+function fehlerMelden(name, nachricht) {
+  if (name === "Antwort") return;
+  const text = `${name || "Fehler"}: ${String(nachricht ?? "").slice(0, 280)}`;
+  if (/vibrate|ResizeObserver loop|Failed to fetch|NetworkError|Load failed|AbortError|NotAllowedError: play/i.test(text)) return;
+  if (gemeldeteFehler.has(text) || gemeldeteFehler.size >= 5) return;
+  gemeldeteFehler.add(text);
+  fetch("/api/fehler", {
+    method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+    body: JSON.stringify({ nachricht: text, ort: S?.angemeldet === false ? "anmeldung" : ansicht })
+  }).catch(() => {});
+}
+window.addEventListener("error", (ev) => fehlerMelden(ev.error?.name, ev.error?.message || ev.message));
+window.addEventListener("unhandledrejection", (ev) => fehlerMelden(ev.reason?.name, ev.reason?.message ?? ev.reason));
 
 function zeitpunkt(iso) {
   if (!iso) return "";
@@ -390,7 +415,67 @@ function zeichneKind(k) {
 
 /* ------------------------------------------------------------------ Anmeldung */
 
+/* Im Pilot kommt ein neues Konto nur mit Einladung zustande: einem Pilot-Code
+ * (HOMI-7K3-PQ8, oft per Link ?pilot=…) oder dem Code eines Haushalts. Die
+ * Schnittstelle prüft ihn und merkt ihn sich für die Google-Anmeldung. Wer
+ * schon dabei ist, meldet sich wie immer an. */
+const PILOT = { pflicht: null, gueltig: null, fehler: "", eingabe: "" };
+
+async function pilotLaden() {
+  try { PILOT.pflicht = (await api("pilot")).pflicht; } catch { PILOT.pflicht = false; }
+  const suche = new URLSearchParams(location.search);
+  const ausLink = suche.get("pilot") || suche.get("einladung");
+  if (ausLink && PILOT.pflicht) await einladungPruefen(ausLink, true);
+}
+
+async function einladungPruefen(roh, ausLink = false) {
+  PILOT.eingabe = String(roh ?? "").trim();
+  PILOT.fehler = "";
+  if (!PILOT.eingabe) { PILOT.fehler = "Gib den Code aus deiner Einladung ein."; return; }
+  try {
+    const r = await api("pilot/pruefen", { code: PILOT.eingabe });
+    PILOT.gueltig = { art: r.art, code: r.code, ausLink };
+    // Ein Haushaltscode wird nach der Anmeldung gleich eingelöst.
+    try {
+      if (r.art === "haushalt") localStorage.setItem("hq-haushaltscode", r.code);
+      else localStorage.removeItem("hq-haushaltscode");
+    } catch { /* ohne Speicher tippt man ihn eben noch einmal */ }
+  } catch (fehler) {
+    PILOT.gueltig = null;
+    PILOT.fehler = fehler.message;
+  }
+}
+
+function einladungsTeil() {
+  const ohne = new URLSearchParams(location.search).has("ohne-einladung");
+  if (PILOT.gueltig) {
+    const g = PILOT.gueltig;
+    return `<div class="pilotkarte" data-einladung-ok>
+        <span class="marke">${g.art === "pilot" ? "Einladung zum Pilot" : "Code eines Haushalts"}</span>
+        <b>${g.art === "pilot" ? "Damit gründest du euren Haushalt." : "Nach der Anmeldung bist du gleich dabei."}</b>
+        <span>${esc(g.code)}${g.ausLink ? " — kam mit dem Link" : ""} · <button class="linkknopf" data-pilot-anders>anderer Code</button></span>
+      </div>`;
+  }
+  return `${ohne && !PILOT.fehler ? `<div class="card flat pilotinfo" data-ohne-einladung><b>Dich kennen wir noch nicht.</b>
+        <span>Homi Point ist gerade im Pilot. Mitmachen geht mit einer Einladung — oder mit dem Code eines Haushalts,
+          in dem schon jemand ist.</span></div>` : ""}
+      <div class="pilotfeld">
+        <label for="pilot-code">Einladungs-Code</label>
+        <div class="pilotzeile">
+          <input id="pilot-code" value="${esc(PILOT.eingabe)}" placeholder="HOMI-… oder 123456"
+            autocomplete="off" autocapitalize="characters" spellcheck="false" ${PILOT.fehler ? 'aria-invalid="true" aria-describedby="pilot-fehler"' : ""}>
+          <button class="btn dark" data-pilot-pruefen>Prüfen</button>
+        </div>
+        ${PILOT.fehler ? `<div class="pilotfehler" id="pilot-fehler" role="alert">${esc(PILOT.fehler)}</div>`
+          : ohne ? "" : `<div class="pilothinweis">Homi Point ist gerade im Pilot — mit Einladung geht's los.</div>`}
+      </div>`;
+}
+
 function anmelden() {
+  if (PILOT.pflicht === null) pilotLaden().then(() => { if (S && S.angemeldet === false) anmelden(); });
+  // Solange unklar ist, ob der Pilot läuft, steht das Tor — sicher ist sicher.
+  const tor = PILOT.pflicht !== false;
+  const frei = !tor || Boolean(PILOT.gueltig);
   app.innerHTML = `
     <div class="mitte">
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
@@ -400,7 +485,11 @@ function anmelden() {
         <span>Danke, dass du dabei warst. Dein Google-Konto bleibt; die Verbindung zu Homi Point trennst du bei
           Google unter „Drittanbieter-Apps“.</span></div>` : ""}
       <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
-      <a class="btn ghost" href="/api/auth/start" style="gap:10px">${icon("i-google", 20)}Mit Google anmelden</a>
+      ${tor ? einladungsTeil() : ""}
+      ${frei
+        ? `<a class="btn ghost" href="/api/auth/start" style="gap:10px" data-google>${icon("i-google", 20)}Mit Google anmelden</a>`
+        : `<button class="btn ghost" disabled style="gap:10px" data-google>${icon("i-google", 20)}Mit Google anmelden</button>`}
+      ${tor && !frei ? `<a class="btn text" href="/api/auth/start" data-schon-dabei>Ich bin schon dabei — anmelden</a>` : ""}
       <button class="btn text" data-kind-code-eingeben>Ich bin ein Kind</button>
       <p style="font-size:12px;color:var(--ink-3);margin-top:18px;max-width:30ch">
         Von Google kommen nur Name, E-Mail und Profilbild. Mit der Anmeldung nimmst du zu den
@@ -492,17 +581,28 @@ function eName() {
 }
 
 function eBegruessung() {
+  // Kam jemand mit dem Code eines Haushalts, geht es gleich dorthin.
+  let haushaltscode = "";
+  try { haushaltscode = localStorage.getItem("hq-haushaltscode") || ""; } catch { /* dann eben von Hand */ }
+  const gruenden = S.darfGruenden !== false && !haushaltscode;
   huelle(`
     <div class="mitte">
       <img class="logo" src="/logo.webp" alt="">
       <h1>Schön, dass du da bist,<br>${esc(E.name || "Du")}</h1>
-      <p>Ab hier zählt jede erledigte Aufgabe. Wir richten in drei kurzen Schritten
-        euren Haushalt ein — danach könnt ihr sofort loslegen.</p>
+      ${gruenden ? `<p>Ab hier zählt jede erledigte Aufgabe. Wir richten in drei kurzen Schritten
+        euren Haushalt ein — danach könnt ihr sofort loslegen.</p>`
+      : haushaltscode ? `<p>Du bist eingeladen — mit dem Code ${esc(haushaltscode)} kommst du gleich in euren Haushalt.</p>`
+      : `<p data-ohne-gruenden>Im Pilot gründest du einen Haushalt mit einer Einladung. Oder du trittst mit dem
+        Code eines Haushalts bei, in dem schon jemand ist.</p>`}
     </div>`,
-    `<button class="btn primary block" data-eweiter>Los geht's</button>
-     <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
-     <button class="btn text block" data-ecode>Ich wurde eingeladen — Code eingeben</button>
-     ${eCleanies()}`);
+    gruenden
+      ? `<button class="btn primary block" data-eweiter>Los geht's</button>
+         <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
+         <button class="btn text block" data-ecode>Ich wurde eingeladen — Code eingeben</button>
+         ${eCleanies()}`
+      : `<button class="btn primary block" data-ecode>${haushaltscode ? "Beitreten" : "Code eingeben"}</button>
+         <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
+         ${eCleanies()}`);
 }
 
 function eHaushalt() {
@@ -662,17 +762,23 @@ function eCodeSchirm() {
     <div class="body ohne-leiste">
       <div class="card flat leer">
         <img src="/logo.webp" alt="">
-        <div class="t">Der Code steht in der App der Person, die den Haushalt eingerichtet hat.</div>
+        <div class="t">Den Code eures Haushalts zeigt die App der Person, die ihn eingerichtet hat. Eine
+          Einladung zum Pilot beginnt mit HOMI.</div>
       </div>
       <div class="card">
         <div class="field">
-          <label>Einladecode</label>
-          <input class="codefeld" id="code-eingabe" inputmode="numeric" maxlength="6" placeholder="000000">
+          <label for="code-eingabe">Code</label>
+          <input class="codefeld" id="code-eingabe" maxlength="14" placeholder="000000" autocomplete="off"
+            autocapitalize="characters" spellcheck="false" value="${esc(eGemerkterCode())}">
         </div>
-        <button class="btn dark block" data-paar-beitreten>Beitreten</button>
+        <button class="btn dark block" data-paar-beitreten>Weiter</button>
       </div>
     </div>`,
-    `<button class="btn text block" data-ezurueck>Doch selbst einrichten</button>`);
+    `<button class="btn text block" data-ezurueck>Zurück</button>`);
+}
+
+function eGemerkterCode() {
+  try { return localStorage.getItem("hq-haushaltscode") || ""; } catch { return ""; }
 }
 
 /* ------------------------------------------------------------------ Hilfen zum Zustand */
@@ -4798,10 +4904,11 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS);
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS);
   if (!el) return;
   if (await familieKlick(el)) return;
   try {
+    if (await pilotKlick(el)) return;
     if (await fairKlick(el)) return;
     if (await kontoKlick(el)) return;
   } catch (fehler) {
@@ -5631,10 +5738,21 @@ document.addEventListener("click", async (ev) => {
     if (el.hasAttribute("data-paar-anlegen")) { await api("pair/create", {}); await laden(); return; }
 
     if (el.hasAttribute("data-paar-beitreten")) {
-      const code = document.getElementById("code-eingabe")?.value.replace(/\D/g, "");
+      const roh = document.getElementById("code-eingabe")?.value || "";
+      // Eine Einladung zum Pilot: annehmen, dann wie gewohnt einrichten.
+      if (/[a-z]/i.test(roh)) {
+        await api("pilot/annehmen", { code: roh });
+        await laden(true);
+        E.schritt = 2;
+        zeichne();
+        toast("Einladung angenommen — jetzt richtest du euren Haushalt ein.");
+        return;
+      }
+      const code = roh.replace(/\D/g, "");
       // Name und Bild aus dem ersten Schritt gelten auch für den, der beitritt.
       if (!S.eingerichtet) await api("profil", { name: E.name, bild: E.bild });
       await api("pair/join", { code });
+      try { localStorage.removeItem("hq-haushaltscode"); } catch { /* egal */ }
       await laden();
       toast("Willkommen im Haushalt!");
       return;
@@ -6457,6 +6575,36 @@ async function fairKlick(el) {
 // sofort und endgültig — dafür tippt man „löschen“ ein.
 
 const KONTO_KLICKS = "[data-konto-loeschen],[data-konto-weiter],[data-konto-endgueltig],[data-haushalt-verlassen],[data-verlassen-ok]";
+const PILOT_KLICKS = "[data-pilot-pruefen],[data-pilot-anders]";
+
+async function pilotKlick(el) {
+  if (!el.matches(PILOT_KLICKS)) return false;
+  if (el.hasAttribute("data-pilot-pruefen")) {
+    el.disabled = true;
+    await einladungPruefen(document.getElementById("pilot-code")?.value || "");
+    anmelden();
+    if (PILOT.gueltig) app.querySelector("[data-google]")?.focus();
+    else document.getElementById("pilot-code")?.focus();
+    return true;
+  }
+  if (el.hasAttribute("data-pilot-anders")) {
+    PILOT.gueltig = null;
+    PILOT.eingabe = "";
+    try { localStorage.removeItem("hq-haushaltscode"); } catch { /* egal */ }
+    anmelden();
+    document.getElementById("pilot-code")?.focus();
+    return true;
+  }
+  return false;
+}
+
+// Eingabetaste im Einladungsfeld prüft wie der Knopf.
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && ev.target?.id === "pilot-code") {
+    ev.preventDefault();
+    app.querySelector("[data-pilot-pruefen]")?.click();
+  }
+});
 
 const folgenListe = (zeilen) => `<ul class="folgen">${zeilen.map(([art, text]) => `
   <li class="${art}"><span class="zeichen" aria-hidden="true">${art === "weg" ? "✕" : art === "bleibt" ? "✓" : "i"}</span><span>${text}</span></li>`).join("")}</ul>`;

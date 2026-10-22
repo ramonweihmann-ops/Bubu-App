@@ -11,9 +11,14 @@ Zwei Sorten, beide gegen eine laufende App:
 ## Loslegen
 
 ```bash
-npx wrangler dev --local --port 8792     # in einem zweiten Fenster
+# in einem zweiten Fenster — mit den beiden Testschaltern:
+npx wrangler dev --local --port 8792 --var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com
 bash tests/alle.sh
 ```
+
+`HQ_TEST=1` schaltet `/api/auth/probe` frei, eine Anmeldung wie nach Google, aber mit ausgedachter Person — nur
+auf 127.0.0.1 und nur mit diesem Schalter, live gibt es sie nicht. `BETRIEB_EMAILS` lässt das Testkonto
+`ramon@example.com` ins Betriebs-Dashboard. Für alle übrigen Tests ist der Pilot aus (`seed.sql`).
 
 `alle.sh` spielt alles in der Reihenfolge durch, in der es sich verträgt, und
 gibt je Suite die letzten Zeilen aus. Jede muss auf **ALLES GRÜN** enden.
@@ -83,6 +88,9 @@ genau so, wie er es soll.
 | `ui-startbild.mjs` | Startbild und Name: Homi Point in Titel, Manifest, Anmeldung und Website; das Logo nur beim echten Start, mindestens 1 s, höchstens 2,5 s, nicht nach dem Neuladen, im Dunkeln dunkel |
 | `ui-konto.mjs` | Konto löschen und Haushalt verlassen im Browser: Folgen im Blatt, „löschen“ eintippen, Gruß auf der Anmeldung, Verlassen bis zur Einrichtung, letzte Erwachsene mit Kind, Löschseite im Web und der Weg über die Anmeldung |
 | `recht.mjs` | Impressum, Datenschutz, Teilnahmebedingungen: erreichbar, Pflichtangaben, Links untereinander und von Startseite, Anmeldung, Einstellungen und Löschseite, 375 px, dunkel |
+| `pilot-api.sh` | Pilot über die Schnittstelle: Zugang zum Betrieb, Einladungen anlegen und zurückziehen, das Tor vor der Anmeldung (Unsinn, unbekannt, klein geschrieben, schon angenommen, schon gegründet), ohne Einladung kein Konto, Gründen nur mit Einladung, Haushaltscode als Einladung, Annehmen in der App, Rücksprung nur auf eigene Seiten, Fehlerliste mit Tagesgrenze, Dashboard-Zahlen bis Woche 4, Pilot aus |
+| `ui-pilot.mjs` | Pilot im Browser: Anmeldeseite mit Einladungsfeld, Link `?pilot=`, ohne Einladung, Haushaltscode → gleich beitreten, Einladung in der App annehmen, Absturz landet im Dashboard (Absagen nicht), Dashboard auf dem Handy und am Rechner, Einladung anlegen, zurückziehen, Pilot-Schalter |
+| `mockup-pilot.mjs` | Mockup Pilot-Codes und Betriebs-Dashboard: Einladung vor der Anmeldung oder beim Gründen, mit Link, von Hand, schon benutzt, ohne; Dashboard mit Toren, Einladungen, Fehlern, Schalter; 375 px hell und dunkel |
 | `ui-stand.mjs` | Kostenlos bleiben im Browser: Alle 25 Sekunden nur die kleine Frage nach dem Änderungszähler, der ganze Zustand nur nach einer Änderung oder nach fünf Minuten, mit offenem Blatt gar nichts |
 | `lesen.sh` | Kostenlos bleiben in Zahlen: misst mit der Messhülle (`messen/`) auf einer Kopie der Testdatenbank, wie viele Zeilen ein Abruf liest (Zustand höchstens 1.500, kleine Frage höchstens 10), ob der Zähler springt, ob „N× erledigt“ stimmt, und rechnet den Pilot hoch. Läuft als Letztes |
 | `mockup-familie.mjs` | Das Familienmodus-Mockup: Kind meldet, Eltern bestätigen oder tragen ein, Wunsch, Kind anlegen, Taschengeld, PIN, hell und dunkel |

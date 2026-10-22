@@ -5,6 +5,7 @@ import { handleApi } from "./api.js";
 import { planNachziehen } from "./plan.js";
 import { eventsNachziehen } from "./events.js";
 import { umziehen } from "./umzug.js";
+import { fehlerMerken, fehlerAufraeumen, ortOhneKennung } from "./fehler.js";
 
 export default {
   async fetch(request, env) {
@@ -25,7 +26,13 @@ export default {
     }
 
     if (url.pathname.startsWith("/api/auth/")) {
-      return handleAuth(request, env, url);
+      try {
+        return await handleAuth(request, env, url);
+      } catch (fehler) {
+        // Die Anmeldung hat keinen eigenen Fehlerfang — was hier ankommt, ist ein echter Fehler.
+        await fehlerMerken(env, { quelle: "server", nachricht: String(fehler.message || fehler), ort: ortOhneKennung(url.pathname) });
+        throw fehler;
+      }
     }
     if (url.pathname.startsWith("/api/")) {
       return handleApi(request, env, url);
@@ -50,6 +57,7 @@ export default {
 
 async function alleHaushalteNachziehen(env) {
   if (!(await umziehen(env))) return; // erst wenn der Umzug durch ist
+  await fehlerAufraeumen(env).catch((e) => console.log(`Wecker: Fehler aufräumen — ${e.message}`));
   const haushalte = await env.DB.prepare(
     "select id from couples where eingerichtet = 1"
   ).all();

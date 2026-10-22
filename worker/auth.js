@@ -4,8 +4,12 @@
 // diese Anwendung eine eigene Sitzung, deshalb spielt Googles Sieben-Tage-Grenze
 // im Testmodus für uns keine Rolle.
 
+import { EINLADUNG, einladungAusKeks, einladungAnnehmen, pilotPflicht } from "./pilot.js";
+import { istBetrieb } from "./betrieb.js";
+
 const SITZUNG = "hq_sitzung";
 const STATUS = "hq_status";
+const WEITER = "hq_weiter";
 const TAGE = 90;
 
 export function keks(request, name) {
@@ -17,7 +21,7 @@ export function keks(request, name) {
   return null;
 }
 
-function setzeKeks(name, wert, sekunden) {
+export function setzeKeks(name, wert, sekunden) {
   const teile = [
     `${name}=${encodeURIComponent(wert)}`,
     "Path=/",
@@ -71,6 +75,7 @@ export async function handleAuth(request, env, url) {
   if (url.pathname === "/api/auth/start") return start(request, env);
   if (url.pathname === "/api/auth/callback") return callback(request, env, url);
   if (url.pathname === "/api/auth/logout") return logout(request, env);
+  if (url.pathname === "/api/auth/probe") return probe(request, env, url);
   return new Response("Nicht gefunden", { status: 404 });
 }
 
@@ -78,8 +83,15 @@ function basis(env, request) {
   return env.BASIS_URL || new URL(request.url).origin;
 }
 
+/** Wohin nach der Anmeldung? Nur Pfade dieser Seite, etwa /betrieb/. */
+function weiterNach(roh) {
+  const pfad = String(roh ?? "");
+  return /^\/[a-z0-9\-/]*$/i.test(pfad) && !pfad.startsWith("//") ? pfad : null;
+}
+
 function start(request, env) {
   const status = zufall(16);
+  const weiter = weiterNach(new URL(request.url).searchParams.get("weiter"));
   const ziel = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   ziel.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
   ziel.searchParams.set("redirect_uri", `${basis(env, request)}/api/auth/callback`);
@@ -88,13 +100,9 @@ function start(request, env) {
   ziel.searchParams.set("state", status);
   ziel.searchParams.set("prompt", "select_account");
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: ziel.toString(),
-      "Set-Cookie": setzeKeks(STATUS, status, 600)
-    }
-  });
+  const kekse = [["Location", ziel.toString()], ["Set-Cookie", setzeKeks(STATUS, status, 600)]];
+  if (weiter) kekse.push(["Set-Cookie", setzeKeks(WEITER, weiter, 600)]);
+  return new Response(null, { status: 302, headers: kekse });
 }
 
 async function callback(request, env, url) {
@@ -126,6 +134,23 @@ async function callback(request, env, url) {
   const person = jwtInhalt(daten.id_token);
   if (!person || !person.sub) return fehlerseite("Die Antwort von Google war unvollständig.");
 
+  return anmelden(request, env, person);
+}
+
+/**
+ * Nach Google: Konto anlegen oder auffrischen, Sitzung geben. Im Pilot entsteht
+ * ein neues Konto nur mit einer vorher geprüften Einladung (oder für den
+ * Betrieb) — sonst geht es ohne Spuren zurück zur Anmeldung.
+ */
+async function anmelden(request, env, person) {
+  const aufraeumen = [["Set-Cookie", setzeKeks(STATUS, "", 0)], ["Set-Cookie", setzeKeks(EINLADUNG, "", 0)],
+    ["Set-Cookie", setzeKeks(WEITER, "", 0)]];
+  const bekannt = await env.DB.prepare("select 1 from users where id = ?1").bind(person.sub).first();
+  const einladung = await einladungAusKeks(env, request);
+  if (!bekannt && !einladung && !istBetrieb(env, person.email) && (await pilotPflicht(env))) {
+    return new Response(null, { status: 302, headers: [["Location", "/app/?ohne-einladung"], ...aufraeumen] });
+  }
+
   // Ein selbst gewählter Name bleibt stehen — sonst käme bei jeder Anmeldung
   // wieder der aus dem Google-Konto zurück.
   await env.DB.prepare(
@@ -133,6 +158,7 @@ async function callback(request, env, url) {
      on conflict(id) do update set email = ?2, avatar_url = ?4,
        name = case when users.name_gesetzt = 1 then users.name else ?3 end`
   ).bind(person.sub, person.email || "", person.name || person.email || "Unbekannt", person.picture || null).run();
+  if (einladung?.art === "pilot") await einladungAnnehmen(env, einladung.code, person.sub);
 
   const token = zufall(32);
   await env.DB.prepare(
@@ -143,11 +169,28 @@ async function callback(request, env, url) {
   return new Response(null, {
     status: 302,
     headers: [
-      ["Location", "/app/"],
+      ["Location", weiterNach(keks(request, WEITER)) || "/app/"],
       ["Set-Cookie", setzeKeks(SITZUNG, token, TAGE * 86400)],
-      ["Set-Cookie", setzeKeks(STATUS, "", 0)]
+      ...aufraeumen
     ]
   });
+}
+
+/**
+ * Nur für die lokalen Tests: dieselbe Anmeldung wie nach Google, aber mit einer
+ * ausgedachten Person (?sub=…&email=…&name=…). Geht ausschließlich auf
+ * 127.0.0.1/localhost und nur, wenn der Testserver mit HQ_TEST=1 läuft — live
+ * gibt es beides nicht.
+ */
+async function probe(request, env, url) {
+  const lokal = ["127.0.0.1", "localhost"].includes(url.hostname);
+  if (!lokal || env.HQ_TEST !== "1") return new Response("Nicht gefunden", { status: 404 });
+  const person = {
+    sub: url.searchParams.get("sub"), email: url.searchParams.get("email") || "",
+    name: url.searchParams.get("name") || "Probe", picture: null
+  };
+  if (!person.sub) return new Response("sub fehlt", { status: 400 });
+  return anmelden(request, env, person);
 }
 
 async function logout(request, env) {

@@ -6,8 +6,12 @@
 # Dreier-WG, die haushalt.sh anlegt, und ui3.mjs frische Konten d/e/f.
 # In falscher Reihenfolge scheitern sie an Altlasten, nicht an der App.
 #
-# Vorher muss `npx wrangler dev --local --port 8792` laufen.
+# Vorher muss der Testserver laufen — mit den beiden Testschaltern:
+#   npx wrangler dev --local --port 8792 --var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com
+# HQ_TEST erlaubt die Probe-Anmeldung ohne Google (nur auf 127.0.0.1), BETRIEB_EMAILS
+# lässt das Testkonto „ramon@example.com“ ins Betriebs-Dashboard.
 set -u
+HQ_VARS="--var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com"
 cd "$(dirname "$0")"
 APP=$(cd .. && pwd)
 HIER=$PWD
@@ -38,7 +42,7 @@ export HQ_BILDER="${HQ_BILDER:-${TMPDIR:-/tmp}}"
 serverDa() {
   curl -s -o /dev/null -m 5 --noproxy 127.0.0.1 http://127.0.0.1:8792/api/health && return 0
   echo "  (Testserver antwortet nicht — wird neu gestartet)"
-  (cd "$APP" && nohup npx wrangler dev --local --port 8792 > "${TMPDIR:-/tmp}/hq-wrangler.log" 2>&1 &)
+  (cd "$APP" && nohup npx wrangler dev --local --port 8792 $HQ_VARS > "${TMPDIR:-/tmp}/hq-wrangler.log" 2>&1 &)
   for _ in $(seq 1 60); do
     curl -s -o /dev/null -m 5 --noproxy 127.0.0.1 http://127.0.0.1:8792/api/health && return 0
     sleep 1
@@ -76,12 +80,18 @@ lauf "bilder-api.sh" bash bilder-api.sh
 lauf "familie-api.sh" bash familie-api.sh
 lauf "fair-api.sh" bash fair-api.sh
 lauf "konto-api.sh" bash konto-api.sh
+lauf "pilot-api.sh" bash pilot-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto ui-stand; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto ui-pilot recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto mockup-pilot ui-stand; do
   lauf "$t.mjs" node "$t.mjs"
 done
+
+# Sicher ist sicher: Der Pilot ist für alles Weitere aus, auch wenn ein Pilot-Test
+# mittendrin abgebrochen ist.
+(cd "$APP" && npx wrangler d1 execute haus-quest --local --command \
+  "insert into einstellungen (schluessel, wert) values ('pilot_pflicht', 'nein') on conflict (schluessel) do update set wert = 'nein'" > /dev/null 2>&1)
 
 echo
 echo "═════ Ersteinrichtung braucht frische Konten"

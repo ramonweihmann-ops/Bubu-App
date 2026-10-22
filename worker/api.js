@@ -30,6 +30,10 @@ import {
 import { fairBericht, plusTesten, plusLage, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
 import { kontoVorschau, kontoLoeschen, haushaltVerlassen } from "./konto.js";
 import { umzugsLage } from "./umzug.js";
+import { EINLADUNG, einladungPruefen, einladungAnnehmen, pilotPflicht, gruendenErlaubt, einloesen } from "./pilot.js";
+import { betrieb } from "./betrieb.js";
+import { fehlerMerken, ortOhneKennung } from "./fehler.js";
+import { setzeKeks } from "./auth.js";
 
 const json = (daten, status = 200) =>
   new Response(JSON.stringify(daten), {
@@ -63,6 +67,15 @@ export async function handleApi(request, env, url) {
   }
   // Das Gerät eines Kindes meldet sich mit einem Code an — ohne Google.
   if (pfad === "kind/anmelden" && request.method === "POST") return kindAnmelden(request, env);
+  // Das Tor im Pilot steht vor der Anmeldung — also ohne Konto.
+  if (pfad === "pilot" && request.method === "GET") return json({ pflicht: await pilotPflicht(env) });
+  if (pfad === "pilot/pruefen" && request.method === "POST") return einladungTor(request, env);
+  // Fehler aus der App, auch von der Anmeldeseite.
+  if (pfad === "fehler" && request.method === "POST") {
+    const d = await request.json().catch(() => ({}));
+    await fehlerMerken(env, { quelle: "app", nachricht: d.nachricht, ort: d.ort }, ich?.id);
+    return json({ ok: true });
+  }
   if (!ich) return json({ fehler: "Nicht angemeldet", angemeldet: false }, 401);
 
   const koerper = request.method === "POST" ? await request.json().catch(() => ({})) : {};
@@ -91,6 +104,10 @@ export async function handleApi(request, env, url) {
     if (pfad === "events/gelesen") return json(await ereignisseGelesen(env, ich, koerper.ids));
     if (pfad === "profil") return json(await profilAendern(env, ich, koerper));
     if (pfad === "haushalt/einrichten") return json(await haushaltEinrichten(env, ich, koerper));
+    // Schon angemeldet, aber noch ohne Haushalt: die Pilot-Einladung in der App annehmen.
+    if (pfad === "pilot/annehmen" && request.method === "POST") return json(await pilotAnnehmen(env, ich, koerper.code));
+    // Das Betriebs-Dashboard — nur für die Adressen im Geheimnis BETRIEB_EMAILS.
+    if (teile[0] === "betrieb") return json(await betrieb(env, ich, request.method, teile, koerper));
 
     // Konto löschen geht auch ohne Haushalt — und nur mit POST.
     if (pfad === "konto/vorschau") return json(await kontoVorschau(env, ich));
@@ -195,8 +212,42 @@ export async function handleApi(request, env, url) {
     const sauber = text.includes("SQLITE_CONSTRAINT") || text.includes("D1_ERROR")
       ? (text.match(/(?:abort at \d+ in \[[^\]]*\]:\s*)?([^:]*(?:muss|kann|bereits|Zu wenig|besteht)[^:]*)/)?.[1] || "Das geht so nicht.").trim()
       : text;
+    // Alles ohne eigenen Status und ohne Datenbankregel dahinter ist ein echter
+    // Fehler im Server — der kommt ins Betriebs-Dashboard.
+    const regel = text.includes("SQLITE_CONSTRAINT") || /abort at \d+/.test(text);
+    if (!fehler.status && !regel) {
+      await fehlerMerken(env, { quelle: "server", nachricht: text, ort: `${request.method} /api/${ortOhneKennung(pfad)}` }, ich?.id);
+    }
     return json({ fehler: sauber }, fehler.status || 400);
   }
+}
+
+/* ------------------------------------------------------------------ Pilot */
+
+/** Vor der Anmeldung: Einladung prüfen und für die Google-Anmeldung merken (30 Minuten). */
+async function einladungTor(request, env) {
+  const { code } = await request.json().catch(() => ({}));
+  try {
+    const gueltig = await einladungPruefen(env, code);
+    return new Response(JSON.stringify({ ok: true, art: gueltig.art, code: gueltig.code }), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Set-Cookie": setzeKeks(EINLADUNG, gueltig.code, 1800)
+      }
+    });
+  } catch (fehler) {
+    return json({ fehler: fehler.message }, fehler.status || 400);
+  }
+}
+
+/** In der App, ohne Haushalt: eine Pilot-Einladung annehmen, um gründen zu dürfen. */
+async function pilotAnnehmen(env, ich, code) {
+  if (ich.couple_id) throw new Fehler("Du bist schon in einem Haushalt");
+  const gueltig = await einladungPruefen(env, code);
+  if (gueltig.art !== "pilot") throw new Fehler("Das ist der Code eines Haushalts — damit trittst du bei");
+  await einladungAnnehmen(env, gueltig.code, ich.id);
+  if (!(await gruendenErlaubt(env, ich))) throw new Fehler("Die Einladung ließ sich nicht annehmen");
+  return { ok: true };
 }
 
 /* ------------------------------------------------------------------ Kinder */
@@ -309,12 +360,17 @@ async function haushaltEinrichten(env, ich, daten) {
   const anweisungen = [];
 
   if (!ich.couple_id) {
+    if (!(await gruendenErlaubt(env, ich))) {
+      throw new Fehler("Im Pilot gründest du einen Haushalt mit einer Einladung. Den Code eines Haushalts? Damit trittst du bei.", 403);
+    }
     anweisungen.push(
       env.DB.prepare(
         `insert into couples (id, pair_code, pair_code_expires, art, groesse, erwachsene, kinder, eingerichtet)
          values (?1, ?2, datetime('now', '+1 day'), ?3, ?4, ?5, ?6, 1)`
       ).bind(paar, code, art, groesse, erwachsenenZahl, kinderZahl),
       env.DB.prepare("insert into members (user_id, couple_id, rolle) values (?1, ?2, 'verwalter')").bind(ich.id, paar),
+      // Die Pilot-Einladung gilt ab jetzt als eingelöst — im selben Schritt wie das Gründen.
+      einloesen(env, ich, paar),
       ...QUESTS.map((q) =>
         env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
           .bind(id(), paar, q.name, q.kategorie, q.punkte)),
@@ -709,7 +765,9 @@ async function zustand(env, ich, versatz = 0) {
       angemeldet: true,
       eingerichtet: false,
       ich: { id: ich.id, name: ich.name, avatar: ich.avatar_url, bild: ich.bild },
-      raumvorschlaege: RAUMVORSCHLAEGE
+      raumvorschlaege: RAUMVORSCHLAEGE,
+      // Im Pilot gründet nur, wer eine Einladung angenommen hat.
+      darfGruenden: await gruendenErlaubt(env, ich)
     };
   }
 
@@ -891,6 +949,7 @@ async function zustand(env, ich, versatz = 0) {
 
 async function melden(env, ich, daten, { still = false } = {}) {
   const { questId, anzahl = 1, notiz = "" } = daten;
+  if (!questId) throw new Fehler("Welche Quest? Es fehlt, was gemeldet werden soll.");
   const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   const quest = await env.DB.prepare(

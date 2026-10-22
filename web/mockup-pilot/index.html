@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point Pilot</title>
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen und einem Browserfenster. Farben und Schrift wie in
+ * der App, hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb; --balken:#2f6fd0;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:72ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-size:12.5px;color:var(--ink-3)}
+.bu{color:var(--ink-2);font-size:14px;margin:0;max-width:60ch}
+.bu b{color:var(--ink)}
+
+/* Regler über den Telefonen */
+.regler{position:sticky;top:0;z-index:5;background:var(--tint);padding:10px 0 14px;margin-bottom:6px;
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+@media (max-width:720px){.regler{position:static}}
+.gruppe{display:flex;flex-direction:column;gap:6px;min-width:0}
+.schalter{display:flex;flex-wrap:wrap;gap:6px}
+.schalter button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* Telefon */
+.phone{width:100%;max-width:360px;aspect-ratio:375/760;border:9px solid var(--rahmen);border-radius:40px;background:var(--bg);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 18px 40px -22px rgba(21,44,79,.5)}
+.screen{flex:1;display:flex;flex-direction:column;padding:26px 20px 18px;min-height:0;overflow:auto}
+.screen.mitte{justify-content:center;text-align:center}
+.logo{width:150px;height:auto;margin:0 auto 12px;display:block}
+.app-h{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:-.03em;margin:0 0 6px;line-height:1.12}
+.app-sub{color:var(--ink-2);margin:0 0 16px;font-size:14.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:14px;padding:13px 16px;font-weight:700;font-size:15px;border:0}
+.btn.rot{background:var(--akzent-flaeche);color:var(--auf-akzent)}
+.btn.rot[disabled]{opacity:.38;cursor:not-allowed}
+.btn.rand{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.btn.text{background:none;color:var(--ink-2);padding:9px}
+.btn+.btn{margin-top:8px}
+.g{width:18px;height:18px;flex:none}
+.fuss{margin-top:auto;padding-top:14px}
+.klein{font-size:12px;color:var(--ink-3);text-align:center;margin:12px 0 0}
+.klein u{color:var(--ink-2)}
+.feld{display:flex;flex-direction:column;gap:6px;text-align:left;margin:4px 0 12px}
+.feld label{font-family:var(--font-data);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.feld input{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);font-family:var(--font-data);
+  font-size:17px;letter-spacing:.12em;text-transform:uppercase;width:100%}
+.feld input.gut{border-color:var(--frei)}
+.feld input.schlecht{border-color:var(--accent)}
+.meldung{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:0 0 12px}
+.meldung b{display:block}
+.meldung.gut{background:var(--frei-tint);color:var(--ink)}
+.meldung.schlecht{background:var(--accent-tint);color:var(--ink)}
+.meldung.info{background:var(--tint);color:var(--ink-2)}
+.meldung .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.meldung.gut .ic{background:var(--frei)} .meldung.schlecht .ic{background:var(--accent)} .meldung.info .ic{background:var(--ink-3)}
+.einladung{border:1.5px solid var(--frei);background:var(--frei-tint);border-radius:16px;padding:12px 14px;text-align:left;margin:0 0 16px}
+.einladung .marke{color:var(--frei)}
+.einladung strong{display:block;font-family:var(--font-display);font-size:17px;margin:2px 0}
+.einladung span{font-size:13px;color:var(--ink-2)}
+.punkte{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line)} .punkte i.an{background:var(--accent)}
+.schritt{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);text-align:center;
+  padding:7px 0;border-top:1px solid var(--line);background:var(--tint)}
+
+/* Ablauf der Einladung */
+.ablauf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px;margin:8px 0 0;padding:0;list-style:none;counter-reset:s}
+.ablauf li{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;counter-increment:s;font-size:14px;color:var(--ink-2)}
+.ablauf li::before{content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--kontrast-bg);
+  color:var(--kontrast-ink);font-size:12px;font-weight:800;margin-right:8px}
+.ablauf li b{color:var(--ink)}
+
+/* Browserfenster für das Dashboard */
+.browser{border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden;box-shadow:0 18px 40px -26px rgba(21,44,79,.45)}
+.adresse{display:flex;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)}
+.adresse i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.adresse span{margin-left:8px;font-family:var(--font-data);font-size:12px;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:3px 10px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.buehne{background:var(--tint);padding:14px;display:flex;justify-content:center}
+.db{width:100%;max-width:980px}
+.db.handy{max-width:390px}
+
+/* Dashboard selbst */
+.db-kopf{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:2px 2px 14px}
+.db-kopf h4{font-family:var(--font-display);font-weight:800;font-size:23px;letter-spacing:-.02em;margin:0}
+.db-kopf p{margin:0;color:var(--ink-2);font-size:13.5px}
+.fortschritt{min-width:min(260px,100%);flex:1;max-width:340px}
+.fortschritt .leiste{height:8px;border-radius:99px;background:var(--tint-2);overflow:hidden;margin-top:5px}
+.fortschritt .leiste i{display:block;height:100%;background:var(--kontrast-bg);border-radius:99px}
+.fortschritt small{font-size:12px;color:var(--ink-3)}
+.karte{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.karte h5{font-family:var(--font-display);font-size:15.5px;font-weight:800;margin:0 0 2px}
+.karte .unter{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
+.raster{display:grid;gap:12px}
+.tore{grid-template-columns:repeat(4,1fr)}
+.db.handy .tore{grid-template-columns:repeat(2,1fr)}
+@media (max-width:760px){.tore{grid-template-columns:repeat(2,1fr)}}
+.tor{display:flex;flex-direction:column;gap:4px}
+.tor .was{font-size:12.5px;color:var(--ink-2);line-height:1.3;min-height:2.6em}
+.tor .zahl{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.tor .ziel{font-size:12px;color:var(--ink-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:12px;padding:3px 9px 3px 4px;font-size:12px;font-weight:700;width:fit-content;max-width:100%;line-height:1.3}
+.chip i{flex:none}
+.chip i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff}
+.chip.erreicht{background:var(--frei-tint);color:var(--frei)} .chip.erreicht i{background:var(--frei)}
+.chip.knapp{background:var(--bald-tint);color:var(--bald)} .chip.knapp i{background:var(--bald)}
+.chip.verfehlt{background:var(--accent-tint);color:var(--accent)} .chip.verfehlt i{background:var(--accent)}
+.chip.offen{background:var(--tint);color:var(--ink-3)} .chip.offen i{background:var(--ink-3)}
+.zwei{grid-template-columns:1.25fr 1fr;margin-top:12px}
+.db.handy .zwei{grid-template-columns:1fr}
+@media (max-width:760px){.zwei{grid-template-columns:1fr}}
+.zahlen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.zahlen div{background:var(--tint);border-radius:12px;padding:10px}
+.zahlen b{display:block;font-family:var(--font-display);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.zahlen span{font-size:12px;color:var(--ink-2)}
+.zahlen small{display:block;font-size:11.5px;color:var(--ink-3)}
+svg text{font-family:var(--font-ui)}
+.diagramm{width:100%;height:auto;display:block}
+.diagramm .balken{fill:var(--balken)}
+.diagramm .balken.jetzt{fill:var(--balken);opacity:.55}
+.diagramm .ziel{stroke:var(--ink-2);stroke-width:1.5;stroke-dasharray:4 4}
+.diagramm .achse{stroke:var(--line);stroke-width:1}
+.diagramm .lbl{fill:var(--ink-3);font-size:11px}
+.diagramm .wert{fill:var(--ink);font-size:11.5px;font-weight:700}
+.diagramm .ziel-lbl{fill:var(--ink-2);font-size:11px;font-weight:600}
+.tabelle-umschalten{background:none;border:0;padding:0;color:var(--ruhig);font-size:12.5px;font-weight:600;margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:11.5px;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.liste{display:flex;flex-direction:column}
+.zeile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.zeile:last-child{border-bottom:0}
+.zeile .name{font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zeile .info{grid-column:1;font-size:12.5px;color:var(--ink-3)}
+.zeile .rechts{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.code{font-family:var(--font-data);font-size:12.5px;letter-spacing:.06em;color:var(--ink-2)}
+.minibtn{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.minibtn.voll{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.kopf-mit-knopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.fehler-zeile .name{white-space:normal;font-family:var(--font-data);font-size:12.5px;font-weight:600}
+.drei{grid-template-columns:1fr 1fr;margin-top:12px}
+.db.handy .drei{grid-template-columns:1fr}
+@media (max-width:760px){.drei{grid-template-columns:1fr}}
+.schiene{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.kippschalter{width:46px;height:28px;border-radius:99px;border:0;background:var(--tint-2);position:relative;flex:none}
+.kippschalter::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.kippschalter[aria-checked="true"]{background:var(--frei)}
+.kippschalter[aria-checked="true"]::after{transform:translateX(18px)}
+.mehr{background:none;border:0;padding:8px 0 0;color:var(--ruhig);font-size:13px;font-weight:600}
+
+/* Blatt „Neue Einladung“ im Dashboard */
+.blatt-schleier{position:fixed;inset:0;background:var(--schleier);display:none;align-items:flex-end;justify-content:center;z-index:20;padding:16px}
+.blatt-schleier[data-offen]{display:flex}
+@media (min-width:700px){.blatt-schleier{align-items:center}}
+.blatt{background:var(--bg);border-radius:20px;max-width:440px;width:100%;padding:20px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.blatt h5{font-family:var(--font-display);font-size:20px;font-weight:800;margin:0 0 4px}
+.blatt p{color:var(--ink-2);font-size:14px;margin:0 0 12px}
+.blatt .feld input{text-transform:none;letter-spacing:0;font-family:var(--font-ui);font-size:15px}
+.ergebnis{background:var(--tint);border-radius:14px;padding:12px 14px;margin:6px 0 12px}
+.ergebnis .gross{font-family:var(--font-data);font-size:22px;font-weight:700;letter-spacing:.12em}
+.ergebnis .link{font-family:var(--font-data);font-size:12px;color:var(--ink-2);word-break:break-all}
+
+/* Entscheidungen */
+.fragen{counter-reset:f;display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.frage{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;counter-increment:f}
+.frage h3{display:flex;gap:10px;align-items:baseline}
+.frage h3::before{content:counter(f);flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:12.5px}
+.frage p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:80ch}
+.frage .empf{margin-top:8px;font-size:14px;color:var(--ink)}
+.frage .empf b{color:var(--frei)}
+.kosten{background:var(--kontrast-bg);color:var(--kontrast-ink-2);border-radius:18px;padding:16px 18px;margin-top:14px}
+.kosten b{color:var(--kontrast-ink)}
+.kosten p{margin:4px 0}
+.themawahl{position:fixed;right:10px;bottom:10px;opacity:.92;z-index:30;display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:4px}
+.themawahl button{border:0;background:none;border-radius:99px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.themawahl button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Pilot-Codes und Betriebs-Dashboard</h1>
+  <p class="lead">Im Pilot sollen <b>30–35 eingeladene Haushalte</b> mitmachen, nicht wer zufällig auf haus-quest.com
+    landet. Dafür bekommt jeder Haushalt eine <b>Einladung</b>: einen Code oder einen Link, den du anlegst und
+    verschickst. Die anderen im Haushalt kommen wie heute mit dem Code des Haushalts dazu.</p>
+  <p class="lead">Und du siehst im <b>Betriebs-Dashboard</b>, ob der Pilot hält, was er soll — gemessen an den Toren
+    aus dem Businessplan: aktiv in Woche 4, Haushalte mit nur einer Person, Testkäufe, kritische Fehler.</p>
+
+  <h2>So kommt ein Haushalt in den Pilot</h2>
+  <ol class="ablauf">
+    <li><b>Du legst eine Einladung an</b> — mit einem Namen, den nur du siehst, etwa „Familie Weber“.</li>
+    <li><b>Du schickst den Link</b> per WhatsApp oder Mail. Darin steckt der Code, z. B. HOMI-7K3P.</li>
+    <li><b>Wer ihn öffnet, gründet den Haushalt.</b> Jede Einladung gilt für genau einen Haushalt.</li>
+    <li><b>Die anderen</b> kommen wie heute mit dem Code des Haushalts dazu — dafür brauchen sie keine eigene Einladung.</li>
+  </ol>
+
+  <h2>Wo die Einladung abgefragt wird</h2>
+  <p class="lead">Zwei Möglichkeiten. Oben stellt ihr ein, <b>wer kommt</b>; in den Telefonen könnt ihr durchtippen.</p>
+  <div class="regler">
+    <div class="gruppe"><span class="marke">Wer kommt</span>
+      <div class="schalter" data-gruppe="wer">
+        <button data-wer="link" aria-pressed="true">Mit Einladungslink</button>
+        <button data-wer="hand" aria-pressed="false">Code von Hand</button>
+        <button data-wer="benutzt" aria-pressed="false">Code schon benutzt</button>
+        <button data-wer="ohne" aria-pressed="false">Ohne Einladung</button>
+      </div></div>
+  </div>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>A · Vor der Anmeldung</h3><span class="vorbild">wie eine geschlossene Beta</span></div>
+      <div class="phone" id="pa"></div>
+      <p class="bu">Ohne Einladung kommt niemand bis zur Google-Anmeldung. <b>Von Uneingeladenen wird nichts
+        gespeichert</b>. Wer schon dabei ist, meldet sich über „Ich bin schon dabei“ an.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>B · Beim Gründen</h3><span class="vorbild">wie heute, ein Schritt mehr</span></div>
+      <div class="phone" id="pb"></div>
+      <p class="bu">Anmelden kann sich jeder, gründen nur mit Einladung. Einfacher gebaut — aber auch Uneingeladene
+        haben danach ein Konto mit Name und E-Mail, das niemand braucht.</p>
+    </div>
+  </div>
+
+  <h2>Das Betriebs-Dashboard</h2>
+  <p class="lead">Eine eigene Seite unter <b>haus-quest.com/betrieb</b>, nur für dich. Oben die Tore zur Beta, darunter
+    die Haushalte, die Einladungen und die Fehler. Haushalte erscheinen nur unter dem Namen, den <b>du</b> der Einladung
+    gegeben hast — keine Quests, keine Notizen, keine Namen der Leute.</p>
+  <div class="regler" style="position:static">
+    <div class="gruppe"><span class="marke">Ansicht</span>
+      <div class="schalter" data-gruppe="breite">
+        <button data-breite="handy" aria-pressed="true">Auf dem Handy</button>
+        <button data-breite="rechner" aria-pressed="false">Am Rechner</button>
+      </div></div>
+  </div>
+  <div class="browser">
+    <div class="adresse"><i></i><i></i><i></i><span>haus-quest.com/betrieb</span></div>
+    <div class="buehne"><div class="db handy" id="db"></div></div>
+  </div>
+
+  <div class="kosten" style="margin-top:22px">
+    <p><b>Entschieden am 22. Oktober 2026:</b> A — die Einladung wird vor der Google-Anmeldung abgefragt. Alles andere
+      wie empfohlen: eine Einladung, ein Haushalt; „aktiv“ wie beschrieben; Fehler sammeln ohne Inhalte; die
+      Testkauf-Kachel wartet auf den Testkauf. Ins Dashboard kommt nur, wessen Adresse im Geheimnis BETRIEB_EMAILS bei
+      Cloudflare steht — zuerst Ramon, weitere nur von Hand.</p>
+    <p><b>Beim Bauen geändert:</b> Codes haben sechs Zeichen (HOMI-7K3-PQ8) statt vier — mit vier ließen sie sich zu
+      leicht erraten. Den Namen der Einladung („Familie Weber“) sehen die Eingeladenen nicht; er bleibt im Dashboard.</p>
+  </div>
+
+  <h2>Zu entscheiden</h2>
+  <div class="fragen">
+    <div class="frage"><h3>Wo die Einladung abgefragt wird</h3>
+      <p>A vor der Google-Anmeldung oder B beim Gründen des Haushalts.</p>
+      <p class="empf"><b>Empfehlung: A.</b> Der Pilot ist dann wirklich geschlossen, und von Leuten ohne Einladung
+        landet nichts in der Datenbank. Nach dem Pilot schaltest du die Abfrage im Dashboard einfach aus.</p></div>
+    <div class="frage"><h3>Eine Einladung, ein Haushalt</h3>
+      <p>Jeder Code lässt sich genau einmal einlösen; die anderen kommen mit dem Code des Haushalts dazu. Einen nicht
+        eingelösten Code kannst du zurückziehen.</p>
+      <p class="empf"><b>Empfehlung: so.</b> Dann weißt du immer, welche Einladung zu welchem Haushalt geführt hat.</p></div>
+    <div class="frage"><h3>Wie du ins Dashboard kommst</h3>
+      <p>Das Projekt auf GitHub ist öffentlich, deine E-Mail-Adresse darf dort nicht stehen. Sie kommt deshalb als
+        Geheimnis in die Einstellungen des Workers bei Cloudflare — einmal eintragen, eine Minute. Angemeldet wird
+        wie in der App mit Google.</p>
+      <p class="empf"><b>Empfehlung: so.</b> Kostenlos, und niemand sonst kommt hinein.</p></div>
+    <div class="frage"><h3>Was „aktiv“ heißt</h3>
+      <p>Ein Haushalt ist aktiv, wenn in den letzten 7 Tagen mindestens eine Quest gemeldet <b>und</b> bestätigt wurde.
+        „Woche 4“ zählt für jeden Haushalt ab seiner Gründung — wer später dazukommt, wird später gemessen.</p>
+      <p class="empf"><b>Empfehlung: so.</b> Das ist genau die Zahl aus dem Businessplan: „ob ein Haushalt in Woche 4
+        noch Quests meldet und bestätigt“.</p></div>
+    <div class="frage"><h3>Fehler sammeln</h3>
+      <p>Die App meldet Abstürze und Server-Fehler ans Dashboard: was, wo, wann, wie oft — ohne Inhalte, ohne Namen.
+        Kritisch ist ein Server-Fehler oder ein App-Fehler bei mehr als einer Person. Gespeichert wird 30 Tage, höchstens
+        200 Meldungen am Tag. Die Datenschutzerklärung bekommt dazu einen Absatz.</p>
+      <p class="empf"><b>Empfehlung: so.</b> Ohne Fehlerliste lässt sich das Tor „kein kritischer Fehler“ nicht prüfen.</p></div>
+    <div class="frage"><h3>Testkauf</h3>
+      <p>Die Kachel steht schon da, zählt aber erst, wenn der Testkauf für Plus gebaut ist — das ist der nächste Punkt
+        auf der Liste.</p>
+      <p class="empf"><b>Empfehlung: so lassen</b> und den Testkauf direkt danach bauen.</p></div>
+  </div>
+  <div class="kosten">
+    <p><b>Kosten: keine.</b> Alles läuft im kostenlosen Plan. Das Dashboard rechnet nur, wenn du es öffnest — bei 35
+      Haushalten ein paar tausend gelesene Zeilen, nichts gegen 5 Millionen am Tag. Fehler schreiben höchstens 200 Zeilen
+      am Tag von 100.000.</p>
+  </div>
+</div>
+
+<div class="blatt-schleier" id="blatt" role="dialog" aria-modal="true" aria-labelledby="blatt-titel">
+  <div class="blatt" id="blatt-inhalt"></div>
+</div>
+
+<div class="themawahl" role="group" aria-label="Darstellung">
+  <button data-thema="auto" aria-pressed="true">Auto</button>
+  <button data-thema="light" aria-pressed="false">Hell</button>
+  <button data-thema="dark" aria-pressed="false">Dunkel</button>
+</div>
+
+<script>
+const G = `<svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>`;
+const LOGO = `<img class="logo" src="/logo.webp" alt="">`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+/* ------------------------------------------------------------ Telefone */
+let wer = "link";
+const stand = { a: 0, b: 0 };
+const fussText = `<p class="klein">Von Google kommen nur Name, E-Mail und Profilbild. Mit der Anmeldung nimmst du zu den
+  <u>Teilnahmebedingungen</u> am Pilot teil.</p>`;
+const punkte = (n) => `<div class="punkte">${[0,1,2,3,4,5].map((i) => `<i class="${i === n ? "an" : ""}"></i>`).join("")}</div>`;
+
+const willkommen = (chip) => `<div class="screen mitte">${LOGO}
+  ${chip ? `<div class="meldung gut" style="margin:0 auto 12px;width:max-content"><span class="ic">✓</span><span>Pilot-Einladung angenommen</span></div>` : ""}
+  <h4 class="app-h">Schön, dass du da bist, Dana</h4>
+  <p class="app-sub">Wir richten in drei kurzen Schritten euren Haushalt ein — danach könnt ihr sofort loslegen.</p>
+  <div class="fuss"><button class="btn rot" data-weiter>Los geht's</button>
+  <button class="btn text">Ich wurde eingeladen — Code eingeben</button>${punkte(1)}</div></div>`;
+
+const haushalt = () => `<div class="screen"><h4 class="app-h">Euer Haushalt</h4>
+  <p class="app-sub">Danach richtet sich, wie die App mit euch rechnet</p>
+  <div class="meldung info"><span class="ic">i</span><span>Wie heute: WG, Familie, Pärchen, wie viele ihr seid … —
+    ab hier ändert sich nichts.</span></div>
+  <div class="fuss"><button class="btn rot" data-zurueck>Von vorn</button>${punkte(2)}</div></div>`;
+
+function codeFeld(wert, zustand) {
+  const kl = zustand === "gut" ? "gut" : zustand === "schlecht" ? "schlecht" : "";
+  const id = `c-${Math.random().toString(36).slice(2, 7)}`;
+  return `<div class="feld"><label for="${id}">Einladungs-Code</label>
+    <input id="${id}" value="${esc(wert)}" class="${kl}" placeholder="HOMI-…" inputmode="text" autocomplete="off" spellcheck="false" readonly></div>`;
+}
+const gutMeldung = `<div class="meldung gut"><span class="ic">✓</span><span><b>Einladung für Familie Weber</b>Damit gründest du euren Haushalt.</span></div>`;
+const benutztMeldung = `<div class="meldung schlecht"><span class="ic">!</span><span><b>Dieser Code ist schon eingelöst</b>Jede Einladung gilt für einen Haushalt. Wohnst du dort? Dann frag nach dem Code eures Haushalts.</span></div>`;
+const ohneMeldung = `<div class="meldung info"><span class="ic">i</span><span><b>Homi Point ist gerade im Pilot</b>Mitmachen geht mit einer Einladung — oder mit dem Code eines Haushalts, in dem schon jemand ist. Fragen? info@rwtesting-environment.de</span></div>`;
+
+function telefonA() {
+  const s = stand.a;
+  if (s === 1) return `${willkommen(true)}<div class="schritt">nach der Google-Anmeldung</div>`;
+  if (s === 2) return `${haushalt()}<div class="schritt">Einrichtung wie heute</div>`;
+  const wert = { link: "HOMI-7K3P", hand: "HOMI-7K3P", benutzt: "HOMI-Q8MZ", ohne: "" }[wer];
+  const zustand = { link: "gut", hand: "gut", benutzt: "schlecht", ohne: "" }[wer];
+  const meldung = { link: gutMeldung, hand: gutMeldung, benutzt: benutztMeldung, ohne: ohneMeldung }[wer];
+  const frei = zustand === "gut";
+  return `<div class="screen mitte">${LOGO}<h4 class="app-h">Homi Point</h4>
+    <p class="app-sub">Cleanies für erledigte Aufgaben. Freigegeben nur zu zweit.</p>
+    ${wer === "link" ? "" : codeFeld(wert, zustand)}
+    ${wer === "link" ? `<div class="einladung"><span class="marke">Einladung zum Pilot</span><strong>Familie Weber</strong><span>Code HOMI-7K3P — kam mit dem Link</span></div>` : meldung}
+    <button class="btn rand" ${frei ? "data-weiter" : "disabled"} style="${frei ? "" : "opacity:.45"}">${G}<span>Mit Google anmelden</span></button>
+    <button class="btn text">Ich bin schon dabei — anmelden</button>
+    <button class="btn text" style="padding-top:0">Ich bin ein Kind</button>
+    ${fussText}</div><div class="schritt">${wer === "link" ? "Link geöffnet: haus-quest.com/app/?pilot=HOMI-7K3P" : "haus-quest.com/app"}</div>`;
+}
+
+function telefonB() {
+  const s = stand.b;
+  if (s === 0) return `<div class="screen mitte">${LOGO}<h4 class="app-h">Homi Point</h4>
+    <p class="app-sub">Cleanies für erledigte Aufgaben. Freigegeben nur zu zweit.</p>
+    <button class="btn rand" data-weiter>${G}<span>Mit Google anmelden</span></button>
+    <button class="btn text">Ich bin ein Kind</button>${fussText}</div>
+    <div class="schritt">${wer === "link" ? "Link geöffnet — Code wird gemerkt" : "haus-quest.com/app"}</div>`;
+  if (s === 1) return `${willkommen(wer === "link")}<div class="schritt">nach der Google-Anmeldung</div>`;
+  if (s === 2 && wer !== "link") {
+    const wert = { hand: "HOMI-7K3P", benutzt: "HOMI-Q8MZ", ohne: "" }[wer];
+    const zustand = { hand: "gut", benutzt: "schlecht", ohne: "" }[wer];
+    const meldung = { hand: gutMeldung, benutzt: benutztMeldung, ohne: ohneMeldung }[wer];
+    return `<div class="screen"><h4 class="app-h">Deine Einladung</h4>
+      <p class="app-sub">Im Pilot gründest du einen Haushalt mit dem Code aus deiner Einladung.</p>
+      ${codeFeld(wert, zustand)}${meldung}
+      <div class="fuss"><button class="btn rot" ${zustand === "gut" ? "data-weiter" : "disabled"}>Weiter</button>
+      <button class="btn text" data-zurueck>Zurück</button>${punkte(2)}</div></div>
+      <div class="schritt">neuer Schritt beim Gründen</div>`;
+  }
+  return `${haushalt()}<div class="schritt">Einrichtung wie heute</div>`;
+}
+
+function telefone() {
+  document.getElementById("pa").innerHTML = telefonA();
+  document.getElementById("pb").innerHTML = telefonB();
+}
+for (const [id, k] of [["pa", "a"], ["pb", "b"]]) {
+  document.getElementById(id).addEventListener("click", (ev) => {
+    if (ev.target.closest("[data-weiter]")) {
+      stand[k] = k === "b" && wer === "link" && stand.b === 1 ? 3 : stand[k] + 1;
+      telefone();
+    }
+    if (ev.target.closest("[data-zurueck]")) { stand[k] = 0; telefone(); }
+  });
+}
+
+/* ------------------------------------------------------------ Dashboard */
+const TAG = 24 * 3600e3;
+const heute = new Date("2026-11-25T10:00:00");
+const PILOT_START = new Date("2026-10-28");
+const HAUSHALTE = [
+  { name: "Familie Weber", personen: 4, kinder: 2, seit: 28, zuletzt: 0, plus: false },
+  { name: "WG Gartenstraße", personen: 3, kinder: 0, seit: 27, zuletzt: 1, plus: false },
+  { name: "Paar Krüger", personen: 2, kinder: 0, seit: 27, zuletzt: 9, plus: false },
+  { name: "Jana", personen: 1, kinder: 0, seit: 25, zuletzt: 16, plus: false },
+  { name: "Familie Öztürk", personen: 5, kinder: 3, seit: 21, zuletzt: 0, plus: false },
+  { name: "Tante Rita", personen: 2, kinder: 0, seit: 12, zuletzt: 2, plus: false },
+  { name: "Studi-WG Uni", personen: 4, kinder: 0, seit: 6, zuletzt: 0, plus: false }
+];
+const EINLADUNGEN = [
+  { name: "Familie Weber", code: "HOMI-7K3P", status: "eingelöst", wann: "vor 28 Tagen" },
+  { name: "Familie Öztürk", code: "HOMI-Q8MZ", status: "eingelöst", wann: "vor 21 Tagen" },
+  { name: "Nachbarn Haus 12", code: "HOMI-3XWN", status: "offen", wann: "seit 4 Tagen" },
+  { name: "Kollegin Sarah", code: "HOMI-H2RD", status: "offen", wann: "seit gestern" },
+  { name: "Test alt", code: "HOMI-9PLE", status: "zurückgezogen", wann: "vor 20 Tagen" }
+];
+const FEHLER = [
+  { was: "App · TypeError: Cannot read properties of undefined (reading 'quests')", wo: "Startseite", n: 4, leute: 2, wann: "vor 3 Std.", kritisch: true },
+  { was: "Server · 500 bei /api/claims/…/decide", wo: "Bestätigen", n: 1, leute: 1, wann: "vor 2 Tagen", kritisch: true },
+  { was: "App · NotAllowedError: vibrate", wo: "Jubel", n: 12, leute: 6, wann: "heute", kritisch: false, harmlos: true }
+];
+const WOCHEN = [ { w: 1, aktiv: 94 }, { w: 2, aktiv: 88 }, { w: 3, aktiv: 81 }, { w: 4, aktiv: 74 }, { w: 5, aktiv: 70, laufend: true } ];
+let breite = "handy";
+let pilotPflicht = true;
+let tabelleOffen = false;
+let fehlerErledigt = new Set();
+
+const chip = (art, text) => `<span class="chip ${art}"><i>${{ erreicht: "✓", knapp: "!", verfehlt: "✕", offen: "…" }[art]}</i>${text}</span>`;
+const status = (h) => h.zuletzt <= 7 ? chip("erreicht", "aktiv") : h.zuletzt <= 13 ? chip("knapp", "ruhig") : chip("verfehlt", "eingeschlafen");
+const tageText = (n) => n === 0 ? "heute" : n === 1 ? "gestern" : `vor ${n} Tagen`;
+
+function diagramm() {
+  const B = 360, H = 168, l = 30, r = 54, o = 18, u = 26;
+  const breiteBalken = (B - l - r) / WOCHEN.length;
+  const y = (p) => o + (H - o - u) * (1 - p / 100);
+  let s = `<svg class="diagramm" viewBox="0 0 ${B} ${H}" role="img" aria-label="Anteil aktiver Haushalte je Pilotwoche, Ziel 60 Prozent">`;
+  for (const p of [0, 50, 100]) s += `<line class="achse" x1="${l}" x2="${B - r}" y1="${y(p)}" y2="${y(p)}"/><text class="lbl" x="${l - 6}" y="${y(p) + 4}" text-anchor="end">${p}</text>`;
+  WOCHEN.forEach((w, i) => {
+    const x = l + i * breiteBalken + 6, b = breiteBalken - 12, h = y(0) - y(w.aktiv);
+    s += `<g><title>Woche ${w.w}${w.laufend ? " (läuft)" : ""}: ${w.aktiv} % aktiv</title>
+      <path class="balken${w.laufend ? " jetzt" : ""}" d="M${x},${y(0)} v${-(h - 4)} q0,-4 4,-4 h${b - 8} q4,0 4,4 v${h - 4} z"/>
+      <rect x="${x - 4}" y="${o}" width="${b + 8}" height="${H - o - u}" fill="transparent"/></g>
+      <text class="lbl" x="${x + b / 2}" y="${H - 8}" text-anchor="middle">W${w.w}</text>`;
+    if (i === WOCHEN.length - 1 || i === 3) s += `<text class="wert" x="${x + b / 2}" y="${y(w.aktiv) - 5}" text-anchor="middle">${w.aktiv} %</text>`;
+  });
+  s += `<line class="ziel" x1="${l}" x2="${B - r}" y1="${y(60)}" y2="${y(60)}"/><text class="ziel-lbl" x="${B - r + 6}" y="${y(60) + 4}">Ziel 60 %</text></svg>`;
+  return s;
+}
+
+function dashboard() {
+  const tag = Math.round((heute - PILOT_START) / TAG);
+  const woche = Math.min(8, Math.floor(tag / 7) + 1);
+  const offeneFehler = FEHLER.filter((f, i) => f.kritisch && !fehlerErledigt.has(i)).length;
+  const tore = `
+    <div class="karte tor"><span class="was">Aktiv in Woche 4</span><span class="zahl">70 %</span>
+      <span class="ziel">14 von 20 Haushalten · Ziel mind. 60 %</span>${chip("erreicht", "erreicht")}</div>
+    <div class="karte tor"><span class="was">Nur eine Person im Haushalt</span><span class="zahl">19 %</span>
+      <span class="ziel">6 von 32 · Ziel höchstens 20 %</span>${chip("knapp", "knapp erreicht")}</div>
+    <div class="karte tor"><span class="was">Testkauf für Plus</span><span class="zahl">—</span>
+      <span class="ziel">Ziel mind. 5 %</span>${chip("offen", "kommt mit dem Testkauf")}</div>
+    <div class="karte tor"><span class="was">Kritische Fehler offen</span><span class="zahl">${offeneFehler}</span>
+      <span class="ziel">Ziel 0</span>${offeneFehler ? chip("verfehlt", "nicht erreicht") : chip("erreicht", "erreicht")}</div>`;
+  const tabelle = `<table><thead><tr><th>Woche</th><th class="n">aktiv</th></tr></thead><tbody>
+    ${WOCHEN.map((w) => `<tr><td>Woche ${w.w}${w.laufend ? " (läuft)" : ""}</td><td class="n">${w.aktiv} %</td></tr>`).join("")}</tbody></table>`;
+  const haushalte = [...HAUSHALTE].sort((a, b) => b.zuletzt - a.zuletzt).slice(0, breite === "handy" ? 5 : 7);
+  document.getElementById("db").innerHTML = `
+    <div class="db-kopf"><div><span class="marke">Betrieb · Homi Point</span><h4>Pilot</h4>
+      <p>Stand 25. November, 10:00 · 32 Haushalte, 94 Personen</p></div>
+      <div class="fortschritt"><small>Woche ${woche} von 8 · Tag ${tag} · Ende 23. Dezember</small>
+        <div class="leiste"><i style="width:${Math.round(tag / 56 * 100)}%"></i></div></div></div>
+    <span class="marke">Tore zur Beta</span>
+    <div class="raster tore" style="margin-top:6px">${tore}</div>
+    <div class="raster zwei">
+      <div class="karte"><h5>Aktive Haushalte je Woche</h5><p class="unter">Anteil mit gemeldeter und bestätigter Quest in den 7 Tagen</p>
+        ${tabelleOffen ? tabelle : diagramm()}
+        <button class="tabelle-umschalten" data-tabelle>${tabelleOffen ? "Als Diagramm" : "Als Tabelle"}</button></div>
+      <div class="karte"><h5>Wer macht mit</h5><p class="unter">Seit Pilotstart</p>
+        <div class="zahlen">
+          <div><b>32</b><span>Haushalte</span><small>+3 diese Woche</small></div>
+          <div><b>71</b><span>Erwachsene</span><small>2,2 je Haushalt</small></div>
+          <div><b>23</b><span>Kinder</span><small>in 9 Familien</small></div>
+        </div>
+        <div class="zahlen" style="margin-top:8px">
+          <div><b>36</b><span>Einladungen</span><small>angelegt</small></div>
+          <div><b>32</b><span>eingelöst</span><small>89 %</small></div>
+          <div><b>3</b><span>offen</span><small>1 zurückgezogen</small></div>
+        </div></div>
+    </div>
+    <div class="raster drei">
+      <div class="karte"><div class="kopf-mit-knopf"><div><h5>Haushalte</h5><p class="unter">Wer zuletzt still war, steht oben</p></div></div>
+        <div class="liste">${haushalte.map((h) => `<div class="zeile"><span class="name">${esc(h.name)}</span>
+          <span class="info">${h.personen} ${h.personen === 1 ? "Person" : "Personen"}${h.kinder ? `, davon ${h.kinder} Kinder` : ""} · Woche ${Math.floor(h.seit / 7) + 1} · zuletzt ${tageText(h.zuletzt)}</span>
+          <span class="rechts">${status(h)}${h.personen === 1 ? chip("knapp", "allein") : ""}</span></div>`).join("")}</div>
+        <button class="mehr">Alle 32 Haushalte</button></div>
+      <div class="karte"><div class="kopf-mit-knopf"><div><h5>Einladungen</h5><p class="unter">Jede gilt für einen Haushalt</p></div>
+        <button class="minibtn voll" data-neu>Neue Einladung</button></div>
+        <div class="liste">${EINLADUNGEN.map((e, i) => `<div class="zeile"><span class="name">${esc(e.name)}</span>
+          <span class="info"><span class="code">${e.code}</span> · ${e.status} ${e.wann}</span>
+          <span class="rechts">${e.status === "offen" ? `<button class="minibtn" data-teilen="${i}">Link teilen</button><button class="minibtn" data-zurueckziehen="${i}">Zurückziehen</button>`
+            : e.status === "eingelöst" ? chip("erreicht", "eingelöst") : chip("offen", "zurückgezogen")}</span></div>`).join("")}</div></div>
+    </div>
+    <div class="raster drei">
+      <div class="karte"><h5>Fehler</h5><p class="unter">Letzte 30 Tage · kritisch: Server-Fehler oder bei mehr als einer Person</p>
+        <div class="liste">${FEHLER.map((f, i) => `<div class="zeile fehler-zeile"><span class="name">${esc(f.was)}</span>
+          <span class="info">${f.wo} · ${f.n}× bei ${f.leute} ${f.leute === 1 ? "Person" : "Personen"} · zuletzt ${f.wann}</span>
+          <span class="rechts">${fehlerErledigt.has(i) ? chip("erreicht", "erledigt")
+            : f.harmlos ? chip("offen", "harmlos") : `${chip("verfehlt", "kritisch")}<button class="minibtn" data-erledigt="${i}">Erledigt</button>`}</span></div>`).join("")}</div></div>
+      <div class="karte"><h5>Pilot</h5><p class="unter">Gilt sofort für alle neuen Besucher</p>
+        <div class="schiene"><div><b style="font-size:14px">Nur mit Einladung</b><br><span style="font-size:12.5px;color:var(--ink-3)">${pilotPflicht
+          ? "Neue Haushalte brauchen einen Code." : "Jeder kann einen Haushalt gründen."}</span></div>
+          <button class="kippschalter" role="switch" aria-checked="${pilotPflicht}" aria-label="Nur mit Einladung" data-pflicht></button></div>
+        <p class="unter" style="margin:14px 0 0">Nach dem Pilot ausschalten — dann sieht die Anmeldung wieder aus wie heute.</p></div>
+    </div>`;
+}
+
+function blatt(inhalt) {
+  document.getElementById("blatt-inhalt").innerHTML = inhalt;
+  document.getElementById("blatt").setAttribute("data-offen", "");
+}
+function neueEinladung(schritt, name) {
+  if (!schritt) return blatt(`<h5 id="blatt-titel">Neue Einladung</h5><p>Für wen? Den Namen siehst nur du — im Dashboard, wenn der Haushalt gegründet ist.</p>
+    <div class="feld"><label for="ein-name">Name der Einladung</label><input id="ein-name" value="Familie Schmidt"></div>
+    <button class="btn rot" data-anlegen>Anlegen</button><button class="btn text" data-zu>Abbrechen</button>`);
+  blatt(`<h5 id="blatt-titel">Einladung für ${esc(name)}</h5><p>Schick den Link — oder sag den Code durch.</p>
+    <div class="ergebnis"><div class="gross">HOMI-5TFA</div><div class="link">haus-quest.com/app/?pilot=HOMI-5TFA</div></div>
+    <button class="btn rot" data-zu>Link teilen</button><button class="btn rand" data-zu>Kopieren</button>
+    <button class="btn text" data-zu>Fertig</button>`);
+}
+
+document.getElementById("db").addEventListener("click", (ev) => {
+  const el = ev.target.closest("button");
+  if (!el) return;
+  if (el.hasAttribute("data-tabelle")) tabelleOffen = !tabelleOffen;
+  if (el.hasAttribute("data-pflicht")) pilotPflicht = !pilotPflicht;
+  if (el.dataset.erledigt) fehlerErledigt.add(Number(el.dataset.erledigt));
+  if (el.dataset.zurueckziehen) EINLADUNGEN[Number(el.dataset.zurueckziehen)].status = "zurückgezogen", EINLADUNGEN[Number(el.dataset.zurueckziehen)].wann = "gerade";
+  if (el.hasAttribute("data-neu")) return neueEinladung(0);
+  if (el.dataset.teilen) {
+    const e = EINLADUNGEN[Number(el.dataset.teilen)];
+    return blatt(`<h5 id="blatt-titel">Einladung für ${esc(e.name)}</h5><p>Schick den Link — oder sag den Code durch.</p>
+      <div class="ergebnis"><div class="gross">${e.code}</div><div class="link">haus-quest.com/app/?pilot=${e.code}</div></div>
+      <button class="btn rot" data-zu>Link teilen</button><button class="btn text" data-zu>Fertig</button>`);
+  }
+  dashboard();
+});
+document.getElementById("blatt").addEventListener("click", (ev) => {
+  if (ev.target.id === "blatt" || ev.target.closest("[data-zu]")) return document.getElementById("blatt").removeAttribute("data-offen");
+  if (ev.target.closest("[data-anlegen]")) {
+    const name = document.getElementById("ein-name").value.trim() || "Neue Einladung";
+    EINLADUNGEN.unshift({ name, code: "HOMI-5TFA", status: "offen", wann: "seit gerade" });
+    dashboard();
+    neueEinladung(1, name);
+  }
+});
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") document.getElementById("blatt").removeAttribute("data-offen"); });
+
+/* ------------------------------------------------------------ Regler */
+document.querySelectorAll("[data-gruppe]").forEach((gruppe) => gruppe.addEventListener("click", (ev) => {
+  const el = ev.target.closest("button");
+  if (!el) return;
+  gruppe.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+  if (el.dataset.wer) { wer = el.dataset.wer; stand.a = 0; stand.b = 0; telefone(); }
+  if (el.dataset.breite) {
+    breite = el.dataset.breite;
+    document.getElementById("db").classList.toggle("handy", breite === "handy");
+    dashboard();
+  }
+}));
+document.querySelector(".themawahl").addEventListener("click", (ev) => {
+  const el = ev.target.closest("button");
+  if (!el) return;
+  document.querySelectorAll(".themawahl button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+  if (el.dataset.thema === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", el.dataset.thema);
+});
+
+telefone();
+dashboard();
+</script>
+</body>
+</html>

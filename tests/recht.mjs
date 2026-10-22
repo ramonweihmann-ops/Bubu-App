@@ -26,9 +26,9 @@ const ueberlauf = () => seite.evaluate(() => document.documentElement.scrollWidt
 
 const SEITEN = {
   impressum: ["Impressum", ["Ramon Weihmann", "Friesische Straße 41", "24937 Flensburg", "info@rwtesting-environment.de", "§ 5 Digitale-Dienste-Gesetz"]],
-  datenschutz: ["Datenschutzerklärung", ["Stand: 21. Oktober 2026", "Ramon Weihmann", "Cloudflare", "auf Rechenzentren in der EU festgelegt", "Google Ireland Limited",
-    "hq_sitzung", "Art. 8 DSGVO", "Unabhängige Landeszentrum für Datenschutz Schleswig-Holstein", "spätestens 30 Tagen"]],
-  teilnahme: ["Teilnahmebedingungen für den Pilot", ["mindestens 16 Jahre", "keinen Geldwert", "Es gilt deutsches Recht", "/konto-loeschen"]]
+  datenschutz: ["Datenschutzerklärung", ["Stand: 22. Oktober 2026", "Ramon Weihmann", "Cloudflare", "auf Rechenzentren in der EU festgelegt", "Google Ireland Limited",
+    "hq_sitzung", "hq_einladung", "Fehlerberichte", "Art. 8 DSGVO", "Unabhängige Landeszentrum für Datenschutz Schleswig-Holstein", "spätestens 30 Tagen"]],
+  teilnahme: ["Teilnahmebedingungen für den Pilot", ["Am Pilot nimmt teil, wer eingeladen ist", "mindestens 16 Jahre", "keinen Geldwert", "Es gilt deutsches Recht", "/konto-loeschen"]]
 };
 
 for (const [pfad, [titel, pflicht]] of Object.entries(SEITEN)) {

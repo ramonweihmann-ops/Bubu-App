@@ -32,3 +32,8 @@ insert into sessions (token_hash, user_id, expires_at) values ('fee2769944990417
 insert into raeume (id, couple_id, name, sortierung) values ('r-1', 'paar-1', 'Bad', 0);
 insert into raeume (id, couple_id, name, sortierung) values ('r-2', 'paar-1', 'Wohnzimmer', 1);
 insert into raeume (id, couple_id, name, sortierung) values ('r-3', 'paar-1', 'Küche', 2);
+
+-- Der Pilot (nur mit Einladung) ist für die übrigen Tests aus; pilot-api.sh und
+-- ui-pilot.mjs schalten ihn für sich ein und danach wieder aus.
+insert into einstellungen (schluessel, wert) values ('pilot_pflicht', 'nein')
+  on conflict (schluessel) do update set wert = 'nein';

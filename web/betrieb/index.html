@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Betrieb — Homi Point</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#152c4f">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
+<style>
+/* Das Betriebs-Dashboard. Farben und Schrift wie in der App, hell und dunkel. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --link:#2f6fd0; --balken:#2f6fd0; --schleier:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --link:#6ba4ff; --balken:#4f86e0; --schleier:rgba(4,9,18,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --link:#6ba4ff; --balken:#4f86e0; --schleier:rgba(4,9,18,.66);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+a{color:var(--link)}
+main{max-width:1020px;margin:0 auto;padding-block:max(18px,env(safe-area-inset-top,0px)) 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.kopf{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:2px 2px 14px}
+.kopf h1{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0}
+.kopf p{margin:0;color:var(--ink-2);font-size:13.5px}
+.fortschritt{min-width:min(260px,100%);flex:1;max-width:360px}
+.fortschritt .leiste{height:8px;border-radius:99px;background:var(--tint-2);overflow:hidden;margin-top:5px}
+.fortschritt .leiste i{display:block;height:100%;background:var(--kontrast-bg);border-radius:99px}
+.fortschritt small{font-size:12px;color:var(--ink-3)}
+.karte{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.karte h2{font-family:var(--font-display);font-size:15.5px;font-weight:800;margin:0 0 2px}
+.karte .unter{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
+.raster{display:grid;gap:12px}
+.tore{grid-template-columns:repeat(4,1fr);margin-top:6px}
+@media (max-width:760px){.tore{grid-template-columns:repeat(2,1fr)}}
+.tor{display:flex;flex-direction:column;gap:4px}
+.tor .was{font-size:12.5px;color:var(--ink-2);line-height:1.3;min-height:2.6em}
+.tor .zahl{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.tor .ziel{font-size:12px;color:var(--ink-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:12px;padding:3px 9px 3px 4px;font-size:12px;font-weight:700;
+  width:fit-content;max-width:100%;line-height:1.3}
+.chip i{flex:none;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff}
+.chip.erreicht{background:var(--frei-tint);color:var(--frei)} .chip.erreicht i{background:var(--frei)}
+.chip.knapp{background:var(--bald-tint);color:var(--bald)} .chip.knapp i{background:var(--bald)}
+.chip.verfehlt{background:var(--accent-tint);color:var(--accent)} .chip.verfehlt i{background:var(--accent)}
+.chip.offen{background:var(--tint);color:var(--ink-3)} .chip.offen i{background:var(--ink-3)}
+.zwei{grid-template-columns:1.25fr 1fr;margin-top:12px}
+.paar{grid-template-columns:1fr 1fr;margin-top:12px}
+@media (max-width:760px){.zwei,.paar{grid-template-columns:1fr}}
+.zahlen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.zahlen div{background:var(--tint);border-radius:12px;padding:10px;min-width:0}
+.zahlen b{display:block;font-family:var(--font-display);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.zahlen span{font-size:12px;color:var(--ink-2)}
+.zahlen small{display:block;font-size:11.5px;color:var(--ink-3)}
+svg text{font-family:var(--font-ui)}
+.diagramm{width:100%;height:auto;display:block}
+.diagramm .balken{fill:var(--balken)}
+.diagramm .balken.jetzt{opacity:.55}
+.diagramm .ziel{stroke:var(--ink-2);stroke-width:1.5;stroke-dasharray:4 4}
+.diagramm .achse{stroke:var(--line);stroke-width:1}
+.diagramm .lbl{fill:var(--ink-3);font-size:11px}
+.diagramm .wert{fill:var(--ink);font-size:11.5px;font-weight:700}
+.diagramm .ziel-lbl{fill:var(--ink-2);font-size:11px;font-weight:600}
+.textknopf{background:none;border:0;padding:0;color:var(--link);font-size:12.5px;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:11.5px;padding:6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.liste{display:flex;flex-direction:column}
+.zeile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.zeile:last-child{border-bottom:0}
+.zeile .name{font-weight:700;font-size:14px;min-width:0;overflow-wrap:anywhere}
+.zeile .info{grid-column:1;font-size:12.5px;color:var(--ink-3);min-width:0}
+.zeile .rechts{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.code{font-family:var(--font-data);font-size:12.5px;letter-spacing:.06em;color:var(--ink-2)}
+.minibtn{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.minibtn.voll{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.minibtn[disabled]{opacity:.5}
+.kopf-mit-knopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.fehler-zeile .name{white-space:normal;font-family:var(--font-data);font-size:12.5px;font-weight:600;word-break:break-word}
+.schiene{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.kippschalter{width:46px;height:28px;border-radius:99px;border:0;background:var(--tint-2);position:relative;flex:none}
+.kippschalter::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.kippschalter[aria-checked="true"]{background:var(--frei)}
+.kippschalter[aria-checked="true"]::after{transform:translateX(18px)}
+.leer{color:var(--ink-3);font-size:13.5px;margin:6px 0}
+.mitte{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px}
+.mitte h1{font-family:var(--font-display);font-weight:800;font-size:26px;margin:0}
+.mitte p{color:var(--ink-2);max-width:36ch;margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:12px 18px;font-weight:700;font-size:15px;
+  border:0;text-decoration:none}
+.btn.rot{background:var(--akzent-flaeche);color:#fff}
+.btn.rand{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.btn.text{background:none;color:var(--ink-2)}
+.leiste-oben{display:flex;justify-content:flex-end;gap:8px;margin-bottom:6px}
+.blatt-schleier{position:fixed;inset:0;background:var(--schleier);display:none;align-items:flex-end;justify-content:center;z-index:20;padding:16px}
+.blatt-schleier[data-offen]{display:flex}
+@media (min-width:700px){.blatt-schleier{align-items:center}}
+.blatt{background:var(--bg);border-radius:20px;max-width:440px;width:100%;padding:20px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);
+  display:flex;flex-direction:column;gap:8px}
+.blatt h2{font-family:var(--font-display);font-size:20px;font-weight:800;margin:0}
+.blatt p{color:var(--ink-2);font-size:14px;margin:0 0 6px}
+.blatt label{font-family:var(--font-data);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.blatt input{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);width:100%}
+.blatt .btn{width:100%}
+.ergebnis{background:var(--tint);border-radius:14px;padding:12px 14px;margin:2px 0 6px}
+.ergebnis .gross{font-family:var(--font-data);font-size:22px;font-weight:700;letter-spacing:.12em}
+.ergebnis .link{font-family:var(--font-data);font-size:12px;color:var(--ink-2);word-break:break-all}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--kontrast-bg);
+  color:var(--kontrast-ink);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;display:none;z-index:30;max-width:calc(100% - 32px)}
+.toast[data-offen]{display:block}
+.toast.fehler{background:var(--akzent-flaeche);color:#fff}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<main id="haupt"><div class="mitte"><p>Lädt …</p></div></main>
+<div class="blatt-schleier" id="blatt" role="dialog" aria-modal="true" aria-labelledby="blatt-titel"><div class="blatt" id="blatt-inhalt"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// Das Betriebs-Dashboard holt alles mit einem Abruf von /api/betrieb und rechnet
+// nichts selbst nach — es zeigt an, was der Server gemessen hat. Es lädt nur beim
+// Öffnen und auf Knopfdruck, nicht von allein: jeder Abruf liest Zeilen.
+const haupt = document.getElementById("haupt");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let L = null;
+let alleHaushalte = false;
+let alsTabelle = false;
+
+async function api(pfad, daten) {
+  const antwort = await fetch(`/api/${pfad}`, {
+    method: daten ? "POST" : "GET",
+    headers: daten ? { "Content-Type": "application/json" } : {},
+    body: daten ? JSON.stringify(daten) : undefined
+  });
+  const ergebnis = await antwort.json().catch(() => ({}));
+  if (!antwort.ok) { const f = new Error(ergebnis.fehler || "Da ist etwas schiefgegangen"); f.status = antwort.status; throw f; }
+  return ergebnis;
+}
+
+function toast(text, fehler = false) {
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.classList.toggle("fehler", fehler);
+  t.setAttribute("data-offen", "");
+  clearTimeout(toast.uhr);
+  toast.uhr = setTimeout(() => t.removeAttribute("data-offen"), 2600);
+}
+
+const chip = (art, text) => `<span class="chip ${art}"><i aria-hidden="true">${{ erreicht: "✓", knapp: "!", verfehlt: "✕", offen: "…" }[art]}</i>${esc(text)}</span>`;
+const datum = (iso) => new Date(iso).toLocaleDateString("de-DE", { day: "numeric", month: "long" });
+const zeitpunkt = (iso) => new Date(String(iso).replace(" ", "T") + (String(iso).includes("T") ? "" : "Z"));
+function vor(iso) {
+  const min = Math.round((Date.now() - zeitpunkt(iso)) / 60000);
+  if (min < 2) return "gerade";
+  if (min < 60) return `vor ${min} Min.`;
+  const std = Math.round(min / 60);
+  if (std < 24) return `vor ${std} Std.`;
+  const tage = Math.round(std / 24);
+  return tage === 1 ? "gestern" : `vor ${tage} Tagen`;
+}
+const stillText = (n) => n === null ? "noch nichts bestätigt" : n === 0 ? "zuletzt heute" : n === 1 ? "zuletzt gestern" : `zuletzt vor ${n} Tagen`;
+const prozent = (a, b) => (b ? Math.round(a / b * 100) : null);
+
+function tore() {
+  const t = L.tore;
+  const w4 = prozent(t.woche4.aktiv, t.woche4.von);
+  const al = prozent(t.allein.anzahl, t.allein.von);
+  const w4chip = w4 === null ? chip("offen", "noch kein Haushalt in Woche 4")
+    : w4 >= t.woche4.ziel + 5 ? chip("erreicht", "erreicht") : w4 >= t.woche4.ziel ? chip("knapp", "knapp erreicht") : chip("verfehlt", "nicht erreicht");
+  const alchip = al === null ? chip("offen", "noch keine Haushalte")
+    : al <= t.allein.ziel - 5 ? chip("erreicht", "erreicht") : al <= t.allein.ziel ? chip("knapp", "knapp erreicht") : chip("verfehlt", "nicht erreicht");
+  return `
+    <div class="karte tor" data-tor="woche4"><span class="was">Aktiv in Woche 4</span><span class="zahl">${w4 === null ? "—" : `${w4} %`}</span>
+      <span class="ziel">${t.woche4.von ? `${t.woche4.aktiv} von ${t.woche4.von} Haushalten · ` : ""}Ziel mind. ${t.woche4.ziel} %</span>${w4chip}</div>
+    <div class="karte tor" data-tor="allein"><span class="was">Nur eine Person im Haushalt</span><span class="zahl">${al === null ? "—" : `${al} %`}</span>
+      <span class="ziel">${t.allein.von ? `${t.allein.anzahl} von ${t.allein.von} · ` : ""}Ziel höchstens ${t.allein.ziel} %</span>${alchip}</div>
+    <div class="karte tor" data-tor="testkauf"><span class="was">Testkauf für Plus</span><span class="zahl">—</span>
+      <span class="ziel">Ziel mind. 5 %</span>${chip("offen", "kommt mit dem Testkauf")}</div>
+    <div class="karte tor" data-tor="fehler"><span class="was">Kritische Fehler offen</span><span class="zahl">${t.fehler.offen}</span>
+      <span class="ziel">Ziel 0</span>${t.fehler.offen ? chip("verfehlt", "nicht erreicht") : chip("erreicht", "erreicht")}</div>`;
+}
+
+function diagramm() {
+  const W = L.wochen;
+  if (!W.length) return `<p class="leer">Der Verlauf beginnt mit dem ersten Haushalt im Pilot.</p>`;
+  if (alsTabelle) {
+    return `<table><thead><tr><th>Woche</th><th class="n">Haushalte</th><th class="n">aktiv</th></tr></thead><tbody>${
+      W.map((w) => `<tr><td>Woche ${w.woche}${w.laufend ? " (läuft)" : ""}</td><td class="n">${w.haushalte}</td><td class="n">${w.anteil} %</td></tr>`).join("")}</tbody></table>`;
+  }
+  const B = 360, H = 168, l = 30, r = 54, o = 18, u = 26;
+  const breite = (B - l - r) / Math.max(W.length, 4);
+  const y = (p) => o + (H - o - u) * (1 - p / 100);
+  let s = `<svg class="diagramm" viewBox="0 0 ${B} ${H}" role="img" aria-label="Anteil aktiver Haushalte je Pilotwoche, Ziel 60 Prozent">`;
+  for (const p of [0, 50, 100]) s += `<line class="achse" x1="${l}" x2="${B - r}" y1="${y(p)}" y2="${y(p)}"/><text class="lbl" x="${l - 6}" y="${y(p) + 4}" text-anchor="end">${p}</text>`;
+  W.forEach((w, i) => {
+    const x = l + i * breite + 5, b = Math.max(6, breite - 10), h = Math.max(0, y(0) - y(w.anteil));
+    const pfad = h > 4 ? `M${x},${y(0)} v${-(h - 4)} q0,-4 4,-4 h${b - 8} q4,0 4,4 v${h - 4} z` : `M${x},${y(0)} h${b} v${-h} h${-b} z`;
+    s += `<g><title>Woche ${w.woche}${w.laufend ? " (läuft)" : ""}: ${w.aktiv} von ${w.haushalte} Haushalten aktiv, ${w.anteil} %</title>
+      <path class="balken${w.laufend ? " jetzt" : ""}" d="${pfad}"/><rect x="${x - 4}" y="${o}" width="${b + 8}" height="${H - o - u}" fill="transparent"/></g>
+      <text class="lbl" x="${x + b / 2}" y="${H - 8}" text-anchor="middle">W${w.woche}</text>`;
+    if (i === W.length - 1 || w.woche === 4) s += `<text class="wert" x="${x + b / 2}" y="${y(w.anteil) - 5}" text-anchor="middle">${w.anteil} %</text>`;
+  });
+  return s + `<line class="ziel" x1="${l}" x2="${B - r}" y1="${y(60)}" y2="${y(60)}"/><text class="ziel-lbl" x="${B - r + 6}" y="${y(60) + 4}">Ziel 60 %</text></svg>`;
+}
+
+function haushaltZeile(h) {
+  const st = { aktiv: chip("erreicht", "aktiv"), ruhig: chip("knapp", "ruhig"), eingeschlafen: chip("verfehlt", "eingeschlafen"), neu: chip("offen", "neu") }[h.status];
+  return `<div class="zeile"><span class="name">${esc(h.name)}</span>
+    <span class="info">${h.personen} ${h.personen === 1 ? "Person" : "Personen"}${h.kinder ? `, davon ${h.kinder} ${h.kinder === 1 ? "Kind" : "Kinder"}` : ""} · Woche ${h.woche} · ${stillText(h.still)}</span>
+    <span class="rechts">${st}${h.personen === 1 ? chip("knapp", "allein") : ""}</span></div>`;
+}
+
+function einladungZeile(e) {
+  const rechts = e.status === "offen"
+    ? `<button class="minibtn" data-teilen="${esc(e.code)}">Link teilen</button><button class="minibtn" data-zurueckziehen="${esc(e.code)}">Zurückziehen</button>`
+    : e.status === "angenommen" ? chip("knapp", "angenommen")
+    : e.status === "eingelöst" ? chip("erreicht", "eingelöst")
+    : chip("offen", e.status);
+  return `<div class="zeile"><span class="name">${esc(e.name)}</span>
+    <span class="info"><span class="code">${esc(e.code)}</span> · ${e.status === "angenommen" ? "angenommen, noch nicht gegründet" : e.status} ${vor(e.wann)}</span><span class="rechts">${rechts}</span></div>`;
+}
+
+function fehlerZeile(f) {
+  const rechts = f.erledigt_am ? chip("erreicht", "erledigt")
+    : `${f.kritisch ? chip("verfehlt", "kritisch") : chip("offen", "einzeln")}<button class="minibtn" data-erledigt="${esc(f.id)}">Erledigt</button>`;
+  return `<div class="zeile fehler-zeile"><span class="name">${f.quelle === "server" ? "Server" : "App"} · ${esc(f.nachricht)}</span>
+    <span class="info">${esc(f.ort || "—")} · ${f.anzahl}× bei ${f.personen || "?"} ${f.personen === 1 ? "Person" : "Personen"} · zuletzt ${vor(f.zuletzt)}</span>
+    <span class="rechts">${rechts}</span></div>`;
+}
+
+function zeichnen() {
+  const z = L.zahlen, p = L.pilot;
+  const personen = z.erwachsene + z.kinder;
+  const liste = alleHaushalte ? L.haushalte : L.haushalte.slice(0, 8);
+  haupt.innerHTML = `
+    <div class="kopf"><div><span class="marke">Betrieb · Homi Point</span><h1>Pilot</h1>
+      <p>Stand ${new Date(L.stand).toLocaleString("de-DE", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+        · ${z.haushalte} ${z.haushalte === 1 ? "Haushalt" : "Haushalte"}, ${personen} ${personen === 1 ? "Person" : "Personen"}</p></div>
+      ${p ? `<div class="fortschritt"><small>Woche ${p.woche} von ${p.wochen} · Tag ${p.tag} · Ende ${datum(p.ende)}</small>
+        <div class="leiste"><i style="width:${Math.min(100, Math.round(p.tag / (p.wochen * 7) * 100))}%"></i></div></div>`
+        : `<div class="fortschritt"><small>Der Pilot beginnt mit dem ersten Haushalt, der mit einer Einladung gegründet wird.</small></div>`}
+    </div>
+    <div class="leiste-oben"><button class="minibtn" data-neu-laden>Aktualisieren</button></div>
+    <span class="marke">Tore zur Beta</span>
+    <div class="raster tore">${tore()}</div>
+    <div class="raster zwei">
+      <div class="karte"><h2>Aktive Haushalte je Woche</h2><p class="unter">Anteil mit gemeldeter und bestätigter Quest in der Woche</p>
+        ${diagramm()}${L.wochen.length ? `<button class="textknopf" data-tabelle>${alsTabelle ? "Als Diagramm" : "Als Tabelle"}</button>` : ""}</div>
+      <div class="karte"><h2>Wer macht mit</h2><p class="unter">Nur Haushalte mit Einladung${z.vorher ? ` · dazu ${z.vorher} von vor dem Pilot, nicht mitgezählt` : ""}</p>
+        <div class="zahlen">
+          <div><b>${z.haushalte}</b><span>Haushalte</span><small>+${z.neu} diese Woche</small></div>
+          <div><b>${z.erwachsene}</b><span>Erwachsene</span><small>${z.haushalte ? (z.erwachsene / z.haushalte).toLocaleString("de-DE", { maximumFractionDigits: 1 }) : 0} je Haushalt</small></div>
+          <div><b>${z.kinder}</b><span>Kinder</span><small>in ${z.familien} ${z.familien === 1 ? "Familie" : "Familien"}</small></div>
+        </div>
+        <div class="zahlen" style="margin-top:8px">
+          <div><b>${z.einladungen.angelegt}</b><span>Einladungen</span><small>angelegt</small></div>
+          <div><b>${z.einladungen.eingeloest}</b><span>eingelöst</span><small>${z.einladungen.angelegt ? `${prozent(z.einladungen.eingeloest, z.einladungen.angelegt)} %` : "—"}</small></div>
+          <div><b>${z.einladungen.offen}</b><span>offen</span><small>${z.einladungen.zurueckgezogen} zurückgezogen</small></div>
+        </div></div>
+    </div>
+    <div class="raster paar">
+      <div class="karte"><h2>Haushalte</h2><p class="unter">Wer am längsten still ist, steht oben</p>
+        ${L.haushalte.length ? `<div class="liste">${liste.map(haushaltZeile).join("")}</div>
+          ${L.haushalte.length > 8 ? `<button class="textknopf" data-alle>${alleHaushalte ? "Weniger zeigen" : `Alle ${L.haushalte.length} Haushalte`}</button>` : ""}`
+          : `<p class="leer">Noch keiner. Lege rechts eine Einladung an und schick den Link.</p>`}</div>
+      <div class="karte"><div class="kopf-mit-knopf"><div><h2>Einladungen</h2><p class="unter">Jede gilt für einen Haushalt</p></div>
+        <button class="minibtn voll" data-neu>Neue Einladung</button></div>
+        ${L.einladungen.length ? `<div class="liste">${L.einladungen.map(einladungZeile).join("")}</div>` : `<p class="leer">Noch keine angelegt.</p>`}</div>
+    </div>
+    <div class="raster paar">
+      <div class="karte"><h2>Fehler</h2><p class="unter">Letzte 30 Tage · kritisch: Server-Fehler oder bei mehr als einer Person</p>
+        ${L.fehler.length ? `<div class="liste">${L.fehler.map(fehlerZeile).join("")}</div>` : `<p class="leer">Keine. So soll es sein.</p>`}</div>
+      <div class="karte"><h2>Pilot</h2><p class="unter">Gilt sofort für alle neuen Besucher</p>
+        <div class="schiene"><div><b style="font-size:14px">Nur mit Einladung</b><br><span style="font-size:12.5px;color:var(--ink-3)">${L.pflicht
+          ? "Neue Konten brauchen eine Einladung oder den Code eines Haushalts." : "Jeder kann sich anmelden und einen Haushalt gründen."}</span></div>
+          <button class="kippschalter" role="switch" aria-checked="${L.pflicht}" aria-label="Nur mit Einladung" data-pflicht></button></div>
+        <p class="unter" style="margin:14px 0 0">Nach dem Pilot ausschalten — dann sieht die Anmeldung wieder aus wie vorher.</p></div>
+    </div>`;
+}
+
+function schirm(titel, text, knopf = "") {
+  haupt.innerHTML = `<div class="mitte"><span class="marke">Betrieb · Homi Point</span><h1>${titel}</h1><p>${text}</p>${knopf}</div>`;
+}
+
+async function laden() {
+  try {
+    L = await api("betrieb");
+    zeichnen();
+  } catch (fehler) {
+    if (fehler.status === 401) return schirm("Anmelden", "Das Betriebs-Dashboard ist nur für das Team von Homi Point.",
+      `<a class="btn rot" href="/api/auth/start?weiter=/betrieb/">Mit Google anmelden</a>`);
+    if (fehler.status === 403) return schirm("Kein Zugang", "Mit diesem Konto geht es hier nicht hinein. Wer zum Team gehört, steht in den Einstellungen bei Cloudflare.",
+      `<a class="btn rand" href="/app/">Zur App</a>`);
+    schirm("Das hat nicht geklappt", esc(fehler.message), `<button class="btn rand" data-neu-laden>Noch einmal</button>`);
+  }
+}
+
+const einladungsLink = (code) => `${location.origin}/app/?pilot=${encodeURIComponent(code)}`;
+function blatt(inhalt) {
+  document.getElementById("blatt-inhalt").innerHTML = inhalt;
+  document.getElementById("blatt").setAttribute("data-offen", "");
+  document.querySelector("#blatt input, #blatt button")?.focus();
+}
+const blattZu = () => document.getElementById("blatt").removeAttribute("data-offen");
+function blattEinladung(code, name) {
+  blatt(`<h2 id="blatt-titel">Einladung für ${esc(name)}</h2><p>Schick den Link — oder sag den Code durch. Den Namen sehen die Eingeladenen nicht.</p>
+    <div class="ergebnis"><div class="gross">${esc(code)}</div><div class="link">${esc(einladungsLink(code))}</div></div>
+    <button class="btn rot" data-link-teilen="${esc(code)}">Link teilen</button>
+    <button class="btn rand" data-link-kopieren="${esc(code)}">Kopieren</button>
+    <button class="btn text" data-zu>Fertig</button>`);
+}
+
+async function teilen(code) {
+  const text = `Du bist zum Pilot von Homi Point eingeladen. Öffne den Link und melde dich an: ${einladungsLink(code)}`;
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* abgebrochen — dann kopieren */ } }
+  await navigator.clipboard.writeText(text);
+  toast("Einladung kopiert.");
+}
+
+document.addEventListener("click", async (ev) => {
+  const el = ev.target.closest("button, [data-zu]");
+  if (ev.target.id === "blatt") return blattZu();
+  if (!el) return;
+  const d = el.dataset;
+  try {
+    if ("zu" in d) return blattZu();
+    if ("neuLaden" in d) { await laden(); return toast("Aktualisiert."); }
+    if ("tabelle" in d) { alsTabelle = !alsTabelle; return zeichnen(); }
+    if ("alle" in d) { alleHaushalte = !alleHaushalte; return zeichnen(); }
+    if ("neu" in d) {
+      return blatt(`<h2 id="blatt-titel">Neue Einladung</h2><p>Für wen? Den Namen siehst nur du — hier im Dashboard.</p>
+        <label for="ein-name">Name der Einladung</label><input id="ein-name" maxlength="60" placeholder="z. B. Familie Weber" autocomplete="off">
+        <button class="btn rot" data-anlegen>Anlegen</button><button class="btn text" data-zu>Abbrechen</button>`);
+    }
+    if ("anlegen" in d) {
+      el.disabled = true;
+      const neu = await api("betrieb/einladung", { name: document.getElementById("ein-name")?.value || "" });
+      await laden();
+      return blattEinladung(neu.code, neu.name);
+    }
+    if (d.teilen) { const e = L.einladungen.find((x) => x.code === d.teilen); return blattEinladung(e.code, e.name); }
+    if (d.linkTeilen) return teilen(d.linkTeilen);
+    if (d.linkKopieren) { await navigator.clipboard.writeText(einladungsLink(d.linkKopieren)); return toast("Link kopiert."); }
+    if (d.zurueckziehen) {
+      if (!confirm(`Einladung ${d.zurueckziehen} zurückziehen? Der Code gilt dann nicht mehr.`)) return;
+      await api(`betrieb/einladung/${encodeURIComponent(d.zurueckziehen)}/zurueckziehen`, {});
+      await laden();
+      return toast("Zurückgezogen.");
+    }
+    if (d.erledigt) { await api(`betrieb/fehler/${encodeURIComponent(d.erledigt)}/erledigt`, {}); await laden(); return toast("Als erledigt markiert."); }
+    if ("pflicht" in d) {
+      const an = !L.pflicht;
+      if (!an && !confirm("Ohne Einladung kann sich dann jeder anmelden und einen Haushalt gründen. Ausschalten?")) return;
+      await api("betrieb/pilot", { pflicht: an });
+      await laden();
+      return toast(an ? "Nur noch mit Einladung." : "Offen für alle.");
+    }
+  } catch (fehler) {
+    toast(fehler.message, true);
+  } finally {
+    if (el.isConnected) el.disabled = false;
+  }
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") blattZu();
+  if (ev.key === "Enter" && ev.target?.id === "ein-name") document.querySelector("[data-anlegen]")?.click();
+});
+
+laden();
+</script>
+</body>
+</html>

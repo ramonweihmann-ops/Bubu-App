@@ -136,6 +136,29 @@ mit der Bezahlung). Verlinkt von der Startseite, der Anmeldung, den Einstellunge
 im Pilot eine Privatperson, wie bei Love Diary. Ändert sich, was die App speichert, muss die Tabelle in der
 Datenschutzerklärung mit.
 
+## Pilot und Betrieb
+
+Im Pilot kommt nur herein, wer eingeladen ist. Eine **Einladung** ist ein Code wie `HOMI-7K3-PQ8`, meist als Link
+`haus-quest.com/app/?pilot=HOMI-7K3-PQ8`. Die Anmeldeseite fragt sie **vor** der Google-Anmeldung ab und lässt sie
+von der Schnittstelle prüfen (`/api/pilot/pruefen`); die geprüfte Einladung reist als Keks `hq_einladung` durch die
+Anmeldung. Ein neues Konto entsteht nur mit gültiger Einladung — sonst geht es ohne Spuren zurück zur Anmeldung
+(`?ohne-einladung`). Wer schon ein Konto hat, kommt immer herein. Als Einladung gilt auch der Code eines Haushalts:
+Wer damit kommt, tritt nach der Anmeldung gleich bei. Gründen darf nur, wer eine Pilot-Einladung angenommen hat — eine
+Einladung, ein Haushalt (`worker/pilot.js`, `d1/migrations/0026_pilot.sql`).
+
+Das **Betriebs-Dashboard** liegt unter `haus-quest.com/betrieb/` (`web/betrieb/`, `worker/betrieb.js`). Hinein kommt
+nur, wessen Google-Adresse im Geheimnis `BETRIEB_EMAILS` steht — in Cloudflare unter Workers → bubu-app →
+Einstellungen → Variablen und Geheimnisse, mehrere mit Komma getrennt. Die Adressen stehen absichtlich nicht im
+öffentlichen Projekt; weitere Personen kommen nur hinzu, wenn sie dort von Hand ergänzt werden. Das Dashboard zeigt die
+Tore zur Beta (aktiv in Woche 4, Haushalte mit nur einer Person, Testkauf, kritische Fehler), den Wochenverlauf, wer
+mitmacht, die Haushalte unter dem Namen ihrer Einladung, die Einladungen (anlegen, teilen, zurückziehen), die Fehler
+und den Schalter „Nur mit Einladung“. Gezählt werden nur Haushalte mit Einladung.
+
+**Fehler** aus App und Server landen gesammelt in der Tabelle `fehler` (`worker/fehler.js`): technische Meldung,
+Bereich, wie oft, bei wie vielen — keine Inhalte, höchstens 200 Meldungen am Tag, nach 30 Tagen gelöscht. Als
+Server-Fehler gilt, was ohne eigenen Status und ohne Datenbankregel dahinter scheitert; Absagen wie „Diese Quest gibt
+es nicht“ zählen nicht.
+
 ## Kostenlos bleiben
 
 Bis Homi Point wirklich im Betrieb ist, läuft alles im kostenlosen Plan von Cloudflare. Dessen knappste Grenze ist
