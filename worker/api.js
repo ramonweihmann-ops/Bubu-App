@@ -19,7 +19,7 @@ import {
 import { zeitraum, urlaubAnlegen, urlaubBeenden, urlaubeVon, urlaubsLage } from "./urlaub.js";
 import { questBild, belohnungBild, bildAusliefern } from "./bilder.js";
 import {
-  istKindProfil, istKind, STIMMRECHT, mitgliedVon, nurErwachsene, entscheidenPruefen,
+  istKindProfil, istKind, istErwachsen, STIMMRECHT, mitgliedVon, nurErwachsene, entscheidenPruefen,
   zaehltSofort, alsKind, kindAnlegen, kindAendern, kindLoeschen, kindCode, kindEinloesen, kindAbmelden,
   jugendlichSetzen, wunschSetzen, ansichtSetzen, fuerSetzen, auszahlen, pinSetzen, pinPruefen, heuteGeschafft
 } from "./familie.js";
@@ -27,7 +27,8 @@ import {
   konfigPruefen, eventAnlegen, eventAendern, eventAus,
   eventsNachziehen, eventsVon, eventPruefen
 } from "./events.js";
-import { fairBericht, plusTesten, plusLage, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
+import { fairBericht, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
+import { plusTesten, plusNoetig, plusFuerMich, plusKaufen, plusEhrlich, plusNicht, testBeimGruenden, eventGrenze } from "./plus.js";
 import { kontoVorschau, kontoLoeschen, haushaltVerlassen } from "./konto.js";
 import { umzugsLage } from "./umzug.js";
 import { EINLADUNG, einladungPruefen, einladungAnnehmen, pilotPflicht, gruendenErlaubt, einloesen } from "./pilot.js";
@@ -85,9 +86,13 @@ export async function handleApi(request, env, url) {
     // Ein Kind mit eigenem Gerät meldet, wünscht sich etwas und bestätigt die
     // Großen. Alles andere machen die Erwachsenen.
     if (istKindProfil(ich) && !kindDarf(pfad, teile)) throw new Fehler("Das machen die Erwachsenen", 403);
+    // Kinder-Geräte gehören zum Familienmodus und damit zu Plus. Ohne Plus sieht
+    // das Kind nur, dass es pausiert — sein Verlauf bleibt.
+    if (istKindProfil(ich) && !KIND_OHNE_PLUS.includes(pfad)) await plusNoetig(env, ich.couple_id, "Kinder-Geräte");
     // Die Kinderansicht auf dem Handy der Eltern spricht für das Kind.
     if (koerper.alsKind) {
       if (!kindDarf(pfad, teile, true)) throw new Fehler("Das geht in der Kinderansicht nicht", 403);
+      if (ich.couple_id) await plusNoetig(env, ich.couple_id, "Die Kinderansicht");
       ich = await alsKind(env, ich, koerper.alsKind);
     }
 
@@ -123,7 +128,11 @@ export async function handleApi(request, env, url) {
 
     if (!ich.couple_id) throw new Fehler("Noch kein Haushalt eingerichtet", 409);
 
-    if (pfad === "claims") return json(koerper.fuer ? await fuerKindEintragen(env, ich, koerper) : await melden(env, ich, koerper));
+    if (pfad === "claims") {
+      if (!koerper.fuer) return json(await melden(env, ich, koerper));
+      await plusNoetig(env, ich.couple_id, "Für Kinder eintragen");
+      return json(await fuerKindEintragen(env, ich, koerper));
+    }
     if (teile[0] === "claims" && teile[2] === "decide") return json(await meldungEntscheiden(env, ich, teile[1], koerper.status));
 
     if (pfad === "requests") return json(await antragStellen(env, ich, koerper));
@@ -145,6 +154,10 @@ export async function handleApi(request, env, url) {
       return json(await fairBericht(env, ich, { zeitraum: f.get("zeitraum"), zurueck: f.get("zurueck"), versatz: f.get("versatz") }));
     }
     if (pfad === "fair/testen") return json(await plusTesten(env, ich));
+    // Der Testkauf im Pilot: ein Plan, die ehrliche Frage danach, oder „Jetzt nicht“.
+    if (pfad === "plus/kaufen" && request.method === "POST") return json(await plusKaufen(env, ich, koerper.plan));
+    if (pfad === "plus/ehrlich" && request.method === "POST") return json(await plusEhrlich(env, ich, koerper.id, koerper.antwort));
+    if (pfad === "plus/nicht" && request.method === "POST") return json(await plusNicht(env, ich, koerper.gruende));
     if (pfad === "phasen") return json(await phasenAendern(env, ich, koerper));
     if (pfad === "wochenziel") return json(await wochenzielSetzen(env, ich, koerper));
     if (pfad === "gifs") return json(await gifAnlegen(env, ich, koerper));
@@ -189,12 +202,22 @@ export async function handleApi(request, env, url) {
     }
 
     /* ---------- Familie ---------- */
-    if (pfad === "kinder") return json(await kindAnlegen(env, ich, koerper));
+    // Kinderprofile ändern und löschen geht immer — anlegen, Geräte und Taschengeld nur mit Plus.
+    if (pfad === "kinder") {
+      await plusNoetig(env, ich.couple_id, "Kinderprofile");
+      return json(await kindAnlegen(env, ich, koerper));
+    }
     if (teile[0] === "kinder" && teile[1] && !teile[2]) return json(await kindAendern(env, ich, teile[1], koerper));
     if (teile[0] === "kinder" && teile[2] === "loeschen") return json(await kindLoeschen(env, ich, teile[1]));
-    if (teile[0] === "kinder" && teile[2] === "code") return json(await kindCode(env, ich, teile[1]));
+    if (teile[0] === "kinder" && teile[2] === "code") {
+      await plusNoetig(env, ich.couple_id, "Kinder-Geräte");
+      return json(await kindCode(env, ich, teile[1]));
+    }
     if (teile[0] === "kinder" && teile[2] === "abmelden") return json(await kindAbmelden(env, ich, teile[1]));
-    if (teile[0] === "kinder" && teile[2] === "auszahlen") return json(await auszahlen(env, ich, teile[1], koerper));
+    if (teile[0] === "kinder" && teile[2] === "auszahlen") {
+      await plusNoetig(env, ich.couple_id, "Taschengeld");
+      return json(await auszahlen(env, ich, teile[1], koerper));
+    }
     if (teile[0] === "mitglieder" && teile[2] === "jugendlich") return json(await jugendlichSetzen(env, ich, teile[1], koerper.ja === true));
     if (pfad === "kind/wunsch") return json(await wunschSetzen(env, selbstKind(ich), koerper.rewardId));
     if (pfad === "kind/ansicht") return json(await ansichtSetzen(env, selbstKind(ich), koerper.ansicht));
@@ -251,6 +274,9 @@ async function pilotAnnehmen(env, ich, code) {
 }
 
 /* ------------------------------------------------------------------ Kinder */
+
+// Was ein Kinder-Gerät ohne Plus noch darf: sehen, dass es pausiert.
+const KIND_OHNE_PLUS = ["state", "stand", "events/gelesen", "push/key", "push/subscribe"];
 
 /** Was ein Kind ohne Google-Konto anfassen darf. Für die Kinderansicht auf dem
  *  Handy der Eltern gilt noch weniger: dort entscheidet das Kind nichts. */
@@ -371,6 +397,8 @@ async function haushaltEinrichten(env, ich, daten) {
       env.DB.prepare("insert into members (user_id, couple_id, rolle) values (?1, ?2, 'verwalter')").bind(ich.id, paar),
       // Die Pilot-Einladung gilt ab jetzt als eingelöst — im selben Schritt wie das Gründen.
       einloesen(env, ich, paar),
+      // Neue Pilot-Haushalte testen Plus 14 Tage; danach schaltet es ein Testkauf frei.
+      testBeimGruenden(env, paar),
       ...QUESTS.map((q) =>
         env.DB.prepare("insert into quests (id, couple_id, name, category, points) values (?1, ?2, ?3, ?4, ?5)")
           .bind(id(), paar, q.name, q.kategorie, q.punkte)),
@@ -845,6 +873,7 @@ async function zustand(env, ich, versatz = 0) {
   // Abstimmen dürfen Erwachsene und Jugendliche — die Karten zählen nur sie.
   const stimmberechtigt = mit.filter((m) => !istKindProfil(m));
   const mein = mit.find((p) => p.id === ich.id) || { id: ich.id, name: ich.name, punkte: 0 };
+  const plusInfo = await plusFuerMich(env, ich, istErwachsen(mein));
   const andere = mit.filter((p) => p.id !== ich.id);
 
   const namenJe = Object.fromEntries(mit.map((m) => [m.id, m.name]));
@@ -866,10 +895,12 @@ async function zustand(env, ich, versatz = 0) {
       belegt: mit.length, ichVerwalte: mein.rolle === "verwalter",
       strafe: !!haus.strafe_an,
       kurs: haus.kurs, pin: !!haus.eltern_pin,
-      plus: (await plusLage(env, paar)).plus,
+      plus: plusInfo.an,
       // Die zwei Grenzen des Jubels. Die dritte Stufe ist nach oben offen.
       phasen: { leise: haus.phase_leise, mittel: haus.phase_mittel }
     },
+    // Plus und der Testkauf: läuft der Test, ist er vorbei, wer kann kaufen.
+    plus: plusInfo,
     ich: mein,
     mitglieder: mit,
     andere,
@@ -1303,7 +1334,10 @@ async function vorschlagen(env, ich, daten) {
   if (!arten.includes(art)) throw new Fehler("Unbekannte Art von Vorschlag");
 
   if (istKindProfil(ich)) throw new Fehler("Vorschlagen dürfen die Großen", 403);
-  if (art === "kurs") return kursVorschlagen(env, ich, daten);
+  if (art === "kurs") {
+    await plusNoetig(env, ich.couple_id, "Taschengeld");
+    return kursVorschlagen(env, ich, daten);
+  }
   if (art === "fair_soll") return fairSollVorschlagen(env, ich, daten);
   if (art === "neues_event" || art === "event_aendern") return eventVorschlagen(env, ich, daten);
   if (art === "event_aus") return eventEndeVorschlagen(env, ich, daten);
@@ -1417,6 +1451,8 @@ function eventSatz(konf) {
  */
 async function eventVorschlagen(env, ich, daten) {
   const aendern = daten.art === "event_aendern";
+  // Ohne Plus gehen drei Events zugleich; Ändern und Beenden gehen immer.
+  if (!aendern) await eventGrenze(env, ich.couple_id);
 
   const koepfe = await env.DB.prepare("select user_id from members where couple_id = ?1")
     .bind(ich.couple_id).all();

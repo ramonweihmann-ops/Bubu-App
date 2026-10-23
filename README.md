@@ -112,8 +112,26 @@ Woche“ und unter „Wir“. Gerechnet wird aus den Buchungen, die es schon gib
 | Rückblick | der Vormonat in Karten, in der ersten Woche des Monats auf der Startseite |
 
 Zeiträume: Woche, Monat, 13 Wochen, Jahr, zurückblättern; Export als PDF und als Tabelle (CSV). Ohne
-Plus gibt es nur die Waage der laufenden Woche, der Rest liegt hinter dem Schloss, einmal 14 Tage zum
-Testen. Bis Plus sich kaufen lässt, haben es alle Haushalte (`couples.plus` steht auf 1).
+Plus gibt es nur die Waage der laufenden Woche, der Rest liegt hinter dem Schloss.
+
+## Plus und der Testkauf
+
+Plus ist der ganze Fair-Bericht, der Familienmodus (Kinderansicht, Kinder-Geräte, Taschengeld) und Events ohne
+Grenze — ohne Plus gehen drei zugleich (`worker/plus.js`, `d1/migrations/0027_testkauf.sql`).
+
+- **Neue Pilot-Haushalte** (gegründet mit Einladung) testen Plus 14 Tage ab der Gründung (`couples.plus = 0`,
+  `plus_test_bis`). Zwei Tage vor Ende erinnert eine Zeile auf der Startseite; danach pausiert Plus.
+- **Der Testkauf**: Ein Erwachsener wählt Jahr (11,99 €, danach 17,99 €), Monat (1,99 €, danach 2,99 €) oder für immer
+  (49,99 €). Abgebucht wird nichts — der Kauf landet in `testkaeufe`, Plus ist danach dauerhaft an
+  (`couples.plus = 1`) und bleibt als Dankeschön. Danach die ehrliche Frage „Hättest du das auch bezahlt?“
+  (ja, vielleicht, nein). „Jetzt nicht“ fragt freiwillig nach Gründen (`plus_absagen`) und blendet die Zeile für
+  diese Person aus. Kinder und Jugendliche sehen „Frag die Großen“.
+- **Ohne Plus** bleiben Kinderprofile, Cleanies und Verlauf; Kinderansicht und Kinder-Geräte zeigen eine Pause,
+  Kind anlegen, Geräte-Code, Taschengeld und Kurs, Eintragen für Kinder und ein viertes Event antworten mit 402 —
+  die App öffnet dann die Plus-Seite mit dem Grund. Profile ändern und löschen geht immer.
+- **Haushalte von vor dem Pilot** behalten Plus (`couples.plus` steht dort auf 1).
+- Im **Betriebs-Dashboard** zählt die Kachel „Testkauf für Plus“: gekauft je Haushalt, dessen Test vorbei ist (oder
+  der vorher gekauft hat). Daneben welcher Plan, wie ehrlich und was gegen Plus spricht.
 
 ## Konto löschen und Haushalt verlassen
 

@@ -36,6 +36,8 @@ async function api(pfad, daten) {
   if (!antwort.ok) {
     const fehler = new Error(ergebnis.fehler || "Da ist etwas schiefgegangen");
     fehler.name = "Antwort"; // eine Absage der Schnittstelle, kein Absturz — siehe fehlerMelden()
+    // Fehlt Plus, erklärt das Plus-Blatt, was los ist — statt nur eines Toasts.
+    if (antwort.status === 402 && S?.plus) plusSperre(fehler.message);
     throw fehler;
   }
   return ergebnis;
@@ -150,6 +152,8 @@ systemDunkel.addEventListener("change", () => { if (themaWahl() === "system") th
 
 let toastTimer;
 function toast(text, fehler = false) {
+  // Das Plus-Blatt sagt es schon.
+  if (fehler && text === plusSperrText) { plusSperrText = null; return; }
   toastEl.className = "toast" + (fehler ? " fehler" : "");
   toastEl.innerHTML = `${icon(fehler ? "i-info" : "i-check", 18)}<span>${esc(text)}</span>`;
   toastEl.setAttribute("data-open", "");
@@ -1553,6 +1557,7 @@ function schirmStart() {
       ${pillen()}
       ${rueckblickKarte()}
       ${stapelBlock(st)}
+      ${plusZeile()}
       <div class="startkacheln">${planKachel()}${wocheKachel()}</div>
       ${wartetZeile()}
       ${zuletztZeile()}
@@ -3146,6 +3151,7 @@ function schirmEinstellungen() {
           <span class="m">${(S.raeume || []).filter((r) => r.aktiv).length} Räume · Kategorien der Quests</span></span>
         <span style="color:var(--ink-3)">›</span>
       </button>
+${plusEinstellung()}
 
       ${S.haushalt.ichVerwalte ? `
       <p class="section-label">Jubel</p>
@@ -4271,7 +4277,7 @@ const zMarke = (s) => s.z === "offen" ? "" : `<span class="kv-marke">${ZMARKE[s.
 const kvStern = '<img class="kv-stern" src="/cleanie.webp" alt="">';
 const offenerWunsch = (k) => S.antraege.find((a) => a.requested_by === k.id);
 
-function kvKopf(k) {
+function kvKopf(k, pause = false) {
   const wahl = aufElternHandy() ? kinderProfile() : [];
   const ansicht = k.ansicht === "weg" ? "weg" : "glas";
   return `
@@ -4279,10 +4285,10 @@ function kvKopf(k) {
       ${wahl.length > 1 ? `<div class="kv-wahl">${wahl.map((x) => `
         <button data-kv-kind="${x.id}" aria-pressed="${x.id === k.id}" aria-label="${esc(vorname(x.name))}">${esc(x.tier || "🦊")}</button>`).join("")}</div>`
         : `<span class="kv-was">${aufElternHandy() ? "Kinderansicht" : "Homi Point"}</span>`}
-      <div class="kv-schalter" role="group" aria-label="Ansicht">
+      ${pause ? "" : `<div class="kv-schalter" role="group" aria-label="Ansicht">
         <button data-kv-ansicht="glas" aria-pressed="${ansicht === "glas"}">🫙 Glas</button>
         <button data-kv-ansicht="weg" aria-pressed="${ansicht === "weg"}">🗺️ Weg</button>
-      </div>
+      </div>`}
       ${aufElternHandy() ? '<button class="kv-knopf" data-kv-schloss aria-label="Zurück zu den Eltern">🔒</button>' : ""}
     </div>`;
 }
@@ -4354,6 +4360,8 @@ function kvFuerDieGrossen() {
 }
 
 function schirmKind(k) {
+  // Ohne Plus pausiert die Kinderansicht — Cleanies und Wünsche bleiben.
+  if (!plusAn()) return kvPausiert(k);
   const w = kindWunsch(k);
   const liste = kindQuests();
   const glas = k.ansicht !== "weg";
@@ -4451,6 +4459,7 @@ function familieBlock() {
   const tg = kinder().filter((k) => k.taschengeld);
   return `
     <p class="section-label">Familie</p>
+    ${plusPauseKarte()}
     ${S.mitglieder.map((m) => istKindM(m) ? `
       <button class="rowlink" data-kind="${m.id}">${istKindProfilM(m) ? tierHtml(m, "sm") : bild(m, "sm")}
         <span class="grow"><span class="t">${esc(vorname(m.name))}</span>
@@ -4904,10 +4913,14 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS);
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS + "," + PLUS_KLICKS);
   if (!el) return;
+  // Ohne Plus geht der Familienmodus gar nicht erst los — das Plus-Blatt sagt, warum.
+  const sperre = !plusAn() && Object.keys(PLUS_NOETIG).find((a) => el.hasAttribute(a));
+  if (sperre) { plusSperre(PLUS_NOETIG[sperre]); return; }
   if (await familieKlick(el)) return;
   try {
+    if (await plusKlick(el)) return;
     if (await pilotKlick(el)) return;
     if (await fairKlick(el)) return;
     if (await kontoKlick(el)) return;
@@ -5237,7 +5250,13 @@ document.addEventListener("click", async (ev) => {
     }
     if (art === "neue-belohnung") { sheetNeueBelohnung(); return; }
     if (art === "aktion") { sheetAktion(); return; }
-    if (art === "event") { sheetEvent(); return; }
+    if (art === "event") {
+      // Ohne Plus gehen drei Events zugleich — offene Vorschläge für neue zählen mit.
+      const zugleich = events().length + (S.abstimmungen || []).filter((v) => v.art === "neues_event").length;
+      if (!plusAn() && zugleich >= 3) { plusSperre("Mehr als 3 Events zugleich gibt es mit Plus. Beendet eins — oder holt euch Plus."); return; }
+      sheetEvent();
+      return;
+    }
     if (scrim.hasAttribute("data-open")) return;
     if (art === "melden") {
       const quest = S.quests.find((q) => q.id === el.dataset.id);
@@ -6239,10 +6258,13 @@ function fairSchloss(f) {
       <div class="fair-attrappe" aria-hidden="true" inert>${attrappe}</div>
       <div class="fair-schloss">
         <span class="plus-chip">Plus</span>
-        <b>Der ganze Bericht</b>
-        <p>Monate und Jahr, zurückblättern, wer welchen Raum macht, was man nicht sieht, und der Export.</p>
+        ${S.plus?.vorbei ? `<b>Euer Test ist vorbei</b>
+        <p>${familie() ? "Den ganzen Bericht, die Kinderansicht und Events ohne Grenze" : "Den ganzen Bericht und Events ohne Grenze"}
+          gibt es mit Plus. Die Woche bleibt für alle.</p>` : `<b>Der ganze Bericht</b>
+        <p>Monate und Jahr, zurückblättern, wer welchen Raum macht, was man nicht sieht, und der Export.</p>`}
         ${f.testen && ichErwachsen() ? '<button class="btn primary block" data-fair-testen>14 Tage kostenlos testen</button>'
-          : f.testen ? "<p>Testen können die Erwachsenen.</p>" : "<p>Euer Test ist vorbei. Plus gibt es bald.</p>"}
+          : S.plus?.kannKaufen ? '<button class="btn primary block" data-plus-holen>Plus holen</button>'
+          : f.testen ? "<p>Testen können die Erwachsenen.</p>" : `<p><b>Frag die Großen</b> — Plus holen können ${esc(elternWort())}.</p>`}
       </div>
     </div>`;
 }
@@ -6565,6 +6587,218 @@ async function fairKlick(el) {
     else { await navigator.clipboard.writeText(text); toast("Kopiert."); }
     return true;
   }
+  return false;
+}
+
+/* ------------------------------------------------------------------ Plus und Testkauf */
+//
+// Neue Pilot-Haushalte testen Plus 14 Tage. Zwei Tage vor Ende erinnert eine
+// Zeile auf der Startseite; danach pausiert Plus, bis ein Erwachsener den
+// Testkauf macht. Abgebucht wird im Pilot nichts: der Kauf zeigt, wer zu welchem
+// Preis kaufen würde — und Plus bleibt als Dankeschön. Kinder und Jugendliche
+// sehen statt der Preise „Frag die Großen“.
+
+const PLUS_PLAENE = {
+  jahr: { name: "Jahr", preis: "11,99 €", em: "im 1. Jahr", klein: "danach 17,99 € · rund 1 € im Monat", rabatt: "−50 %" },
+  monat: { name: "Monat", preis: "1,99 €", em: "im Monat", klein: "im 1. Jahr, danach 2,99 €" },
+  immer: { name: "Für immer", preis: "49,99 €", em: "einmalig", klein: "einmal zahlen, nie wieder" }
+};
+const PLUS_GRUENDE = ["Zu teuer", "Brauchen wir nicht", "Erst später", "Lieber ohne Abo", "Anderes"];
+const PLUS_KLICKS = "[data-plus-holen],[data-plus-plan],[data-plus-kaufen],[data-plus-nicht],[data-plus-grund],"
+  + "[data-plus-nicht-ok],[data-plus-ehrlich],[data-plus-zu]";
+// Was ohne Plus gar nicht erst losgeht — und der Satz dazu.
+const PLUS_NOETIG = {
+  "data-kv-oeffnen": "Die Kinderansicht gibt es mit Plus.",
+  "data-kind-neu": "Kinderprofile gibt es mit Plus.",
+  "data-kind-code": "Kinder-Geräte gibt es mit Plus.",
+  "data-auszahlen": "Taschengeld gibt es mit Plus.",
+  "data-kurs": "Taschengeld gibt es mit Plus."
+};
+const plusWahl = { plan: "jahr", kauf: null, ehrlich: null, gruende: new Set() };
+// Öffnet eine Absage der Schnittstelle (402) das Plus-Blatt, braucht es keinen Toast dazu.
+let plusSperrText = null;
+
+const plusAn = () => S?.plus?.an !== false;
+const plusWas = () => familie() ? "Fair-Bericht, Kinderansicht und Events ohne Grenze" : "Der ganze Fair-Bericht und Events ohne Grenze";
+const tageText = (t) => t === 0 ? "heute" : t === 1 ? "morgen" : t === 2 ? "übermorgen" : `in ${t} Tagen`;
+
+/** Die Zeile auf der Startseite: kurz vor Ende des Tests und danach, bis gekauft oder abgewinkt ist. */
+function plusZeile() {
+  if (!S.plus?.hinweis) return "";
+  return `
+    <div class="zuletzt hinweis plus">
+      <button class="los" data-plus-holen><span class="plus-zeichen" aria-hidden="true">+</span>
+        <span class="plus-text"><b>${S.plus.vorbei ? "Euer Plus-Test ist vorbei" : `Euer Plus-Test endet ${tageText(S.plus.testTage)}`}</b>
+          <small>${S.plus.vorbei ? `${plusWas()} pausieren — ein Testkauf holt sie zurück.` : `${plusWas()} — Plus behalten?`}</small></span>
+        <span class="mehr">›</span></button>
+    </div>`;
+}
+
+/** Die Plus-Seite: was dazugehört, drei Pläne zu den späteren Preisen, kaufen oder „Jetzt nicht“. */
+function sheetPlusHolen(grund = null) {
+  const p = PLUS_PLAENE[plusWahl.plan];
+  const kann = S.plus?.kannKaufen && !S.plus?.gekauft;
+  const unter = grund
+    || (S.plus?.vorbei ? "Euer Test ist vorbei — mit Plus ist alles wieder da."
+      : S.plus?.testBis ? `Euer Test endet ${tageText(S.plus.testTage)}. Kauft ihr vorher, bleibt Plus einfach an.`
+      : "Für euren ganzen Haushalt — eine Person kauft für alle.");
+  sheet(`
+    <div class="grabber"></div>
+    <div class="plus-kopf"><span class="plus-chip">Plus</span><h3>Homi Point Plus</h3><p>${esc(unter)}</p></div>
+    <ul class="plus-vorteile">
+      <li><span class="h">✓</span><span><b>Der ganze Fair-Bericht</b> — Monate, Jahr, Räume, Export</span></li>
+      <li><span class="h">✓</span><span><b>Familienmodus</b> — Kinderansicht, Kinder-Geräte, Taschengeld</span></li>
+      <li><span class="h">✓</span><span><b>Events ohne Grenze</b> — sonst drei zugleich</span></li>
+      <li><span class="h">✓</span><span><b>Ohne Werbung</b> — auch wenn sie später kommt</span></li>
+    </ul>
+    ${kann ? `
+    <div class="plus-plaene" role="radiogroup" aria-label="Plan">${Object.entries(PLUS_PLAENE).map(([id, x]) => `
+      <button class="plus-plan" role="radio" aria-checked="${id === plusWahl.plan}" data-plus-plan="${id}"><span class="punkt"></span>
+        <b>${x.name}${x.rabatt ? `<span class="rabatt">${x.rabatt}</span>` : ""}</b><small>${x.klein}</small>
+        <span class="preis">${x.preis}<em>${x.em}</em></span></button>`).join("")}</div>
+    <button class="btn primary block" data-plus-kaufen>Kaufen · ${p.preis}</button>
+    <button class="btn text block" data-plus-nicht>Jetzt nicht</button>
+    <p class="plus-klein">Pilot: Es wird nichts abgebucht. Ein Kauf gilt für alle im Haushalt.</p>` : `
+    <div class="note">${icon("i-info", 16)}<span><b>Frag die Großen.</b> Plus holen können ${esc(elternWort())} — für alle im Haushalt.</span></div>
+    <button class="btn dark block" data-plus-zu>Verstanden</button>`}`);
+}
+
+/** Nach dem Testkauf: Danke, was das war — und die ehrliche Frage. */
+function sheetPlusDanke() {
+  const k = plusWahl.kauf;
+  const p = PLUS_PLAENE[k.plan];
+  sheet(`
+    <div class="grabber"></div>
+    <div class="plus-danke">
+      <div class="konfetti" aria-hidden="true">🎉</div>
+      <h3>Danke! Plus ist an.</h3>
+      <p>Das war ein <b>Testkauf</b> über ${k.plan === "immer" ? "Plus für immer" : `Plus pro ${p.name}`} (${p.preis}).
+        Im Pilot wird nichts abgebucht — Plus bleibt euer Dankeschön, auch nach dem Pilot.</p>
+    </div>
+    ${plusWahl.ehrlich ? `
+    <div class="note">${icon("i-check", 16)}<span><b>Danke für die Antwort.</b> Sie hilft uns, den richtigen Preis zu finden.</span></div>
+    <button class="btn dark block" data-plus-zu>Fertig</button>` : `
+    <p class="plus-frage">Ganz ehrlich: Hättest du das auch bezahlt?</p>
+    <div class="plus-antworten">
+      <button class="btn ghost block" data-plus-ehrlich="ja">Ja</button>
+      <button class="btn ghost block" data-plus-ehrlich="vielleicht">Vielleicht</button>
+      <button class="btn ghost block" data-plus-ehrlich="nein">Nein, nur weil es nichts kostet</button>
+    </div>
+    <button class="btn text block" data-plus-zu>Überspringen</button>`}`);
+}
+
+/** „Jetzt nicht“ — freiwillig mit Gründen. Danach erinnert die Startseite nicht mehr. */
+function sheetPlusNicht() {
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Was hält dich ab?</h3>
+    <p class="plus-unter">Freiwillig — ein Tipp hilft uns schon.</p>
+    <div class="plus-gruende">${PLUS_GRUENDE.map((g) =>
+      `<button data-plus-grund="${g}" aria-pressed="${plusWahl.gruende.has(g)}">${g}</button>`).join("")}</div>
+    <button class="btn dark block" data-plus-nicht-ok>${plusWahl.gruende.size ? "Fertig" : "Ohne Grund schließen"}</button>
+    <p class="plus-klein">${S.plus?.testBis || S.plus?.vorbei
+      ? "Nach dem Test pausiert Plus. „Plus holen“ steht weiter im Fair-Bericht und in den Einstellungen."
+      : "„Plus holen“ steht weiter in den Einstellungen."}</p>`);
+}
+
+/** Wo Plus fehlt: kurz erklärt, ein Knopf zu Plus. Für Kinder und Jugendliche „Frag die Großen“. */
+function plusSperre(text) {
+  plusSperrText = text;
+  sheetPlusHolen(text);
+}
+
+/** Die Zeile in den Einstellungen. */
+function plusEinstellung() {
+  const p = S.plus;
+  if (!p) return "";
+  const stand = p.gekauft ? `Testkauf: ${PLUS_PLAENE[p.gekauft.plan]?.name || "Plus"} · abgebucht wird nichts`
+    : p.testBis ? `Test · endet ${tageText(p.testTage)}`
+    : p.vorbei ? "Pausiert — der Test ist vorbei"
+    : p.an ? "An — im Pilot geschenkt" : "Aus";
+  const tippbar = !p.gekauft && (p.testBis || p.vorbei || !p.an);
+  const innen = `
+        <span class="avatar sm plus-avatar">+</span>
+        <span class="grow"><span class="t">Homi Point Plus</span><span class="m">${esc(stand)}</span></span>`;
+  return `
+      <p class="section-label">Plus</p>
+      ${tippbar ? `<button class="rowlink" data-plus-holen>${innen}<span style="color:var(--ink-3)">›</span></button>`
+        : `<div class="rowlink" data-plus-stand style="cursor:default">${innen}</div>`}`;
+}
+
+/** Im Familienmodus: was ohne Plus pausiert. Profile und Cleanies der Kinder bleiben. */
+function plusPauseKarte() {
+  if (plusAn()) return "";
+  return `
+    <div class="plus-pause"><span class="plus-chip">Plus</span><b>Familienmodus pausiert</b>
+      <p>Kinderansicht, Kinder-Geräte und Taschengeld gibt es mit Plus. Profile und Cleanies der Kinder bleiben.</p>
+      ${S.plus?.kannKaufen ? '<button class="btn primary block" data-plus-holen>Plus holen</button>'
+        : `<p><b>Frag die Großen.</b></p>`}</div>`;
+}
+
+/** Auf dem Kinder-Gerät und in der Kinderansicht: Pause statt Aufgaben. */
+function kvPausiert(k) {
+  return `
+    <div class="kv">
+      ${kvKopf(k, true)}
+      <div class="kv-body">
+        <div class="kv-hallo">${tierHtml(k, "gross")}
+          <span><b>Hallo ${esc(vorname(k.name))}!</b><small>Du hast <span data-kv-konto>${k.punkte}</span> Cleanies</small></span></div>
+        <div class="kv-pause" data-kv-pause>
+          <span class="kv-pause-zeichen" aria-hidden="true">😴</span>
+          <b>Deine Ansicht macht gerade Pause</b>
+          <p>Deine Cleanies und Wünsche bleiben. Frag ${esc(elternWort())}.</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function plusKlick(el) {
+  if (!el.matches(PLUS_KLICKS)) return false;
+  const d = el.dataset;
+  if (el.hasAttribute("data-plus-holen")) { sheetPlusHolen(); return true; }
+  if (d.plusPlan) {
+    plusWahl.plan = d.plusPlan;
+    scrim.querySelectorAll("[data-plus-plan]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.plusPlan === d.plusPlan)));
+    const knopf = scrim.querySelector("[data-plus-kaufen]");
+    if (knopf) knopf.textContent = `Kaufen · ${PLUS_PLAENE[d.plusPlan].preis}`;
+    return true;
+  }
+  if (el.hasAttribute("data-plus-kaufen")) {
+    el.disabled = true;
+    try {
+      plusWahl.kauf = await api("plus/kaufen", { plan: plusWahl.plan });
+      plusWahl.ehrlich = null;
+      sheetPlusDanke();
+      // Hinter dem Blatt geht schon alles wieder auf — auch der Fair-Bericht, falls er offen ist.
+      laden(true).then(() => ansicht === "fair" ? fairNeu() : null).catch(() => {});
+    } finally { el.disabled = false; }
+    return true;
+  }
+  if (d.plusEhrlich) {
+    el.disabled = true;
+    await api("plus/ehrlich", { id: plusWahl.kauf.id, antwort: d.plusEhrlich });
+    plusWahl.ehrlich = d.plusEhrlich;
+    sheetPlusDanke();
+    return true;
+  }
+  if (el.hasAttribute("data-plus-nicht")) { plusWahl.gruende = new Set(); sheetPlusNicht(); return true; }
+  if (d.plusGrund) {
+    const g = plusWahl.gruende;
+    if (g.has(d.plusGrund)) g.delete(d.plusGrund); else g.add(d.plusGrund);
+    el.setAttribute("aria-pressed", String(g.has(d.plusGrund)));
+    const ok = scrim.querySelector("[data-plus-nicht-ok]");
+    if (ok) ok.textContent = g.size ? "Fertig" : "Ohne Grund schließen";
+    return true;
+  }
+  if (el.hasAttribute("data-plus-nicht-ok")) {
+    el.disabled = true;
+    await api("plus/nicht", { gruende: [...plusWahl.gruende] });
+    sheetZu();
+    toast("Danke! Plus findest du weiter in den Einstellungen.");
+    await laden(true);
+    return true;
+  }
+  if (el.hasAttribute("data-plus-zu")) { sheetZu(); return true; }
   return false;
 }
 

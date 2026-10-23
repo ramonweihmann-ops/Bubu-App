@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point Testkauf</title>
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen und einem Browserfenster. Farben und Schrift wie in
+ * der App, hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb; --balken:#2f6fd0;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:72ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-size:12.5px;color:var(--ink-3)}
+.bu{color:var(--ink-2);font-size:14px;margin:0;max-width:60ch}
+.bu b{color:var(--ink)}
+
+/* Regler über den Telefonen */
+.regler{position:sticky;top:0;z-index:5;background:var(--tint);padding:10px 0 14px;margin-bottom:6px;
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+@media (max-width:720px){.regler{position:static}}
+.gruppe{display:flex;flex-direction:column;gap:6px;min-width:0}
+.schalter{display:flex;flex-wrap:wrap;gap:6px}
+.schalter button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* Telefon */
+.phone{width:100%;max-width:360px;aspect-ratio:375/760;border:9px solid var(--rahmen);border-radius:40px;background:var(--bg);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 18px 40px -22px rgba(21,44,79,.5)}
+.screen{flex:1;display:flex;flex-direction:column;padding:26px 20px 18px;min-height:0;overflow:auto}
+.screen.mitte{justify-content:center;text-align:center}
+.logo{width:150px;height:auto;margin:0 auto 12px;display:block}
+.app-h{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:-.03em;margin:0 0 6px;line-height:1.12}
+.app-sub{color:var(--ink-2);margin:0 0 16px;font-size:14.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:14px;padding:13px 16px;font-weight:700;font-size:15px;border:0}
+.btn.rot{background:var(--akzent-flaeche);color:var(--auf-akzent)}
+.btn.rot[disabled]{opacity:.38;cursor:not-allowed}
+.btn.rand{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.btn.text{background:none;color:var(--ink-2);padding:9px}
+.btn+.btn{margin-top:8px}
+.g{width:18px;height:18px;flex:none}
+.fuss{margin-top:auto;padding-top:14px}
+.klein{font-size:12px;color:var(--ink-3);text-align:center;margin:12px 0 0}
+.klein u{color:var(--ink-2)}
+.feld{display:flex;flex-direction:column;gap:6px;text-align:left;margin:4px 0 12px}
+.feld label{font-family:var(--font-data);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.feld input{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);font-family:var(--font-data);
+  font-size:17px;letter-spacing:.12em;text-transform:uppercase;width:100%}
+.feld input.gut{border-color:var(--frei)}
+.feld input.schlecht{border-color:var(--accent)}
+.meldung{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:0 0 12px}
+.meldung b{display:block}
+.meldung.gut{background:var(--frei-tint);color:var(--ink)}
+.meldung.schlecht{background:var(--accent-tint);color:var(--ink)}
+.meldung.info{background:var(--tint);color:var(--ink-2)}
+.meldung .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.meldung.gut .ic{background:var(--frei)} .meldung.schlecht .ic{background:var(--accent)} .meldung.info .ic{background:var(--ink-3)}
+.einladung{border:1.5px solid var(--frei);background:var(--frei-tint);border-radius:16px;padding:12px 14px;text-align:left;margin:0 0 16px}
+.einladung .marke{color:var(--frei)}
+.einladung strong{display:block;font-family:var(--font-display);font-size:17px;margin:2px 0}
+.einladung span{font-size:13px;color:var(--ink-2)}
+.punkte{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line)} .punkte i.an{background:var(--accent)}
+.schritt{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);text-align:center;
+  padding:7px 0;border-top:1px solid var(--line);background:var(--tint)}
+
+/* Ablauf der Einladung */
+.ablauf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px;margin:8px 0 0;padding:0;list-style:none;counter-reset:s}
+.ablauf li{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;counter-increment:s;font-size:14px;color:var(--ink-2)}
+.ablauf li::before{content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--kontrast-bg);
+  color:var(--kontrast-ink);font-size:12px;font-weight:800;margin-right:8px}
+.ablauf li b{color:var(--ink)}
+
+/* Browserfenster für das Dashboard */
+.browser{border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden;box-shadow:0 18px 40px -26px rgba(21,44,79,.45)}
+.adresse{display:flex;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--tint)}
+.adresse i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.adresse span{margin-left:8px;font-family:var(--font-data);font-size:12px;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:3px 10px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.buehne{background:var(--tint);padding:14px;display:flex;justify-content:center}
+.db{width:100%;max-width:980px}
+.db.handy{max-width:390px}
+
+/* Dashboard selbst */
+.db-kopf{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:2px 2px 14px}
+.db-kopf h4{font-family:var(--font-display);font-weight:800;font-size:23px;letter-spacing:-.02em;margin:0}
+.db-kopf p{margin:0;color:var(--ink-2);font-size:13.5px}
+.fortschritt{min-width:min(260px,100%);flex:1;max-width:340px}
+.fortschritt .leiste{height:8px;border-radius:99px;background:var(--tint-2);overflow:hidden;margin-top:5px}
+.fortschritt .leiste i{display:block;height:100%;background:var(--kontrast-bg);border-radius:99px}
+.fortschritt small{font-size:12px;color:var(--ink-3)}
+.karte{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.karte h5{font-family:var(--font-display);font-size:15.5px;font-weight:800;margin:0 0 2px}
+.karte .unter{font-size:12.5px;color:var(--ink-3);margin:0 0 10px}
+.raster{display:grid;gap:12px}
+.tore{grid-template-columns:repeat(4,1fr)}
+.db.handy .tore{grid-template-columns:repeat(2,1fr)}
+@media (max-width:760px){.tore{grid-template-columns:repeat(2,1fr)}}
+.tor{display:flex;flex-direction:column;gap:4px}
+.tor .was{font-size:12.5px;color:var(--ink-2);line-height:1.3;min-height:2.6em}
+.tor .zahl{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.tor .ziel{font-size:12px;color:var(--ink-3)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:12px;padding:3px 9px 3px 4px;font-size:12px;font-weight:700;width:fit-content;max-width:100%;line-height:1.3}
+.chip i{flex:none}
+.chip i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff}
+.chip.erreicht{background:var(--frei-tint);color:var(--frei)} .chip.erreicht i{background:var(--frei)}
+.chip.knapp{background:var(--bald-tint);color:var(--bald)} .chip.knapp i{background:var(--bald)}
+.chip.verfehlt{background:var(--accent-tint);color:var(--accent)} .chip.verfehlt i{background:var(--accent)}
+.chip.offen{background:var(--tint);color:var(--ink-3)} .chip.offen i{background:var(--ink-3)}
+.zwei{grid-template-columns:1.25fr 1fr;margin-top:12px}
+.db.handy .zwei{grid-template-columns:1fr}
+@media (max-width:760px){.zwei{grid-template-columns:1fr}}
+.zahlen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.zahlen div{background:var(--tint);border-radius:12px;padding:10px}
+.zahlen b{display:block;font-family:var(--font-display);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.zahlen span{font-size:12px;color:var(--ink-2)}
+.zahlen small{display:block;font-size:11.5px;color:var(--ink-3)}
+svg text{font-family:var(--font-ui)}
+.diagramm{width:100%;height:auto;display:block}
+.diagramm .balken{fill:var(--balken)}
+.diagramm .balken.jetzt{fill:var(--balken);opacity:.55}
+.diagramm .ziel{stroke:var(--ink-2);stroke-width:1.5;stroke-dasharray:4 4}
+.diagramm .achse{stroke:var(--line);stroke-width:1}
+.diagramm .lbl{fill:var(--ink-3);font-size:11px}
+.diagramm .wert{fill:var(--ink);font-size:11.5px;font-weight:700}
+.diagramm .ziel-lbl{fill:var(--ink-2);font-size:11px;font-weight:600}
+.tabelle-umschalten{background:none;border:0;padding:0;color:var(--ruhig);font-size:12.5px;font-weight:600;margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:11.5px;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.liste{display:flex;flex-direction:column}
+.zeile{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.zeile:last-child{border-bottom:0}
+.zeile .name{font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zeile .info{grid-column:1;font-size:12.5px;color:var(--ink-3)}
+.zeile .rechts{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.code{font-family:var(--font-data);font-size:12.5px;letter-spacing:.06em;color:var(--ink-2)}
+.minibtn{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.minibtn.voll{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+.kopf-mit-knopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.fehler-zeile .name{white-space:normal;font-family:var(--font-data);font-size:12.5px;font-weight:600}
+.drei{grid-template-columns:1fr 1fr;margin-top:12px}
+.db.handy .drei{grid-template-columns:1fr}
+@media (max-width:760px){.drei{grid-template-columns:1fr}}
+.schiene{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.kippschalter{width:46px;height:28px;border-radius:99px;border:0;background:var(--tint-2);position:relative;flex:none}
+.kippschalter::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.kippschalter[aria-checked="true"]{background:var(--frei)}
+.kippschalter[aria-checked="true"]::after{transform:translateX(18px)}
+.mehr{background:none;border:0;padding:8px 0 0;color:var(--ruhig);font-size:13px;font-weight:600}
+
+/* Blatt „Neue Einladung“ im Dashboard */
+.blatt-schleier{position:fixed;inset:0;background:var(--schleier);display:none;align-items:flex-end;justify-content:center;z-index:20;padding:16px}
+.blatt-schleier[data-offen]{display:flex}
+@media (min-width:700px){.blatt-schleier{align-items:center}}
+.blatt{background:var(--bg);border-radius:20px;max-width:440px;width:100%;padding:20px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.blatt h5{font-family:var(--font-display);font-size:20px;font-weight:800;margin:0 0 4px}
+.blatt p{color:var(--ink-2);font-size:14px;margin:0 0 12px}
+.blatt .feld input{text-transform:none;letter-spacing:0;font-family:var(--font-ui);font-size:15px}
+.ergebnis{background:var(--tint);border-radius:14px;padding:12px 14px;margin:6px 0 12px}
+.ergebnis .gross{font-family:var(--font-data);font-size:22px;font-weight:700;letter-spacing:.12em}
+.ergebnis .link{font-family:var(--font-data);font-size:12px;color:var(--ink-2);word-break:break-all}
+
+/* Entscheidungen */
+.fragen{counter-reset:f;display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.frage{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;counter-increment:f}
+.frage h3{display:flex;gap:10px;align-items:baseline}
+.frage h3::before{content:counter(f);flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:12.5px}
+.frage p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:80ch}
+.frage .empf{margin-top:8px;font-size:14px;color:var(--ink)}
+.frage .empf b{color:var(--frei)}
+.kosten{background:var(--kontrast-bg);color:var(--kontrast-ink-2);border-radius:18px;padding:16px 18px;margin-top:14px}
+.kosten b{color:var(--kontrast-ink)}
+.kosten p{margin:4px 0}
+.themawahl{position:fixed;right:10px;bottom:10px;opacity:.92;z-index:30;display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:4px}
+.themawahl button{border:0;background:none;border-radius:99px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.themawahl button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+
+
+/* ---------- Eigenes für den Testkauf ---------- */
+.app-kopf{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.app-kopf b{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:-.03em;line-height:1.05}
+.app-kopf span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.konto{background:#152c4f;color:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+:root[data-theme="dark"] .konto{background:#1f3252}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .konto{background:#1f3252}}
+.konto b{font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1}
+.konto span{font-size:12px;opacity:.8}
+.hinweiszeile{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0;
+  font-size:13.5px;text-align:left;background:var(--bg);width:100%}
+.hinweiszeile.plus{border-color:var(--plus);background:var(--plus-tint)}
+.hinweiszeile .zeichen{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--akzent-flaeche);color:#fff;font-weight:800;font-size:12px}
+.hinweiszeile b{display:block;font-size:13.5px;color:var(--ink)}
+.hinweiszeile span{color:var(--ink-2);font-size:12.5px}
+.hinweiszeile .pfeil{margin-left:auto;color:var(--ink-3);font-size:18px}
+.leerkarte{border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center;color:var(--ink-2);font-size:13px;background:var(--tint);margin-bottom:8px}
+.leerkarte b{display:block;font-family:var(--font-display);font-size:17px;color:var(--ink)}
+/* Plus trägt in der App das Marken-Rot (.plus-chip) — hier genauso. */
+:root{--plus:var(--accent);--plus-tint:var(--accent-tint)}
+.plus-chip{display:inline-block;font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  color:var(--plus);background:var(--plus-tint);border-radius:99px;padding:3px 9px}
+.blattkopf{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:10px}
+.blattkopf h4{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:0}
+.blattkopf p{margin:0;color:var(--ink-2);font-size:13.5px}
+.vorteile{list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:7px;text-align:left}
+.vorteile li{display:flex;gap:9px;font-size:13px;color:var(--ink-2);line-height:1.35}
+.vorteile li b{color:var(--ink)}
+.vorteile .h{flex:none;width:20px;height:20px;border-radius:50%;background:var(--plus-tint);color:var(--plus);display:grid;place-items:center;font-size:11px;font-weight:800;margin-top:1px}
+.plaene{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.plan{display:grid;grid-template-columns:22px 1fr auto;gap:2px 10px;align-items:center;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;
+  background:var(--bg);text-align:left;width:100%}
+.plan[aria-checked="true"]{border-color:var(--plus);background:var(--plus-tint)}
+.plan .punkt{grid-row:1/3;width:18px;height:18px;border-radius:50%;border:2px solid var(--ink-3)}
+.plan[aria-checked="true"] .punkt{border-color:var(--plus);background:radial-gradient(circle,var(--plus) 45%,transparent 50%)}
+.plan b{font-size:14.5px}
+.plan small{grid-column:2;color:var(--ink-3);font-size:12px}
+.plan .preis{grid-row:1/3;grid-column:3;text-align:right;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1.1}
+.plan .preis em{display:block;font-style:normal;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--ink-3)}
+.plan .rabatt{font-family:var(--font-data);font-size:9.5px;letter-spacing:.1em;color:var(--plus);font-weight:700;margin-left:6px}
+.kleingedruckt{font-size:11.5px;color:var(--ink-3);text-align:center;margin:8px 0 0;line-height:1.4}
+.antworten{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0 10px}
+.chips button{border:1.5px solid var(--line);background:var(--bg);border-radius:99px;padding:7px 12px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.chips button[aria-pressed="true"]{border-color:var(--plus);background:var(--plus-tint);color:var(--ink)}
+.konfetti{font-size:40px;line-height:1;margin-bottom:6px}
+.gesperrt-attrappe{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;filter:blur(3px);opacity:.6}
+.gesperrt-attrappe i{display:inline-block;width:18px;margin-right:8px;border-radius:3px;background:var(--ruhig);vertical-align:bottom}
+.schlosskarte{border:1.5px solid var(--plus);background:var(--bg);border-radius:18px;padding:14px;text-align:center;margin-top:-80px;position:relative;
+  box-shadow:0 18px 40px -22px rgba(21,44,79,.5)}
+.schlosskarte b{display:block;font-family:var(--font-display);font-size:17px;margin:6px 0 4px}
+.schlosskarte p{margin:0 0 10px;font-size:13px;color:var(--ink-2)}
+.db-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}
+.balkenzeile{display:grid;grid-template-columns:110px 1fr 28px;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.balkenzeile .spur{height:10px;background:var(--tint-2);border-radius:99px;overflow:hidden}
+.balkenzeile .spur i{display:block;height:100%;background:var(--plus);border-radius:99px}
+.balkenzeile b{text-align:right;font-variant-numeric:tabular-nums}
+.variante-hinweis{font-size:12.5px;color:var(--ink-3);margin:2px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Testkauf für Plus</h1>
+  <p class="lead">Im Pilot wird nichts berechnet. Trotzdem wollen wir wissen, <b>wer Plus kaufen würde</b> — das ist das
+    dritte Tor zur Beta: <b>mindestens 5 % der Haushalte</b>. Dafür geht man den Kauf wie später durch, mit den echten
+    Preisen. Erst am Ende steht: <b>Das war ein Testkauf, abgebucht wird nichts</b>, und Plus bleibt als Dankeschön.</p>
+  <p class="lead">Plus ist, wie im Businessplan: der <b>ganze Fair-Bericht</b>, der <b>Familienmodus</b>, <b>Events ohne
+    Grenze</b> und <b>keine Werbung</b>. Eigene Fotos bleiben für alle frei.</p>
+
+  <div class="regler">
+    <div class="gruppe"><span class="marke">Wann es zum Kauf kommt</span>
+      <div class="schalter" data-gruppe="variante">
+        <button data-variante="a" aria-pressed="true">A · nach 14 Tagen Test</button>
+        <button data-variante="b" aria-pressed="false">B · Plus bleibt geschenkt</button>
+      </div></div>
+  </div>
+  <p class="lead" id="variante-text"></p>
+
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>1 · Der Anlass</h3><span class="vorbild">auf der Startseite</span></div>
+      <div class="phone" id="p1"></div>
+      <p class="bu" id="bu1"></p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>2 · Plus wählen</h3><span class="vorbild">mit den echten Preisen</span></div>
+      <div class="phone" id="p2"></div>
+      <p class="bu">Jahr ist vorgewählt. Tippt man einen anderen Plan an, ändert sich der Knopf. „Jetzt nicht“ fragt kurz nach dem Grund.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>3 · Testkauf und eine ehrliche Frage</h3><span class="vorbild">nach dem Tippen auf Kaufen</span></div>
+      <div class="phone" id="p3"></div>
+      <p class="bu">Weil nichts bezahlt wird, klickt mancher leichter auf „Kaufen“. Die eine Frage danach trennt „hätte wirklich gekauft“ von „gratis nehme ich gern“.</p>
+    </div>
+  </div>
+
+  <h2 id="h-folgen">Und wer nicht kauft?</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3 id="h4"></h3><span class="vorbild" id="v4"></span></div>
+      <div class="phone" id="p4"></div>
+      <p class="bu" id="bu4"></p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>„Jetzt nicht“</h3><span class="vorbild">der Grund, freiwillig</span></div>
+      <div class="phone" id="p5"></div>
+      <p class="bu">Ein Tipp genügt, nichts muss gewählt werden. Die Gründe stehen gezählt im Dashboard.</p>
+    </div>
+  </div>
+
+  <h2>Im Betriebs-Dashboard</h2>
+  <p class="lead">Die dritte Kachel zählt jetzt. Daneben siehst du, welcher Plan gewählt wird, wie ehrlich die Käufe sind und
+    was gegen Plus spricht. Beispielzahlen.</p>
+  <div class="db-mini">
+    <div class="karte tor"><span class="was">Testkauf für Plus</span><span class="zahl">15 %</span>
+      <span class="ziel" id="nenner">3 von 20 Haushalten nach ihrem Test · Ziel mind. 5 %</span>
+      <span class="chip erreicht"><i>✓</i>erreicht</span></div>
+    <div class="karte"><h5>Welcher Plan</h5><p class="unter">Testkäufe</p>
+      <div class="balkenzeile"><span>Jahr</span><span class="spur"><i style="width:67%"></i></span><b>2</b></div>
+      <div class="balkenzeile"><span>Monat</span><span class="spur"><i style="width:33%"></i></span><b>1</b></div>
+      <div class="balkenzeile"><span>Für immer</span><span class="spur"><i style="width:0%"></i></span><b>0</b></div></div>
+    <div class="karte"><h5>Hätte wirklich gekauft</h5><p class="unter">die Frage nach dem Testkauf</p>
+      <div class="balkenzeile"><span>Ja</span><span class="spur"><i style="width:67%"></i></span><b>2</b></div>
+      <div class="balkenzeile"><span>Vielleicht</span><span class="spur"><i style="width:33%"></i></span><b>1</b></div>
+      <div class="balkenzeile"><span>Nein</span><span class="spur"><i style="width:0%"></i></span><b>0</b></div></div>
+    <div class="karte"><h5>„Jetzt nicht“</h5><p class="unter">Gründe, mehrere möglich</p>
+      <div class="balkenzeile"><span>Zu teuer</span><span class="spur"><i style="width:100%"></i></span><b>4</b></div>
+      <div class="balkenzeile"><span>Brauchen wir nicht</span><span class="spur"><i style="width:50%"></i></span><b>2</b></div>
+      <div class="balkenzeile"><span>Erst später</span><span class="spur"><i style="width:75%"></i></span><b>3</b></div></div>
+  </div>
+
+  <h2>Zu entscheiden</h2>
+  <div class="fragen">
+    <div class="frage"><h3>Wann es zum Kauf kommt</h3>
+      <p><b>A:</b> Jeder neue Pilot-Haushalt hat Plus 14 Tage zum Testen, ab der Gründung von selbst. Danach pausiert Plus,
+        bis jemand den Testkauf macht. <b>B:</b> Plus bleibt für alle geschenkt; ab Tag 14 lädt eine Zeile zum Testkauf ein,
+        ohne dass etwas wegfällt.</p>
+      <p class="empf"><b>Empfehlung: A.</b> Nur wenn ohne Kauf wirklich etwas fehlt, sagt die Zahl etwas darüber, wer
+        später zahlt. Die Teilnahmebedingungen sagen heute „Plus ist im Pilot für alle frei“ — der Satz wird angepasst:
+        „Plus testet ihr 14 Tage; danach schaltet ein Testkauf es frei. Abgebucht wird im Pilot nichts.“ Haushalte von vor
+        dem Pilot, auch deiner, behalten Plus.</p></div>
+    <div class="frage"><h3>Was im Pilot zu Plus gehört</h3>
+      <p>Wie geplant: der ganze Fair-Bericht, der Familienmodus, Events ohne Grenze (ohne Plus: drei zugleich), keine
+        Werbung. Ohne Plus bleiben Kinderprofile und Verlauf erhalten; Kinderansicht, Kinder-Geräte und Taschengeld
+        pausieren nur.</p>
+      <p class="empf"><b>Empfehlung: so.</b> Der Familienmodus ist laut Businessplan einer der beiden Gründe für Plus —
+        ohne ihn misst der Pilot einen anderen Preis für ein kleineres Paket.</p></div>
+    <div class="frage"><h3>Preise und „für immer“</h3>
+      <p>Jahr 11,99 € im ersten Jahr, danach 17,99 €; Monat 1,99 €, danach 2,99 €; für immer 49,99 € einmalig. Alles für
+        den ganzen Haushalt.</p>
+      <p class="empf"><b>Empfehlung: alle drei anbieten.</b> Der Pilot zeigt dann, ob „für immer“ jemand wählt — das
+        beantwortet die offene Frage im Businessplan mit echten Zahlen statt mit einer Schätzung.</p></div>
+    <div class="frage"><h3>Die ehrliche Frage nach dem Kauf</h3>
+      <p>„Hättest du das auch bezahlt?“ — Ja, vielleicht, nein. Ein Tipp, freiwillig.</p>
+      <p class="empf"><b>Empfehlung: ja.</b> Für das Tor zählen alle Testkäufe; die Antwort zeigt, wie viel davon trägt.</p></div>
+    <div class="frage"><h3>Wer kaufen kann</h3>
+      <p>Erwachsene im Haushalt; ein Kauf gilt für alle. Kinder und Jugendliche sehen keinen Kaufknopf, sondern „Frag die
+        Großen“.</p>
+      <p class="empf"><b>Empfehlung: so.</b></p></div>
+  </div>
+  <div class="kosten">
+    <p><b>Kosten: keine.</b> Kein Zahlungsdienst, keine Zahlungsdaten — der Testkauf ist eine Zeile in unserer Datenbank.
+      Echte Zahlung kommt erst nach dem Pilot, über die Stores und RevenueCat.</p>
+  </div>
+</div>
+
+<div class="themawahl" role="group" aria-label="Darstellung">
+  <button data-thema="auto" aria-pressed="true">Auto</button>
+  <button data-thema="light" aria-pressed="false">Hell</button>
+  <button data-thema="dark" aria-pressed="false">Dunkel</button>
+</div>
+
+<script>
+let variante = "a";
+let plan = "jahr";
+let ehrlich = null;
+let gruende = new Set();
+let gekauft = false;
+const PLAENE = {
+  jahr: { name: "Jahr", preis: "11,99 €", em: "im 1. Jahr", klein: "danach 17,99 € · rund 1 € im Monat", rabatt: "−50 %" },
+  monat: { name: "Monat", preis: "1,99 €", em: "im Monat", klein: "im 1. Jahr, danach 2,99 €" },
+  immer: { name: "Für immer", preis: "49,99 €", em: "einmalig", klein: "einmal zahlen, nie wieder" }
+};
+
+const startKopf = `<div class="app-kopf"><div><b>Hallo Anna</b><span>Montag, 16. November</span></div></div>
+  <div class="konto"><b>84</b><span>dein Konto</span></div>`;
+
+function anlass() {
+  if (variante === "a") {
+    return `<div class="screen">${startKopf}
+      <div class="leerkarte"><b>Alles erledigt</b>Gerade wartet nichts auf dich.</div>
+      <button class="hinweiszeile plus" data-zu="2"><span class="zeichen">+</span>
+        <span><b>Euer Plus-Test endet übermorgen</b><span>Fair-Bericht, Kinderansicht und Events ohne Grenze — Plus behalten?</span></span>
+        <span class="pfeil">›</span></button>
+      <p class="kleingedruckt">Die Zeile erscheint ab Tag 12 und bleibt, bis gekauft oder „Jetzt nicht“ gewählt ist.</p></div>`;
+  }
+  return `<div class="screen">${startKopf}
+    <div class="leerkarte"><b>Alles erledigt</b>Gerade wartet nichts auf dich.</div>
+    <button class="hinweiszeile plus" data-zu="2"><span class="zeichen">+</span>
+      <span><b>Gefällt euch Plus?</b><span>Im Pilot geschenkt. Danach ab 1,99 € im Monat — würdet ihr kaufen?</span></span>
+      <span class="pfeil">›</span></button>
+    <p class="kleingedruckt">Ab Tag 14, einmal pro Haushalt. Plus bleibt so oder so.</p></div>`;
+}
+
+function waehlen() {
+  const p = PLAENE[plan];
+  return `<div class="screen">
+    <div class="blattkopf"><span class="plus-chip">Plus</span><h4>Homi Point Plus</h4><p>Für euren ganzen Haushalt — eine Person kauft für alle.</p></div>
+    <ul class="vorteile">
+      <li><span class="h">✓</span><span><b>Der ganze Fair-Bericht</b> — Monate, Jahr, Räume, Export</span></li>
+      <li><span class="h">✓</span><span><b>Familienmodus</b> — Kinderansicht, Kinder-Geräte, Taschengeld</span></li>
+      <li><span class="h">✓</span><span><b>Events ohne Grenze</b> — sonst drei zugleich</span></li>
+      <li><span class="h">✓</span><span><b>Ohne Werbung</b> — auch wenn sie später kommt</span></li>
+    </ul>
+    <div class="plaene" role="radiogroup" aria-label="Plan">${Object.entries(PLAENE).map(([id, x]) => `
+      <button class="plan" role="radio" aria-checked="${id === plan}" data-plan="${id}"><span class="punkt"></span>
+        <b>${x.name}${x.rabatt ? `<span class="rabatt">${x.rabatt}</span>` : ""}</b><small>${x.klein}</small>
+        <span class="preis">${x.preis}<em>${x.em}</em></span></button>`).join("")}</div>
+    <button class="btn rot" data-kaufen>Kaufen · ${p.preis}</button>
+    <button class="btn text" data-nicht>Jetzt nicht</button>
+    <p class="kleingedruckt">Pilot: Es wird nichts abgebucht.</p></div>`;
+}
+
+function danke() {
+  if (!gekauft) {
+    return `<div class="screen mitte"><p class="app-sub">Erst links auf <b>Kaufen</b> tippen.</p></div>`;
+  }
+  const p = PLAENE[plan];
+  return `<div class="screen mitte">
+    <div class="konfetti" aria-hidden="true">🎉</div>
+    <h4 class="app-h">Danke! Plus ist an.</h4>
+    <p class="app-sub">Das war ein <b>Testkauf</b> über ${p.name === "Für immer" ? "Plus für immer" : `Plus pro ${p.name}`} (${p.preis}).
+      Im Pilot wird nichts abgebucht — Plus bleibt euer Dankeschön, auch nach dem Pilot.</p>
+    ${ehrlich ? `<div class="meldung gut"><span class="ic">✓</span><span><b>Danke für die Antwort.</b>Sie hilft uns, den richtigen Preis zu finden.</span></div>` : `
+    <p style="font-weight:700;margin:4px 0 0">Ganz ehrlich: Hättest du das auch bezahlt?</p>
+    <div class="antworten">
+      <button class="btn rand" data-ehrlich="ja">Ja</button>
+      <button class="btn rand" data-ehrlich="vielleicht">Vielleicht</button>
+      <button class="btn rand" data-ehrlich="nein">Nein, nur weil es nichts kostet</button>
+    </div>`}
+    <div class="fuss"><button class="btn text" data-neu>Noch einmal von vorn</button></div></div>`;
+}
+
+function folgen() {
+  if (variante === "a") {
+    return `<div class="screen">
+      <div class="app-kopf"><div><b>Fair-Bericht</b><span>November</span></div></div>
+      <div class="gesperrt-attrappe" aria-hidden="true">
+        <p style="margin:0 0 8px;font-weight:700">Verlauf</p>
+        <i style="height:50px"></i><i style="height:38px"></i><i style="height:56px"></i><i style="height:30px"></i><i style="height:44px"></i>
+      </div>
+      <div class="gesperrt-attrappe" aria-hidden="true"><p style="margin:0">Wer macht was · Küche · Bad · Wäsche</p></div>
+      <div class="schlosskarte"><span class="plus-chip">Plus</span><b>Euer Test ist vorbei</b>
+        <p>Den ganzen Bericht, die Kinderansicht und Events ohne Grenze gibt es mit Plus. Die Woche bleibt für alle.</p>
+        <button class="btn rot" data-zu="2">Plus holen</button></div>
+      <p class="kleingedruckt">Genauso in der Kinderansicht und beim vierten Event: kurz erklärt, ein Knopf zu Plus.</p></div>`;
+  }
+  return `<div class="screen mitte">
+    <h4 class="app-h">Nichts fällt weg</h4>
+    <p class="app-sub">In B behalten alle Plus, auch ohne Testkauf. Wer „Jetzt nicht“ wählt, sieht die Einladung nicht wieder.</p></div>`;
+}
+
+function nicht() {
+  return `<div class="screen mitte">
+    <h4 class="app-h">Was hält dich ab?</h4>
+    <p class="app-sub">Freiwillig — ein Tipp hilft uns schon.</p>
+    <div class="chips">${["Zu teuer", "Brauchen wir nicht", "Erst später", "Lieber ohne Abo", "Anderes"].map((g) =>
+      `<button data-grund="${g}" aria-pressed="${gruende.has(g)}">${g}</button>`).join("")}</div>
+    <button class="btn rot">${gruende.size ? "Fertig" : "Ohne Grund schließen"}</button>
+    <p class="kleingedruckt">${variante === "a" ? "Plus pausiert nach dem Test; „Plus holen“ steht weiter im Fair-Bericht und in den Einstellungen."
+      : "Die Zeile auf der Startseite verschwindet."}</p></div>`;
+}
+
+const TEXTE = {
+  a: { lead: "<b>A — nach 14 Tagen Test.</b> Jeder neue Pilot-Haushalt hat Plus vom ersten Tag an zum Testen. Ab Tag 12 erinnert eine Zeile auf der Startseite; nach Tag 14 pausiert Plus, bis jemand den Testkauf macht.",
+       bu1: "Die Zeile sagt, was wegfällt, und führt zur Plus-Seite. Sonst bleibt die Startseite, wie sie ist.",
+       h4: "Nach dem Test ohne Kauf", v4: "Fair-Bericht, Kinderansicht, viertes Event", bu4: "Wo Plus fehlt, steht eine kurze Erklärung mit „Plus holen“ — wie heute schon beim Fair-Bericht. Daten gehen nie verloren.",
+       nenner: "3 von 20 Haushalten nach ihrem Test · Ziel mind. 5 %" },
+  b: { lead: "<b>B — Plus bleibt geschenkt.</b> Alle Pilot-Haushalte haben Plus die ganzen 8 Wochen. Ab Tag 14 lädt eine Zeile zum Testkauf ein; wer nicht kauft, verliert nichts.",
+       bu1: "Die Zeile nennt den Preis nach dem Pilot und fragt, ob ihr kaufen würdet.",
+       h4: "Wer nicht kauft", v4: "in Variante B", bu4: "Ohne Folgen klicken viele „Jetzt nicht“ — oder kaufen, weil es nichts kostet. Die Zahl ist deshalb weicher.",
+       nenner: "3 von 32 Haushalten ab Tag 14 · Ziel mind. 5 %" }
+};
+
+function zeichnen() {
+  const t = TEXTE[variante];
+  document.getElementById("variante-text").innerHTML = t.lead;
+  document.getElementById("bu1").textContent = t.bu1;
+  document.getElementById("h4").textContent = t.h4;
+  document.getElementById("v4").textContent = t.v4;
+  document.getElementById("bu4").textContent = t.bu4;
+  document.getElementById("nenner").textContent = t.nenner;
+  document.getElementById("p1").innerHTML = anlass();
+  document.getElementById("p2").innerHTML = waehlen();
+  document.getElementById("p3").innerHTML = danke();
+  document.getElementById("p4").innerHTML = folgen();
+  document.getElementById("p5").innerHTML = nicht();
+}
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("button");
+  if (!el) return;
+  const d = el.dataset;
+  if (d.variante) {
+    variante = d.variante;
+    el.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+    gekauft = false; ehrlich = null;
+  }
+  if (d.plan) plan = d.plan;
+  if ("kaufen" in d) { gekauft = true; ehrlich = null; }
+  if (d.ehrlich) ehrlich = d.ehrlich;
+  if ("neu" in d) { gekauft = false; ehrlich = null; plan = "jahr"; }
+  if (d.grund) { gruende.has(d.grund) ? gruende.delete(d.grund) : gruende.add(d.grund); }
+  if (d.zu === "2") document.getElementById("p2").scrollIntoView({ behavior: "smooth", block: "center" });
+  if ("nicht" in d) document.getElementById("p5").scrollIntoView({ behavior: "smooth", block: "center" });
+  if (d.thema) {
+    document.querySelectorAll(".themawahl button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+    if (d.thema === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", d.thema);
+    return;
+  }
+  zeichnen();
+});
+
+zeichnen();
+</script>
+</body>
+</html>

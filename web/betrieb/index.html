@@ -108,6 +108,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .kopf-mit-knopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .fehler-zeile .name{white-space:normal;font-family:var(--font-data);font-size:12.5px;font-weight:600;word-break:break-word}
 .schiene{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.drei{grid-template-columns:repeat(3,1fr);margin-top:12px}
+@media (max-width:760px){.drei{grid-template-columns:1fr}}
+.balkenzeile{display:grid;grid-template-columns:minmax(0,9.5em) 1fr 2.2em;gap:8px;align-items:center;font-size:13px;margin:7px 0}
+.balkenzeile span:first-child{min-width:0;overflow-wrap:anywhere}
+.balkenzeile .spur{height:10px;background:var(--tint-2);border-radius:99px;overflow:hidden}
+.balkenzeile .spur i{display:block;height:100%;background:var(--balken);border-radius:99px}
+.balkenzeile b{text-align:right;font-variant-numeric:tabular-nums}
 .kippschalter{width:46px;height:28px;border-radius:99px;border:0;background:var(--tint-2);position:relative;flex:none}
 .kippschalter::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
 .kippschalter[aria-checked="true"]{background:var(--frei)}
@@ -198,6 +205,9 @@ function tore() {
   const al = prozent(t.allein.anzahl, t.allein.von);
   const w4chip = w4 === null ? chip("offen", "noch kein Haushalt in Woche 4")
     : w4 >= t.woche4.ziel + 5 ? chip("erreicht", "erreicht") : w4 >= t.woche4.ziel ? chip("knapp", "knapp erreicht") : chip("verfehlt", "nicht erreicht");
+  const tk = prozent(t.testkauf.anzahl, t.testkauf.von);
+  const tkchip = tk === null ? chip("offen", "noch kein Test vorbei")
+    : tk >= t.testkauf.ziel + 2 ? chip("erreicht", "erreicht") : tk >= t.testkauf.ziel ? chip("knapp", "knapp erreicht") : chip("verfehlt", "nicht erreicht");
   const alchip = al === null ? chip("offen", "noch keine Haushalte")
     : al <= t.allein.ziel - 5 ? chip("erreicht", "erreicht") : al <= t.allein.ziel ? chip("knapp", "knapp erreicht") : chip("verfehlt", "nicht erreicht");
   return `
@@ -205,8 +215,8 @@ function tore() {
       <span class="ziel">${t.woche4.von ? `${t.woche4.aktiv} von ${t.woche4.von} Haushalten · ` : ""}Ziel mind. ${t.woche4.ziel} %</span>${w4chip}</div>
     <div class="karte tor" data-tor="allein"><span class="was">Nur eine Person im Haushalt</span><span class="zahl">${al === null ? "—" : `${al} %`}</span>
       <span class="ziel">${t.allein.von ? `${t.allein.anzahl} von ${t.allein.von} · ` : ""}Ziel höchstens ${t.allein.ziel} %</span>${alchip}</div>
-    <div class="karte tor" data-tor="testkauf"><span class="was">Testkauf für Plus</span><span class="zahl">—</span>
-      <span class="ziel">Ziel mind. 5 %</span>${chip("offen", "kommt mit dem Testkauf")}</div>
+    <div class="karte tor" data-tor="testkauf"><span class="was">Testkauf für Plus</span><span class="zahl">${tk === null ? "—" : `${tk} %`}</span>
+      <span class="ziel">${t.testkauf.von ? `${t.testkauf.anzahl} von ${t.testkauf.von} nach ihrem Test · ` : ""}Ziel mind. ${t.testkauf.ziel} %</span>${tkchip}</div>
     <div class="karte tor" data-tor="fehler"><span class="was">Kritische Fehler offen</span><span class="zahl">${t.fehler.offen}</span>
       <span class="ziel">Ziel 0</span>${t.fehler.offen ? chip("verfehlt", "nicht erreicht") : chip("erreicht", "erreicht")}</div>`;
 }
@@ -234,11 +244,34 @@ function diagramm() {
   return s + `<line class="ziel" x1="${l}" x2="${B - r}" y1="${y(60)}" y2="${y(60)}"/><text class="ziel-lbl" x="${B - r + 6}" y="${y(60) + 4}">Ziel 60 %</text></svg>`;
 }
 
+/** Was hinter dem Testkauf steht: welcher Plan, wie ehrlich, was dagegen spricht. */
+function balken(zeilen) {
+  const max = Math.max(1, ...zeilen.map(([, n]) => n));
+  return zeilen.map(([name, n]) => `<div class="balkenzeile"><span>${esc(name)}</span>
+    <span class="spur" title="${esc(name)}: ${n}"><i style="width:${Math.round(n / max * 100)}%"></i></span><b>${n}</b></div>`).join("");
+}
+
+function testkaufKarten() {
+  const t = L.tore.testkauf;
+  const kaeufe = t.plaene.jahr + t.plaene.monat + t.plaene.immer;
+  const gruende = Object.entries(t.gruende).sort((a, b) => b[1] - a[1]);
+  return `
+    <div class="karte" data-testkauf="plaene"><h2>Welcher Plan</h2><p class="unter">${kaeufe} ${kaeufe === 1 ? "Testkauf" : "Testkäufe"} · abgebucht wird nichts</p>
+      ${balken([["Jahr", t.plaene.jahr], ["Monat", t.plaene.monat], ["Für immer", t.plaene.immer]])}</div>
+    <div class="karte" data-testkauf="ehrlich"><h2>Hätte wirklich gekauft</h2><p class="unter">Die Frage nach dem Testkauf${t.ehrlich.offen ? ` · ${t.ehrlich.offen} ohne Antwort` : ""}</p>
+      ${balken([["Ja", t.ehrlich.ja], ["Vielleicht", t.ehrlich.vielleicht], ["Nein", t.ehrlich.nein]])}</div>
+    <div class="karte" data-testkauf="gruende"><h2>„Jetzt nicht“</h2><p class="unter">${t.absagen} ${t.absagen === 1 ? "Person" : "Personen"} · mehrere Gründe möglich</p>
+      ${t.absagen ? balken(gruende) : `<p class="leer">Noch niemand.</p>`}</div>`;
+}
+
+const plusChip = (p) => !p ? "" : p.startsWith("gekauft") ? chip("erreicht", `Plus ${p}`)
+  : p === "pausiert" ? chip("knapp", "Plus pausiert") : p === "Test" ? chip("offen", "Plus-Test") : "";
+
 function haushaltZeile(h) {
   const st = { aktiv: chip("erreicht", "aktiv"), ruhig: chip("knapp", "ruhig"), eingeschlafen: chip("verfehlt", "eingeschlafen"), neu: chip("offen", "neu") }[h.status];
   return `<div class="zeile"><span class="name">${esc(h.name)}</span>
     <span class="info">${h.personen} ${h.personen === 1 ? "Person" : "Personen"}${h.kinder ? `, davon ${h.kinder} ${h.kinder === 1 ? "Kind" : "Kinder"}` : ""} · Woche ${h.woche} · ${stillText(h.still)}</span>
-    <span class="rechts">${st}${h.personen === 1 ? chip("knapp", "allein") : ""}</span></div>`;
+    <span class="rechts">${st}${h.personen === 1 ? chip("knapp", "allein") : ""}${plusChip(h.plus)}</span></div>`;
 }
 
 function einladungZeile(e) {
@@ -274,6 +307,7 @@ function zeichnen() {
     <div class="leiste-oben"><button class="minibtn" data-neu-laden>Aktualisieren</button></div>
     <span class="marke">Tore zur Beta</span>
     <div class="raster tore">${tore()}</div>
+    <div class="raster drei">${testkaufKarten()}</div>
     <div class="raster zwei">
       <div class="karte"><h2>Aktive Haushalte je Woche</h2><p class="unter">Anteil mit gemeldeter und bestätigter Quest in der Woche</p>
         ${diagramm()}${L.wochen.length ? `<button class="textknopf" data-tabelle>${alsTabelle ? "Als Diagramm" : "Als Tabelle"}</button>` : ""}</div>

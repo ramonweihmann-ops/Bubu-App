@@ -12,6 +12,7 @@
 
 import { meldeAlle } from "./melden.js";
 import { nurErwachsene } from "./familie.js";
+import { plusLage } from "./plus.js";
 
 class Fehler extends Error {
   constructor(text, status = 400) { super(text); this.status = status; }
@@ -113,32 +114,6 @@ function namen(art, zurueck, z, heute) {
       : `${MONATE[monatVon(z.von)].slice(0, 3)} ${z.von.slice(0, 4)} – ${MONATE[monatVon(z.bis)].slice(0, 3)} ${z.bis.slice(0, 4)}`,
     vorher: "die 12 Monate davor"
   };
-}
-
-/* ------------------------------------------------------------------ Plus */
-
-export async function plusLage(env, paar) {
-  const haus = await env.DB.prepare(
-    `select plus, plus_test_bis, coalesce(plus_test_bis > datetime('now'), 0) as testet
-       from couples where id = ?1`
-  ).bind(paar).first();
-  return {
-    plus: haus.plus === 1 || haus.testet === 1,
-    testBis: haus.testet === 1 && haus.plus !== 1 ? haus.plus_test_bis : null,
-    testen: haus.plus !== 1 && !haus.plus_test_bis
-  };
-}
-
-/** Einmal je Haushalt: 14 Tage alles. */
-export async function plusTesten(env, ich) {
-  await nurErwachsene(env, ich);
-  const lage = await plusLage(env, ich.couple_id);
-  if (lage.plus && !lage.testBis) throw new Fehler("Ihr habt Plus schon");
-  if (!lage.testen) throw new Fehler("Getestet habt ihr schon");
-  await env.DB.prepare(
-    "update couples set plus_test_bis = datetime('now', '+14 days') where id = ?1 and plus_test_bis is null"
-  ).bind(ich.couple_id).run();
-  return { ok: true, ...(await plusLage(env, ich.couple_id)) };
 }
 
 /* ------------------------------------------------------------------ Soll */

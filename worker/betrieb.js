@@ -12,6 +12,9 @@
 // getrennt daneben.
 
 import { pilotPflicht, pilotSetzen, einladungAnlegen, einladungZurueckziehen } from "./pilot.js";
+import { PLAENE, GRUENDE } from "./plus.js";
+
+const PLAN_NAMEN = Object.fromEntries(Object.entries(PLAENE).map(([k, p]) => [k, p.name]));
 
 const TAG = 24 * 3600e3;
 const PILOT_WOCHEN = 8;
@@ -57,7 +60,7 @@ const tageZwischen = (a, b) => Math.round((b - a) / TAG);
 async function lage(env) {
   const jetzt = new Date();
   const heute = tagVon(jetzt.toISOString());
-  const [pflicht, einladungen, mitglieder, tage, fehler, vorher] = await Promise.all([
+  const [pflicht, einladungen, mitglieder, tage, fehler, vorher, plusRoh, kaeufe, absagen] = await Promise.all([
     pilotPflicht(env),
     env.DB.prepare(
       `select code, name, angelegt_am, angenommen_am, haushalt, gegruendet_am, zurueckgezogen_am
@@ -84,8 +87,23 @@ async function lage(env) {
     env.DB.prepare(
       `select count(*) as n from couples where eingerichtet = 1
           and id not in (select haushalt from einladungen where haushalt is not null)`
-    ).first()
+    ).first(),
+    // Der Testkauf: wie Plus je Pilot-Haushalt steht, wer gekauft hat und warum nicht.
+    env.DB.prepare(
+      `select id as haushalt, plus, plus_test_bis, coalesce(plus_test_bis <= datetime('now'), 0) as vorbei
+         from couples where id in (select haushalt from einladungen where haushalt is not null)`
+    ).all(),
+    env.DB.prepare(
+      `select couple_id as haushalt, plan, ehrlich from testkaeufe
+        where couple_id in (select haushalt from einladungen where haushalt is not null)`
+    ).all(),
+    env.DB.prepare(
+      `select gruende from plus_absagen
+        where couple_id in (select haushalt from einladungen where haushalt is not null)`
+    ).all()
   ]);
+  const plusJe = new Map(plusRoh.results.map((p) => [p.haushalt, p]));
+  const kaufJe = new Map(kaeufe.results.map((k) => [k.haushalt, k]));
 
   const leute = new Map(mitglieder.results.map((m) => [m.haushalt, m]));
   const aktivTage = new Map();
@@ -104,7 +122,12 @@ async function lage(env) {
       const letzter = tageListe.length ? new Date(Math.max(...tageListe)) : null;
       const still = letzter ? tageZwischen(letzter, heute) : null;
       const p = leute.get(e.haushalt) || { personen: 0, kinder: 0 };
+      const pl = plusJe.get(e.haushalt), kauf = kaufJe.get(e.haushalt);
       return {
+        plus: kauf ? `gekauft · ${PLAN_NAMEN[kauf.plan]}` : !pl ? null : pl.plus === 1 ? "an"
+          : !pl.plus_test_bis ? "aus" : pl.vorbei ? "pausiert" : "Test",
+        testkaufZaehlt: Boolean(kauf) || Boolean(pl && pl.plus !== 1 && pl.vorbei),
+        gekauft: Boolean(kauf),
         id: e.haushalt, start: gegruendet, name: e.name, gegruendet: e.gegruendet_am, alter, woche: Math.floor(alter / 7) + 1,
         personen: p.personen, kinder: p.kinder || 0,
         still, status: still === null ? (alter >= 7 ? "eingeschlafen" : "neu") : still <= 7 ? "aktiv" : still <= 13 ? "ruhig" : "eingeschlafen",
@@ -127,6 +150,10 @@ async function lage(env) {
   }
 
   const durch4 = haushalte.filter((h) => h.woche4 !== null);
+  // Der Nenner: Haushalte, deren Test vorbei ist — oder die vorher schon gekauft haben.
+  const nachTest = haushalte.filter((h) => h.testkaufZaehlt);
+  const zaehlen = (liste, schluessel) => Object.fromEntries(schluessel.map((k) => [k, liste.filter((x) => x === k).length]));
+  const gruende = absagen.results.flatMap((a) => { try { return JSON.parse(a.gruende); } catch { return []; } });
   const allein = haushalte.filter((h) => h.personen === 1);
   const fehlerListe = fehler.results.map((f) => ({ ...f, kritisch: f.quelle === "server" || f.personen > 1 }));
   const zaehl = (f) => einladungen.results.filter(f).length;
@@ -139,7 +166,14 @@ async function lage(env) {
     tore: {
       woche4: { aktiv: durch4.filter((h) => h.woche4).length, von: durch4.length, ziel: 60 },
       allein: { anzahl: allein.length, von: haushalte.length, ziel: 20 },
-      testkauf: null,
+      testkauf: {
+        anzahl: nachTest.filter((h) => h.gekauft).length, von: nachTest.length, ziel: 5,
+        plaene: zaehlen(kaeufe.results.map((k) => k.plan), ["jahr", "monat", "immer"]),
+        ehrlich: { ...zaehlen(kaeufe.results.map((k) => k.ehrlich), ["ja", "vielleicht", "nein"]),
+                   offen: kaeufe.results.filter((k) => !k.ehrlich).length },
+        absagen: absagen.results.length,
+        gruende: zaehlen(gruende, GRUENDE)
+      },
       fehler: { offen: fehlerListe.filter((f) => f.kritisch && !f.erledigt_am).length }
     },
     wochen,
@@ -160,7 +194,7 @@ async function lage(env) {
     // Wer am längsten still ist, steht oben. Kennungen und Gründungstag bleiben drinnen.
     haushalte: haushalte
       .sort((a, b) => (b.still ?? 999) - (a.still ?? 999) || a.name.localeCompare(b.name, "de"))
-      .map(({ id, start, ...rest }) => rest),
+      .map(({ id, start, testkaufZaehlt, gekauft, ...rest }) => rest),
     einladungen: einladungen.results.map((e) => ({
       code: e.code, name: e.name, angelegt: e.angelegt_am,
       status: e.gegruendet_am ? (e.haushalt ? "eingelöst" : "Haushalt gelöscht") : e.zurueckgezogen_am ? "zurückgezogen"

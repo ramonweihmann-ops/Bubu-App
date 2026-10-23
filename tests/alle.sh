@@ -81,10 +81,11 @@ lauf "familie-api.sh" bash familie-api.sh
 lauf "fair-api.sh" bash fair-api.sh
 lauf "konto-api.sh" bash konto-api.sh
 lauf "pilot-api.sh" bash pilot-api.sh
+lauf "testkauf-api.sh" bash testkauf-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto ui-pilot recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto mockup-pilot ui-stand; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto ui-pilot ui-testkauf recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto mockup-pilot mockup-testkauf ui-stand; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

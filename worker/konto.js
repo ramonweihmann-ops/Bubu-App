@@ -125,6 +125,9 @@ async function herausloesen(env, ich, l, { kontoWeg }) {
     P("update quests set zugewiesen = null where couple_id = ?1 and zugewiesen = ?2", paar, ich.id),
     P("delete from bewerbungen where couple_id = ?1 and member_id = ?2", paar, ich.id),
     P("update couples set fair_soll = null, fair_soll_von = null where id = ?1 and fair_soll_von = ?2", paar, ich.id),
+    // Testkauf und „Jetzt nicht“ zählen weiter für den Haushalt, aber ohne Namen.
+    P("update testkaeufe set wer = null where couple_id = ?1 and wer = ?2", paar, ich.id),
+    P("update plus_absagen set wer = null where couple_id = ?1 and wer = ?2", paar, ich.id),
 
     ...(await namenAnweisungen(env, paar, ich.id, l.mich.name)),
 

@@ -167,7 +167,7 @@ await s.context().addCookies([{ name: "hq_sitzung", value: "tok-ramon", domain: 
 await s.reload({ waitUntil: "networkidle" });
 await s.waitForSelector("[data-tor]");
 pruefe("Vier Tore", await s.locator("[data-tor]").count(), 4);
-pruefe("Testkauf kommt noch", (await text(s, "[data-tor='testkauf']")).includes("kommt mit dem Testkauf"), true);
+pruefe("Testkauf: der Test läuft noch", (await text(s, "[data-tor='testkauf']")).includes("noch kein Test vorbei"), true);
 pruefe("Haushalt unter dem Namen der Einladung", (await text(s)).includes("Familie UI"), true);
 pruefe("Absturz in der Liste", (await text(s)).includes("probe absturz"), true);
 pruefe("375 px: nichts läuft über", await ueberlauf(s), false);
