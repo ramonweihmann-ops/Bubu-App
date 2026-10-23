@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point für Android</title>
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit Telefonen und einem Browserfenster. Farben und Schrift wie in
+ * der App, hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb; --balken:#2f6fd0;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:72ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-size:12.5px;color:var(--ink-3)}
+.bu{color:var(--ink-2);font-size:14px;margin:0;max-width:60ch}
+.bu b{color:var(--ink)}
+
+/* Regler über den Telefonen */
+.regler{position:sticky;top:0;z-index:5;background:var(--tint);padding:10px 0 14px;margin-bottom:6px;
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+@media (max-width:720px){.regler{position:static}}
+.gruppe{display:flex;flex-direction:column;gap:6px;min-width:0}
+.schalter{display:flex;flex-wrap:wrap;gap:6px}
+.schalter button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* Telefon */
+.phone{width:100%;max-width:360px;aspect-ratio:375/760;border:9px solid var(--rahmen);border-radius:40px;background:var(--bg);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 18px 40px -22px rgba(21,44,79,.5)}
+.screen{flex:1;display:flex;flex-direction:column;padding:26px 20px 18px;min-height:0;overflow:auto}
+.screen.mitte{justify-content:center;text-align:center}
+.logo{width:150px;height:auto;margin:0 auto 12px;display:block}
+.app-h{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:-.03em;margin:0 0 6px;line-height:1.12}
+.app-sub{color:var(--ink-2);margin:0 0 16px;font-size:14.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:14px;padding:13px 16px;font-weight:700;font-size:15px;border:0}
+.btn.rot{background:var(--akzent-flaeche);color:var(--auf-akzent)}
+.btn.rot[disabled]{opacity:.38;cursor:not-allowed}
+.btn.rand{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.btn.text{background:none;color:var(--ink-2);padding:9px}
+.btn+.btn{margin-top:8px}
+.g{width:18px;height:18px;flex:none}
+.fuss{margin-top:auto;padding-top:14px}
+.klein{font-size:12px;color:var(--ink-3);text-align:center;margin:12px 0 0}
+.klein u{color:var(--ink-2)}
+.feld{display:flex;flex-direction:column;gap:6px;text-align:left;margin:4px 0 12px}
+.feld label{font-family:var(--font-data);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.feld input{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);font-family:var(--font-data);
+  font-size:17px;letter-spacing:.12em;text-transform:uppercase;width:100%}
+.feld input.gut{border-color:var(--frei)}
+.feld input.schlecht{border-color:var(--accent)}
+.meldung{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:0 0 12px}
+.meldung b{display:block}
+.meldung.gut{background:var(--frei-tint);color:var(--ink)}
+.meldung.schlecht{background:var(--accent-tint);color:var(--ink)}
+.meldung.info{background:var(--tint);color:var(--ink-2)}
+.meldung .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.meldung.gut .ic{background:var(--frei)} .meldung.schlecht .ic{background:var(--accent)} .meldung.info .ic{background:var(--ink-3)}
+.einladung{border:1.5px solid var(--frei);background:var(--frei-tint);border-radius:16px;padding:12px 14px;text-align:left;margin:0 0 16px}
+.einladung .marke{color:var(--frei)}
+.einladung strong{display:block;font-family:var(--font-display);font-size:17px;margin:2px 0}
+.einladung span{font-size:13px;color:var(--ink-2)}
+.punkte{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line)} .punkte i.an{background:var(--accent)}
+.schritt{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);text-align:center;
+  padding:7px 0;border-top:1px solid var(--line);background:var(--tint)}
+
+/* Entscheidungen */
+.fragen{counter-reset:f;display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.frage{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;counter-increment:f}
+.frage h3{display:flex;gap:10px;align-items:baseline}
+.frage h3::before{content:counter(f);flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:12.5px}
+.frage p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:80ch}
+.frage .empf{margin-top:8px;font-size:14px;color:var(--ink)}
+.frage .empf b{color:var(--frei)}
+.kosten{background:var(--kontrast-bg);color:var(--kontrast-ink-2);border-radius:18px;padding:16px 18px;margin-top:14px}
+.kosten b{color:var(--kontrast-ink)}
+.kosten p{margin:4px 0}
+.themawahl{position:fixed;right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));opacity:.92;z-index:30;display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:4px}
+.themawahl button{border:0;background:none;border-radius:99px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.themawahl button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* ---------- Android drumherum ---------- */
+/* Das Telefon bekommt eine Android-Statusleiste und die Gestenleiste unten. */
+.phone.android{border-radius:34px}
+.sb{flex:none;height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 22px;
+  font-size:12.5px;font-weight:600;background:var(--sb-bg,var(--bg));color:var(--sb-ink,var(--ink))}
+.sb.navy{--sb-bg:#152c4f;--sb-ink:#fff}
+.sb.durch{--sb-bg:transparent;--sb-ink:#fff}
+.sb .rechts{display:flex;gap:6px;align-items:center}
+.sb .netz{width:14px;height:10px;background:linear-gradient(135deg,transparent 50%,currentColor 50%);opacity:.9}
+.sb .akku{width:20px;height:10px;border:1.5px solid currentColor;border-radius:3px;position:relative}
+.sb .akku::after{content:"";position:absolute;inset:1.5px 5px 1.5px 1.5px;background:currentColor;border-radius:1px}
+.gb{flex:none;height:22px;display:flex;align-items:center;justify-content:center;background:var(--gb-bg,var(--bg))}
+.gb i{width:96px;height:4px;border-radius:99px;background:var(--ink);opacity:.55}
+.gb.durch{--gb-bg:transparent} .gb.durch i{background:#fff}
+.inhalt{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+/* Chat */
+.chatkopf{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.chatkopf .av{width:32px;height:32px;border-radius:50%;background:var(--ruhig-tint);color:var(--ruhig);display:grid;place-items:center;font-weight:800;font-size:13px}
+.chatkopf b{font-size:15px}
+.chatverlauf{flex:1;background:var(--tint);padding:14px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.blase{background:var(--bg);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:9px 12px;font-size:13px;max-width:92%;line-height:1.45}
+.blase a{color:var(--ruhig);text-decoration:underline;word-break:break-all}
+.blase .zeit{display:block;text-align:right;font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.blase ol{margin:4px 0;padding-left:18px}
+
+/* Store */
+.store{padding:16px 16px 0;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.store-kopf{display:flex;gap:14px;align-items:center}
+.store-kopf img{width:64px;height:64px;border-radius:16px;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.store-kopf b{display:block;font-family:var(--font-display);font-size:20px;font-weight:800;line-height:1.15}
+.store-kopf span{font-size:12.5px;color:var(--ruhig)}
+.store-kopf small{display:block;font-size:11.5px;color:var(--ink-3)}
+.store-fakten{display:flex;justify-content:space-around;font-size:11.5px;color:var(--ink-2);text-align:center;border-block:1px solid var(--line);padding:8px 0}
+.store-fakten b{display:block;font-size:13px;color:var(--ink)}
+.store-knopf{border:0;border-radius:99px;background:var(--kontrast-bg);color:var(--kontrast-ink);font-weight:700;padding:11px;width:100%}
+.store-test{font-size:12px;background:var(--bald-tint);color:var(--ink);border-radius:10px;padding:8px 10px}
+.shots{display:flex;gap:8px;overflow:hidden}
+.shot{flex:none;width:86px;aspect-ratio:9/17;border-radius:10px;border:1px solid var(--line);background:var(--bg);overflow:hidden;
+  display:flex;flex-direction:column;gap:4px;padding:6px}
+.shot i{display:block;border-radius:4px;background:var(--tint-2)}
+.shot i.navy{background:#152c4f;height:26px}
+.shot i.rot{background:var(--akzent-flaeche);height:8px;width:60%}
+.store-text{font-size:12.5px;color:var(--ink-2)}
+.store-text b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+
+/* Startbildschirm */
+.home{flex:1;background:linear-gradient(170deg,#30508a,#152c4f 70%);display:flex;flex-direction:column;padding:22px 14px 10px;gap:18px}
+.uhr{color:#fff;font-family:var(--font-display);font-weight:300;font-size:46px;letter-spacing:-.02em;line-height:1;text-align:center}
+.datum{color:#d5def0;font-size:13px;text-align:center;margin-top:-12px}
+.icons{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 8px;margin-top:auto}
+.ic{display:flex;flex-direction:column;align-items:center;gap:5px;color:#fff;font-size:11px;text-align:center;min-width:0}
+.ic .form{width:52px;height:52px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.18);display:grid;place-items:center;position:relative}
+.ic .form img{width:125%;height:125%;max-width:none;object-fit:cover}
+.ic .form.leer::after{content:"";width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.55)}
+.ic.unseres .form{box-shadow:0 0 0 3px rgba(255,255,255,.9)}
+.ic span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock{display:flex;justify-content:space-around;padding:8px 6px;background:rgba(255,255,255,.12);border-radius:22px}
+.dock .form{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.22)}
+.suche{height:40px;border-radius:99px;background:rgba(255,255,255,.88)}
+
+/* Browser im Telefon */
+.chrome{flex:none;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--tint)}
+.chrome span{flex:1;min-width:0;background:var(--bg);border-radius:99px;padding:6px 12px;font-size:12.5px;color:var(--ink-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chrome i{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--ink-3)}
+.banner{display:flex;align-items:center;gap:10px;background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:14px;padding:10px 12px;margin:12px 14px 0}
+.banner img{width:36px;height:36px;border-radius:10px;flex:none;background:#fff}
+.banner b{display:block;font-size:13.5px}
+.banner small{font-size:11.5px;color:var(--kontrast-ink-2)}
+.banner button{margin-left:auto;border:0;border-radius:99px;background:var(--akzent-flaeche);color:#fff;font-weight:700;font-size:12.5px;padding:7px 12px;flex:none}
+.dialog-schleier{position:absolute;inset:0;background:var(--schleier);display:flex;align-items:center;justify-content:center;padding:22px}
+.dialog{background:var(--bg);border-radius:24px;padding:20px;width:100%;display:flex;flex-direction:column;gap:12px}
+.dialog h4{margin:0;font-size:19px;font-family:var(--font-display);font-weight:700}
+.dialog .app{display:flex;gap:12px;align-items:center}
+.dialog .app img{width:44px;height:44px;border-radius:50%}
+.dialog .app b{display:block}
+.dialog .app small{color:var(--ink-3);font-size:12px}
+.dialog .knoepfe{display:flex;justify-content:flex-end;gap:6px}
+.dialog .knoepfe button{border:0;background:none;color:var(--ruhig);font-weight:700;padding:8px 10px;border-radius:99px}
+.dialog .knoepfe button.voll{background:var(--ruhig);color:#fff}
+.halb{opacity:.35;filter:blur(.5px);pointer-events:none}
+
+/* Die App selbst, vereinfacht */
+.app-kopf{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px 8px}
+.app-kopf b{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:-.03em;line-height:1.05}
+.app-kopf span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.konto{background:#152c4f;color:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:8px;margin:0 16px 12px}
+.konto b{font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1}
+.konto span{font-size:12px;opacity:.8}
+.leerkarte{border:1px solid var(--line);border-radius:18px;padding:16px 14px;text-align:center;color:var(--ink-2);font-size:13px;background:var(--frei-tint);margin:0 16px 10px}
+.leerkarte b{display:block;font-family:var(--font-display);font-size:17px;color:var(--ink)}
+.kacheln{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 16px}
+.kacheln div{border:1px solid var(--line);border-radius:14px;padding:10px;font-size:12px;color:var(--ink-3)}
+.kacheln b{display:block;color:var(--ink);font-size:15px}
+.leiste{margin-top:auto;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);padding:6px 4px 2px;font-size:10px;color:var(--ink-3);text-align:center}
+.leiste span::before{content:"";display:block;width:20px;height:20px;margin:0 auto 2px;border-radius:6px;background:var(--tint-2)}
+.leiste span.an{color:var(--accent)} .leiste span.an::before{background:var(--accent-tint)}
+.leiste span.plus::before{background:var(--akzent-flaeche);border-radius:12px;width:36px;height:30px;margin-top:-10px}
+.zurueck-chip{position:absolute;top:6px;left:10px;background:var(--tint);border:1px solid var(--line);border-radius:99px;font-size:11px;padding:2px 9px;color:var(--ink-2)}
+.einladung{border:1.5px solid var(--frei);background:var(--frei-tint);border-radius:16px;padding:12px 14px;text-align:left;margin:0 0 14px}
+.einladung .marke{color:var(--frei)}
+.einladung strong{display:block;font-family:var(--font-data);font-size:16px;letter-spacing:.08em;margin:2px 0}
+.einladung span{font-size:12.5px;color:var(--ink-2)}
+
+/* Sperrbildschirm mit Benachrichtigung */
+.sperre{flex:1;background:linear-gradient(170deg,#30508a,#152c4f 70%);padding:24px 12px 10px;display:flex;flex-direction:column;gap:10px}
+.note{background:rgba(255,255,255,.94);color:#152c4f;border-radius:20px;padding:12px 14px;display:flex;gap:10px}
+.note .klein-ic{flex:none;width:22px;height:22px;border-radius:50%;background:#152c4f;display:grid;place-items:center}
+.note .klein-ic svg{width:13px;height:13px}
+.note .text{min-width:0;flex:1}
+.note .wer{font-size:11.5px;color:#56698b}
+.note b{display:block;font-size:13.5px}
+.note p{margin:1px 0 0;font-size:12.5px;color:#36507a;line-height:1.35}
+.note .bild{width:38px;height:38px;border-radius:50%;flex:none;overflow:hidden;background:#fff}
+.note .bild img{width:125%;height:125%;max-width:none;margin:-12.5%}
+.note.alt{opacity:.82}
+
+/* Symbole zur Wahl */
+.symbole{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:14px}
+.symbolkarte{background:var(--bg);border:1.5px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px;text-align:left}
+.symbolkarte[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.symbolkarte .reihe-icons{display:flex;gap:16px;align-items:flex-end;background:linear-gradient(170deg,#30508a,#152c4f 70%);border-radius:14px;padding:14px;justify-content:center}
+.symbolkarte .gross{width:96px;height:96px;border-radius:50%;overflow:hidden;background:#fff}
+.symbolkarte .mittel{width:56px;height:56px;border-radius:30%;overflow:hidden;background:#fff}
+.symbolkarte .gross img,.symbolkarte .mittel img{width:125%;height:125%;max-width:none;margin:-12.5%}
+.symbolkarte b{font-size:15px}
+.symbolkarte p{margin:0;font-size:13.5px;color:var(--ink-2)}
+
+/* Zeitplan */
+.plan{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px;counter-reset:z}
+.plan li{counter-increment:z;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 12px;align-items:start;background:var(--bg);
+  border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.plan li::before{content:counter(z);grid-row:1/3;width:26px;height:26px;border-radius:50%;background:var(--kontrast-bg);color:var(--kontrast-ink);
+  display:grid;place-items:center;font-weight:800;font-size:12.5px}
+.plan b{font-size:14.5px}
+.plan p{grid-column:2/4;margin:0;font-size:13.5px;color:var(--ink-2)}
+.plan .wer{font-family:var(--font-data);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.wissen{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-top:10px}
+.wissen div{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:12px 14px;font-size:13.5px;color:var(--ink-2)}
+.wissen b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:2px}
+.nur-a[hidden],.nur-b[hidden]{display:none}
+.updates{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-top:10px}
+.update{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.update .wie{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.update.oft .wie{color:var(--frei)} .update.selten .wie{color:var(--bald)}
+.update b{font-size:15px}
+.update p{margin:0;font-size:13.5px;color:var(--ink-2)}
+.update ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="marke">Mockup · zur Entscheidung</span>
+  <h1>Homi Point als Android-App</h1>
+  <p class="lead">Die Android-App ist <b>keine zweite App</b>: Sie zeigt haus-quest.com in einem eigenen Rahmen, ohne
+    Adresszeile und mit eigenem Symbol. Google nennt das „Trusted Web Activity“ — so kommen auch andere Web-Apps in den
+    Play Store. Alles, was wir bauen, ist sofort auch in der Android-App; ein Update im Store braucht es nur für Name,
+    Symbol und Farben.</p>
+  <p class="lead">Offen ist vor allem der Weg aufs Handy: <b>über den Play Store</b> (einmalig 25 $) oder <b>direkt aus
+    dem Browser</b> (kostenlos). Oben umschalten — die drei Telefone zeigen den Weg, darunter steht, was gleich bleibt.</p>
+
+  <div class="regler">
+    <div class="gruppe"><span class="marke">Wie die App aufs Handy kommt</span>
+      <div class="schalter" data-gruppe="weg">
+        <button data-weg="a" aria-pressed="true">A · Play Store, geschlossener Test</button>
+        <button data-weg="b" aria-pressed="false">B · Aus dem Browser installieren</button>
+      </div></div>
+  </div>
+  <p class="lead" id="weg-text"></p>
+
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3 id="h1"></h3><span class="vorbild" id="v1"></span></div>
+      <div class="phone android" id="p1"></div>
+      <p class="bu" id="bu1"></p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3 id="h2"></h3><span class="vorbild" id="v2"></span></div>
+      <div class="phone android" id="p2"></div>
+      <p class="bu" id="bu2"></p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Auf dem Startbildschirm</h3><span class="vorbild">wie jede andere App</span></div>
+      <div class="phone android" id="p3"></div>
+      <p class="bu">Ein Tipp aufs Symbol: Android zeigt kurz das Symbol auf Weiß, dann kommt das Homi-Point-Startbild, das es
+        schon gibt, und die App.</p>
+    </div>
+  </div>
+
+  <h2>In der App — bei A und B gleich</h2>
+  <div class="reihe">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Ohne Browser drumherum</h3><span class="vorbild">die Startseite</span></div>
+      <div class="phone android" id="p4"></div>
+      <p class="bu">Keine Adresszeile, oben die Statusleiste im Homi-Point-Blau. Wer im Browser schon angemeldet ist, ist
+        es in der App auch; die Anmeldung mit Google läuft wie gewohnt. Die Zurück-Geste kennt die App schon: erst
+        Blatt zu, dann zur Startseite, dann „App schließen?“.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Benachrichtigungen</h3><span class="vorbild">als echte Android-Nachricht</span></div>
+      <div class="phone android" id="p5"></div>
+      <p class="bu">Sie kommen unter „Homi Point“, nicht unter „Chrome“, und lassen sich in den Android-Einstellungen wie
+        bei jeder App abschalten. Das kleine Zeichen oben links mache ich einfarbig — sonst zeigt Android dort nur einen
+        weißen Fleck.</p>
+    </div>
+    <div class="spalte">
+      <div class="kopfzeile"><h3>Links öffnen die App</h3><span class="vorbild">etwa eine Einladung im Chat</span></div>
+      <div class="phone android" id="p6"></div>
+      <p class="bu">Ein Link auf haus-quest.com/app öffnet direkt Homi Point statt des Browsers — die Einladung ist schon
+        eingetragen. Dafür liegt auf haus-quest.com eine kleine Datei, die Android zeigt: Diese App gehört zur Seite.</p>
+    </div>
+  </div>
+
+  <h2>Das Symbol</h2>
+  <p class="lead">Android schneidet jedes Symbol rund oder abgerundet zu, je nach Handy. Auf dem Startbildschirm ist es so
+    groß wie ein Fingernagel. Tippe eins an, um es oben in den Telefonen zu sehen.</p>
+  <div class="symbole">
+    <button class="symbolkarte" data-symbol="logo" aria-pressed="false">
+      <span class="reihe-icons"><span class="gross"><img src="logo-symbol.webp" alt=""></span><span class="mittel"><img src="logo-symbol.webp" alt=""></span></span>
+      <b>A · Das ganze Logo</b>
+      <p>Wie heute auf dem iPhone und in der Web-App. Die Schrift „Homi Point“ wird auf dem Handy sehr klein, und die
+        Zeichen ringsum gehen beim Zuschneiden zum Teil verloren.</p>
+    </button>
+    <button class="symbolkarte" data-symbol="haus" aria-pressed="true">
+      <span class="reihe-icons"><span class="gross"><img src="haus.webp" alt=""></span><span class="mittel"><img src="haus.webp" alt=""></span></span>
+      <b>B · Nur das Haus</b>
+      <p>Das Gesicht der App, groß genug zum Wiedererkennen. Der Name steht ohnehin darunter. Der Ausschnitt hier ist ein
+        Entwurf; fürs echte Symbol stelle ich das Haus sauber frei.</p>
+    </button>
+  </div>
+
+  <div class="nur-a" id="zeitplan">
+    <h2>So läuft es mit dem Play Store</h2>
+    <p class="lead">Google lässt neue Privatkonten erst in den Store, wenn die App <b>14 Tage am Stück mit mindestens 12
+      Testern</b> in einem geschlossenen Test lief. Der Pilot ist genau so ein Test — danach ist der Weg in den Store frei.</p>
+    <ol class="plan">
+      <li><b>Play-Konto anlegen</b><span class="wer">du · 30 Minuten</span>
+        <p>Als Privatperson, wie im Impressum. 25 $ einmalig, dazu Ausweis und Kreditkarte; Google prüft das, meist in
+          ein paar Tagen. Außerdem bestätigst du mit der Play-Console-App, dass du ein Android-Handy hast (ab Android 10).</p></li>
+      <li><b>Paket bauen und hochladen</b><span class="wer">ich · du lädst hoch</span>
+        <p>Ich baue das Paket und schreibe Store-Texte und Datenschutz-Angaben vor. Den Upload-Schlüssel bekommst du als
+          Datei — er kommt nie ins Projekt, du bewahrst ihn auf.</p></li>
+      <li><b>Geschlossener Test mit dem Pilot</b><span class="wer">die Pilot-Leute</span>
+        <p>Wer mitmacht, tritt der Testgruppe bei und lädt die App aus dem Store. Ab 12 Personen läuft die Uhr: 14 Tage am
+          Stück. Wer auf iPhone oder ohne Google-Konto ist, nutzt weiter die Web-App.</p></li>
+      <li><b>Für alle freischalten</b><span class="wer">du entscheidest</span>
+        <p>Nach den 14 Tagen kannst du den Zugang für alle beantragen. Wann, entscheidest du — etwa zur Beta.</p></li>
+    </ol>
+  </div>
+
+  <h2 id="updates-h">Updates</h2>
+  <div id="updates">
+    <p class="lead">Wie bei einer Web-App: Was ich live stelle, hat die Android-App beim nächsten Öffnen — <b>ohne Store und
+      ohne Prüfung durch Google</b>. Das ist im Play Store erlaubt, weil die App nur die Seite zeigt und keinen eigenen
+      Programmcode nachlädt.</p>
+    <div class="updates">
+      <div class="update oft"><span class="wie">fast alles · sofort</span><b>Neue Funktionen, Texte, Fehlerbehebungen</b>
+        <p>Laufen wie heute: Commit, Push, live — und beim nächsten Öffnen ist es in der App. Niemand muss etwas
+          aktualisieren, auch nicht im Store.</p></div>
+      <div class="update selten"><span class="wie">selten · über den Store</span><b>Ein neues Paket braucht es nur für</b>
+        <ul><li>einen neuen Namen oder ein neues Symbol</li><li>andere Farben der Status- und Startleiste</li>
+          <li>Googles jährliche Vorgabe zur Android-Version — etwa einmal im Jahr</li></ul>
+        <p>Das baue ich, du lädst es hoch; die Handys holen es sich von selbst.</p></div>
+    </div>
+  </div>
+
+  <h2>Gut zu wissen</h2>
+  <div class="wissen">
+    <div><b>Kinder-Tablets</b>Ohne eigenes Google-Konto kommt ein Tablet nicht in den Play-Test. Dann installieren die
+      Eltern Homi Point aus dem Browser — der Knopf dafür kommt in beiden Fällen — und Lena meldet sich wie bisher mit ihrem Code an.</div>
+    <div><b>iPhone</b>Ändert sich nichts: „Zum Home-Bildschirm“ wie bisher. Eine eigene iPhone-App kommt laut Businessplan
+      nach dem Pilot.</div>
+    <div><b>Die App-Kennung</b>Ich nehme <span class="code">com.homipoint.app</span>. Sie steht in der Store-Adresse und
+      lässt sich nie mehr ändern — sag Bescheid, wenn du eine andere willst.</div>
+    <div><b>Store-Eintrag</b>Name „Homi Point“, darunter: „<span id="kurz">Haushalt fair teilen: erledigen, bestätigen, Cleanies in Belohnungen tauschen</span>“.
+      Datenschutz und Löschseite sind schon live — beides verlangt Google.</div>
+  </div>
+
+  <h2>Zu entscheiden</h2>
+  <div class="fragen">
+    <div class="frage"><h3>Wie die App aufs Handy kommt</h3>
+      <p><b>A · Play Store:</b> echte Store-App, der Pilot zählt als Googles Pflicht-Test, danach kann Homi Point in den
+        Store. Kostet einmalig 25 $ (rund 23 €), keine Jahresgebühr. <b>B · Aus dem Browser:</b> Chrome legt Homi Point
+        wie eine App an, mit Symbol und Benachrichtigungen. Kostenlos, sofort möglich — aber kein Store, und der
+        Pflicht-Test steht später noch an.</p>
+      <p class="empf"><b>Empfehlung: A</b>, wenn du die 25 $ jetzt freigibst — es wären die ersten Kosten vor dem Betrieb.
+        Der Pilot liefert die 12 Tester für 14 Tage gratis mit; später müsstest du sie extra suchen, und der Launch wartet
+        zwei Wochen länger. Den Installieren-Knopf aus B baue ich so oder so ein.</p></div>
+    <div class="frage"><h3>Welches Symbol</h3>
+      <p>A · das ganze Logo oder B · nur das Haus (oben zum Ansehen).</p>
+      <p class="empf"><b>Empfehlung: B.</b> Auf Fingernagelgröße bleibt vom Logo nur ein bunter Fleck; das Haus erkennt man.</p></div>
+    <div class="frage"><h3>Wie Pilot-Leute zu Testern werden</h3>
+      <p><b>A · Google-Gruppe:</b> Jeder tritt mit einem Link selbst bei, dann ist die Test-App im Store sichtbar.
+        <b>B · E-Mail-Liste:</b> Du trägst jede Google-Adresse in der Play Console ein.</p>
+      <p class="empf"><b>Empfehlung: A.</b> Du musst keine Adressen sammeln und abtippen. Die Gruppe öffnet nur die Tür
+        zur Test-App — in Homi Point hinein kommt man weiter nur mit Einladung.</p></div>
+    <div class="frage"><h3>Kinder in der Zielgruppe</h3>
+      <p>Google fragt, für welches Alter die App ist. <b>A:</b> ehrlich „Erwachsene und Kinder“ — Kinder nutzen Homi
+        Point auf eigenen Geräten. Dann gelten Googles Familien-Regeln und die Prüfung ist strenger. <b>B:</b> nur „ab 16“,
+        Kinder-Geräte bleiben beim Browser.</p>
+      <p class="empf"><b>Empfehlung: A.</b> Die Kinderansicht mit Tieren und Sparglas sieht Google ohnehin als „spricht
+        Kinder an“; eine falsche Angabe kann die App sperren. Die wichtigsten Familien-Regeln erfüllen wir schon: keine
+        Werbung, keine Tracker, kein Standort, Kinderprofile nur mit Einwilligung der Eltern.</p></div>
+  </div>
+  <div class="kosten">
+    <p><b>Kosten:</b> A einmalig 25 $ für das Play-Konto, danach nichts. B nichts. In beiden Fällen bleibt der Server
+      gleich — die App lädt dieselbe Seite wie der Browser, es gibt keine zusätzlichen Abrufe.</p>
+  </div>
+</div>
+
+<div class="themawahl" role="group" aria-label="Darstellung">
+  <button data-thema="auto" aria-pressed="true">Auto</button>
+  <button data-thema="light" aria-pressed="false">Hell</button>
+  <button data-thema="dark" aria-pressed="false">Dunkel</button>
+</div>
+
+<script>
+let weg = "a";
+let symbol = "haus";
+const BILD = { haus: "haus.webp", logo: "logo-symbol.webp" };
+
+const sb = (art = "") => `<div class="sb ${art}"><span>9:41</span><span class="rechts"><span class="netz"></span><span class="akku"></span></span></div>`;
+const gb = (art = "") => `<div class="gb ${art}"><i></i></div>`;
+const rahmen = (inhalt, { status = "", geste = "" } = {}) => `${sb(status)}<div class="inhalt">${inhalt}</div>${gb(geste)}`;
+const symbolBild = () => `<img src="${BILD[symbol]}" alt="">`;
+
+function chatEinladung() {
+  return rahmen(`
+    <div class="chatkopf"><span class="av">R</span><b>Ramon</b></div>
+    <div class="chatverlauf">
+      <div class="blase">Hallo Anna, ihr seid zum Pilot von Homi Point eingeladen!
+        <ol>
+          <li>Freischalten — Testgruppe beitreten (sonst findet der Store die App nicht):<br><a>groups.google.com/g/homi-point-pilot</a></li>
+          <li>App laden:<br><a>play.google.com/apps/testing/com.homipoint.app</a></li>
+          <li>In der App diesen Link öffnen:<br><a>haus-quest.com/app/?pilot=HOMI-7K3-PQ8</a></li>
+        </ol>
+        <span class="zeit">18:02</span></div>
+    </div>`);
+}
+
+function store() {
+  return rahmen(`
+    <div class="store">
+      <div class="store-kopf"><img src="${BILD[symbol]}" alt="">
+        <div><b>Homi Point</b><span>Ramon Weihmann</span><small>Familie · Haushalt</small></div></div>
+      <div class="store-test">Du nimmst am Test von Homi Point teil. Diese Version gibt es noch nicht öffentlich.</div>
+      <button class="store-knopf" data-installieren>Installieren</button>
+      <div class="store-fakten"><span><b>Neu</b>noch ohne Bewertung</span><span><b>USK 0</b>Altersfreigabe</span><span><b>1 MB</b>klein, lädt die Seite</span></div>
+      <div class="shots">
+        <span class="shot"><i class="navy"></i><i style="height:40px"></i><i style="height:18px"></i><i class="rot"></i></span>
+        <span class="shot"><i style="height:14px;width:70%"></i><i style="height:46px"></i><i style="height:46px"></i></span>
+        <span class="shot"><i class="navy" style="height:50px"></i><i style="height:22px"></i><i style="height:22px"></i></span>
+        <span class="shot"><i style="height:30px"></i><i style="height:30px"></i></span>
+      </div>
+      <div class="store-text"><b>Über diese App</b>${document.getElementById("kurz").textContent}.</div>
+    </div>`);
+}
+
+function browserBanner() {
+  return rahmen(`
+    <div class="chrome"><span>haus-quest.com/app</span><i></i></div>
+    <div class="banner"><img src="${BILD[symbol]}" alt=""><span><b>Homi Point als App</b><small>eigenes Symbol, ohne Adresszeile</small></span>
+      <button>Installieren</button></div>
+    <div class="screen mitte" style="padding-top:20px">
+      <img class="logo" src="/logo.webp" alt="Homi Point">
+      <p class="app-sub">Eure Aufgaben, eure Cleanies — gemeinsam bestätigt.</p>
+      <button class="btn rand">Mit Google anmelden</button>
+    </div>`);
+}
+
+function installDialog() {
+  return rahmen(`
+    <div class="chrome halb"><span>haus-quest.com/app</span><i></i></div>
+    <div class="screen mitte halb"><img class="logo" src="/logo.webp" alt=""></div>
+    <div class="dialog-schleier"><div class="dialog">
+      <h4>App installieren?</h4>
+      <div class="app"><img src="${BILD[symbol]}" alt=""><span><b>Homi Point</b><small>haus-quest.com</small></span></div>
+      <div class="knoepfe"><button>Abbrechen</button><button class="voll">Installieren</button></div>
+    </div></div>`);
+}
+
+function startbildschirm() {
+  const leer = (name) => `<span class="ic"><span class="form leer"></span><span>${name}</span></span>`;
+  return rahmen(`
+    <div class="home">
+      <div class="uhr">9:41</div><div class="datum">Freitag, 23. Oktober</div>
+      <div class="icons">
+        ${leer("Kalender")}${leer("Fotos")}${leer("Notizen")}${leer("Wetter")}
+        ${leer("Uhr")}<span class="ic unseres"><span class="form">${symbolBild()}</span><span>Homi Point</span></span>${leer("Karten")}${leer("Rechner")}
+      </div>
+      <div class="suche"></div>
+      <div class="dock"><span class="form"></span><span class="form"></span><span class="form"></span><span class="form"></span></div>
+    </div>`, { status: "durch", geste: "durch" }).replace('<div class="sb durch">', '<div class="sb durch" style="background:#30508a">');
+}
+
+function appStart() {
+  return rahmen(`
+    <div class="app-kopf"><div><b>Hallo Anna</b><span>Freitag, 23. Oktober</span></div></div>
+    <div class="konto"><b>84</b><span>dein Konto</span></div>
+    <div class="leerkarte"><b>Alles erledigt</b>Gerade wartet nichts auf dich.</div>
+    <div class="kacheln"><div>Haushaltsplan<b>3 heute</b></div><div>Diese Woche<b>+46</b></div></div>
+    <div class="leiste"><span class="an">Start</span><span>Quests</span><span class="plus">Erledigt</span><span>Belohnung</span><span>Wir</span></div>`,
+    { status: "navy" });
+}
+
+function benachrichtigung() {
+  const zeichen = `<span class="klein-ic"><svg viewBox="0 0 16 16"><path d="M8 2 2 7v7h4v-4h4v4h4V7z" fill="#fff"/></svg></span>`;
+  return rahmen(`
+    <div class="sperre">
+      <div class="uhr">9:41</div><div class="datum">Freitag, 23. Oktober</div>
+      <div class="note">${zeichen}<div class="text"><span class="wer">Homi Point · jetzt</span>
+        <b>Tom hat etwas erledigt</b><p>Küche wischen — 8 Cleanies warten auf eine Bestätigung.</p></div>
+        <span class="bild">${symbolBild()}</span></div>
+      <div class="note alt">${zeichen}<div class="text"><span class="wer">Homi Point · vor 20 Min.</span>
+        <b>Lena möchte etwas einlösen</b><p>30 Minuten Tablet</p></div></div>
+    </div>`, { status: "durch", geste: "durch" }).replace('<div class="sb durch">', '<div class="sb durch" style="background:#30508a">');
+}
+
+function linkOeffnet() {
+  return rahmen(`
+    <span class="zurueck-chip">◂ Chat</span>
+    <div class="screen" style="padding-top:34px">
+      <img class="logo" src="/logo.webp" alt="Homi Point" style="width:120px">
+      <div class="einladung"><span class="marke">Einladung erkannt</span><strong>HOMI-7K3-PQ8</strong>
+        <span>Kam mit dem Link. Jetzt anmelden, dann richtet ihr euren Haushalt ein.</span></div>
+      <button class="btn rand">Mit Google anmelden</button>
+    </div>`, { status: "navy" });
+}
+
+const TEXTE = {
+  a: { lead: "<b>A · Play Store.</b> Die Pilot-Leute bekommen mit der Einladung zwei Links mehr: der Testgruppe beitreten und die App laden. Danach ist Homi Point eine Store-App mit automatischen Updates.",
+       h1: "Die Einladung", v1: "drei Schritte im Chat", bu1: "Die Reihenfolge muss so sein: Eine Test-App sieht im Play Store nur, wer auf der Testerliste steht — für alle anderen gibt es sie nicht. Die Testgruppe ist diese Liste. Erst danach findet der Store-Link die App; der Pilot-Link öffnet wie bisher den Zugang zu Homi Point.",
+       h2: "Im Play Store", v2: "nur für Testgruppe sichtbar", bu2: "Der Eintrag ist da, aber nur für die Testgruppe. Die Bilder darunter mache ich aus der App, wie die Prüf-Bildschirme." },
+  b: { lead: "<b>B · Aus dem Browser.</b> Wer haus-quest.com/app auf Android in Chrome öffnet, sieht oben ein Band zum Installieren. Chrome legt dann eine echte App an — ohne Store, ohne Kosten.",
+       h1: "Im Browser", v1: "das Band zum Installieren", bu1: "Das Band kommt nur, wenn Chrome die Installation anbietet und Homi Point noch nicht installiert ist. Wegtippen merkt sich die App.",
+       h2: "Installieren", v2: "Chrome fragt nach", bu2: "Der Dialog kommt von Chrome. Zwei Sekunden später liegt das Symbol auf dem Startbildschirm." }
+};
+
+function zeichnen() {
+  const t = TEXTE[weg];
+  document.getElementById("weg-text").innerHTML = t.lead;
+  for (const k of ["h1", "v1", "bu1", "h2", "v2", "bu2"]) document.getElementById(k).textContent = t[k];
+  document.getElementById("p1").innerHTML = weg === "a" ? chatEinladung() : browserBanner();
+  document.getElementById("p2").innerHTML = weg === "a" ? store() : installDialog();
+  document.getElementById("p3").innerHTML = startbildschirm();
+  document.getElementById("p4").innerHTML = appStart();
+  document.getElementById("p5").innerHTML = benachrichtigung();
+  document.getElementById("p6").innerHTML = linkOeffnet();
+  document.getElementById("zeitplan").hidden = weg !== "a";
+  document.querySelectorAll("[data-symbol]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.symbol === symbol)));
+}
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("button");
+  if (!el) return;
+  const d = el.dataset;
+  if (d.weg) {
+    weg = d.weg;
+    el.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+  }
+  if (d.symbol) symbol = d.symbol;
+  if (d.thema) {
+    document.querySelectorAll(".themawahl button").forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+    if (d.thema === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", d.thema);
+    return;
+  }
+  zeichnen();
+});
+
+zeichnen();
+</script>
+</body>
+</html>

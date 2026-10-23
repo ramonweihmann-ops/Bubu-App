@@ -26,7 +26,7 @@ const ueberlauf = () => seite.evaluate(() => document.documentElement.scrollWidt
 
 const SEITEN = {
   impressum: ["Impressum", ["Ramon Weihmann", "Friesische Straße 41", "24937 Flensburg", "info@rwtesting-environment.de", "§ 5 Digitale-Dienste-Gesetz"]],
-  datenschutz: ["Datenschutzerklärung", ["Stand: 22. Oktober 2026", "Ramon Weihmann", "Cloudflare", "auf Rechenzentren in der EU festgelegt", "Google Ireland Limited",
+  datenschutz: ["Datenschutzerklärung", ["Stand: 23. Oktober 2026", "Android-App", "Ramon Weihmann", "Cloudflare", "auf Rechenzentren in der EU festgelegt", "Google Ireland Limited",
     "hq_sitzung", "hq_einladung", "Fehlerberichte", "Testkauf für Plus", "Keine Zahlungsdaten", "Art. 8 DSGVO", "Unabhängige Landeszentrum für Datenschutz Schleswig-Holstein", "spätestens 30 Tagen"]],
   teilnahme: ["Teilnahmebedingungen für den Pilot", ["Am Pilot nimmt teil, wer eingeladen ist", "mindestens 16 Jahre", "keinen Geldwert", "testet ihr 14 Tage; danach schaltet ein Testkauf es frei", "Abgebucht wird im Pilot nichts", "Es gilt deutsches Recht", "/konto-loeschen"]]
 };

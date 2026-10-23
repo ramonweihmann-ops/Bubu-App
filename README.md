@@ -177,6 +177,36 @@ Bereich, wie oft, bei wie vielen — keine Inhalte, höchstens 200 Meldungen am 
 Server-Fehler gilt, was ohne eigenen Status und ohne Datenbankregel dahinter scheitert; Absagen wie „Diese Quest gibt
 es nicht“ zählen nicht.
 
+## Android-App
+
+Die Android-App ist eine verpackte Web-App (Googles „Trusted Web Activity“): ein kleines Paket, das
+`haus-quest.com/app` in Chrome öffnet — ohne Adresszeile, mit eigenem Symbol und Benachrichtigungen unter
+„Homi Point“. App-Kennung `com.homipoint.app` (lässt sich nie mehr ändern). Das Projekt liegt in `android/`,
+erzeugt mit Bubblewrap aus `android/twa-manifest.json`. Im Pilot läuft sie im Play Store als geschlossener Test
+(Testgruppe als Google-Gruppe); Google verlangt für neue Privatkonten 14 Tage am Stück mit mindestens 12 Testern,
+bevor die App öffentlich darf.
+
+- **Updates:** Alles, was live geht, hat die App beim nächsten Öffnen — ohne Store. Ein neues Paket braucht es nur
+  für Name, Symbol, Farben und Googles jährliche Vorgabe zur Android-Version; dann in `twa-manifest.json`
+  `appVersionCode` hochzählen und neu bauen.
+- **Verknüpfung:** `web/.well-known/assetlinks.json` nennt die Fingerabdrücke, mit denen Android prüft, dass die App
+  zur Seite gehört: den des Upload-Schlüssels und — sobald die App in der Play Console angelegt ist — den des
+  App-Signaturschlüssels von Google (Play Console → App-Integrität). Fehlt der passende, zeigt die App eine Adresszeile.
+- **Schlüssel:** Der Upload-Schlüssel (`upload-schluessel.jks`, Alias `upload`) liegt nur beim Betreiber, nie im
+  Repo (`android/.gitignore`). Geht er verloren, gibt es in der Play Console einen neuen.
+- **Bauen:** JDK 17 und Android-SDK, Pfade in `~/.bubblewrap/config.json`, Schlüssel nach
+  `android/upload-schluessel.jks` kopieren, dann in `android/`:
+  `BUBBLEWRAP_KEYSTORE_PASSWORD=… BUBBLEWRAP_KEY_PASSWORD=… npx @bubblewrap/cli@1.27.0 build --skipPwaValidation`
+  → `app-release-bundle.aab` für die Play Console.
+- **Aus dem Browser installieren:** Wer nicht über den Play-Test kommt (Kinder-Tablet ohne Google-Konto), bekommt
+  in Chrome das Band „Homi Point als App“ (Anmeldung, Kinder-Anmeldung, Zeile auf der Startseite; wegtippbar). In
+  der installierten App und wenn die Store-App schon da ist, kommt es nicht (`related_applications` im Manifest).
+- **Benachrichtigungen:** Das kleine Zeichen in der Android-Leiste ist `icons/badge-96.png`, einfarbig.
+- **Googles Prüfung:** Die Prüfer melden sich mit einem eigenen Google-Konto an, dessen Haushalt über eine
+  Einladung „Google-Prüfung“ gegründet wurde. Dieser Haushalt zählt im Betriebs-Dashboard nirgends mit
+  (`worker/betrieb.js`, `OHNE_PRUEFUNG`); die Einladung steht trotzdem in der Liste. Texte und Angaben für die Play
+  Console: `android/store/texte.md`.
+
 ## Kostenlos bleiben
 
 Bis Homi Point wirklich im Betrieb ist, läuft alles im kostenlosen Plan von Cloudflare. Dessen knappste Grenze ist

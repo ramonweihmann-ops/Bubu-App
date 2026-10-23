@@ -475,6 +475,64 @@ function einladungsTeil() {
       </div>`;
 }
 
+/* ------------------------------------------------------------------ Als App installieren */
+//
+// Auf Android bietet Chrome an, Homi Point wie eine App anzulegen: eigenes Symbol,
+// ohne Adresszeile. Das braucht, wer nicht über den Play-Store-Test kommt — etwa ein
+// Kinder-Tablet ohne Google-Konto. Das Band steht auf der Anmeldung, als Zeile auf der
+// Startseite und lässt sich wegtippen. In der installierten App und wenn die App aus
+// dem Play Store schon auf dem Handy ist, kommt es nicht.
+let installAngebot = null;
+const alsApp = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true
+  || document.referrer.startsWith("android-app://");
+
+async function storeAppDa() {
+  try { return navigator.getInstalledRelatedApps ? (await navigator.getInstalledRelatedApps()).length > 0 : false; }
+  catch { return false; }
+}
+
+window.addEventListener("beforeinstallprompt", async (ev) => {
+  ev.preventDefault();
+  if (alsApp() || await storeAppDa()) return;
+  installAngebot = ev;
+  installNeuZeichnen();
+});
+window.addEventListener("appinstalled", () => { installAngebot = null; installNeuZeichnen(); });
+
+const installZeigen = () => Boolean(installAngebot) && !alsApp() && !hinweisWeg("installieren");
+
+function installBand() {
+  if (!installZeigen()) return "";
+  return `
+    <div class="installband" data-installband>
+      <img src="/icons/icon-192.png" alt="">
+      <span><b>Homi Point als App</b><small>eigenes Symbol, ohne Adresszeile</small></span>
+      <button class="los" data-installieren>Installieren</button>
+      <button class="zu" data-hinweis-weg="installieren" aria-label="Nicht jetzt">×</button>
+    </div>`;
+}
+
+async function installieren() {
+  const angebot = installAngebot;
+  if (!angebot) return;
+  installAngebot = null;
+  angebot.prompt();
+  const { outcome } = await angebot.userChoice.catch(() => ({ outcome: "dismissed" }));
+  if (outcome === "accepted") toast("Homi Point liegt jetzt auf dem Startbildschirm.");
+  installNeuZeichnen();
+}
+
+/** Das Band kommt oder geht: nur die Schirme neu zeichnen, auf denen es steht. */
+function installNeuZeichnen() {
+  if (!S) return;
+  if (S.angemeldet === false) {
+    if (app.querySelector("[data-kind-anmelden]")) return;
+    anmelden();
+    return;
+  }
+  if (S.eingerichtet && !kindImBild() && ansicht === "start") { letztesBild = ""; zeichne(); }
+}
+
 function anmelden() {
   if (PILOT.pflicht === null) pilotLaden().then(() => { if (S && S.angemeldet === false) anmelden(); });
   // Solange unklar ist, ob der Pilot läuft, steht das Tor — sicher ist sicher.
@@ -482,6 +540,7 @@ function anmelden() {
   const frei = !tor || Boolean(PILOT.gueltig);
   app.innerHTML = `
     <div class="mitte">
+      ${installBand()}
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
       <h1>Homi Point</h1>
       ${new URLSearchParams(location.search).has("geloescht") ? `
@@ -1527,6 +1586,14 @@ function hinweisZeilen() {
       <button class="los" data-go="einladen">${icon("i-plus", 15)}<span>Es fehlen noch ${fehlen} —
         ${allein() ? "allein lässt sich nichts bestätigen" : "Code teilen"}</span><span class="mehr">›</span></button>
       ${allein() ? "" : `<button class="zu" data-hinweis-weg="einladen" aria-label="Hinweis ausblenden">×</button>`}
+    </div>`);
+  }
+  if (installZeigen()) {
+    z.push(`
+    <div class="zuletzt hinweis">
+      <button class="los" data-installieren>${icon("i-plus", 15)}<span>Homi Point als App installieren</span>
+        <span class="mehr">›</span></button>
+      <button class="zu" data-hinweis-weg="installieren" aria-label="Hinweis ausblenden">×</button>
     </div>`);
   }
   if (pushOffen() && !hinweisWeg("push")) {
@@ -4661,6 +4728,7 @@ function sheetEintragen(quest, k) {
 function anmeldenKind() {
   app.innerHTML = `
     <div class="mitte">
+      ${installBand()}
       <img class="logo" src="/logo.webp" alt="">
       <h1>Hallo!</h1>
       <p>Gib den Code ein, den dir Mama oder Papa zeigen.</p>
@@ -4913,8 +4981,9 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS + "," + PLUS_KLICKS);
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS + "," + PLUS_KLICKS + ",[data-installieren]");
   if (!el) return;
+  if (el.hasAttribute("data-installieren")) { await installieren(); return; }
   // Ohne Plus geht der Familienmodus gar nicht erst los — das Plus-Blatt sagt, warum.
   const sperre = !plusAn() && Object.keys(PLUS_NOETIG).find((a) => el.hasAttribute(a));
   if (sperre) { plusSperre(PLUS_NOETIG[sperre]); return; }
@@ -5009,7 +5078,7 @@ document.addEventListener("click", async (ev) => {
   }
   if (el.dataset.hinweisWeg) {
     try { localStorage.setItem(`hq-hinweis-${el.dataset.hinweisWeg}`, "weg"); } catch { /* dann nur bis zum nächsten Laden */ }
-    el.closest(".hinweis")?.remove();
+    (el.closest(".hinweis") || el.closest("[data-installband]"))?.remove();
     return;
   }
   if (el.dataset.zielschritt) {

@@ -17,6 +17,11 @@ import { PLAENE, GRUENDE } from "./plus.js";
 const PLAN_NAMEN = Object.fromEntries(Object.entries(PLAENE).map(([k, p]) => [k, p.name]));
 
 const TAG = 24 * 3600e3;
+
+// Der Haushalt, mit dem Googles Prüfer die Android-App testen, kommt über eine Einladung
+// „Google-Prüfung“ — er zählt in keiner Zahl mit. Die Einladung steht trotzdem in der Liste.
+const OHNE_PRUEFUNG = "name not like 'google-pr%fung%'";
+const istPruefung = (name) => /^google-pr(ü|ue|u)fung/i.test(String(name || "").trim());
 const PILOT_WOCHEN = 8;
 
 class Fehler extends Error {
@@ -68,14 +73,14 @@ async function lage(env) {
     ).all(),
     env.DB.prepare(
       `select m.couple_id as haushalt, count(*) as personen, sum(case when m.erwachsen = 0 then 1 else 0 end) as kinder
-         from members m where m.couple_id in (select haushalt from einladungen where haushalt is not null)
+         from members m where m.couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})
         group by m.couple_id`
     ).all(),
     // Bestätigte Quests je Haushalt und Tag — daraus „aktiv“, „zuletzt“ und die Wochen.
     env.DB.prepare(
       `select couple_id as haushalt, date(decided_at) as tag, count(*) as n
          from claims where status = 'bestaetigt' and decided_at is not null
-          and couple_id in (select haushalt from einladungen where haushalt is not null)
+          and couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})
         group by couple_id, date(decided_at)`
     ).all(),
     env.DB.prepare(
@@ -91,15 +96,15 @@ async function lage(env) {
     // Der Testkauf: wie Plus je Pilot-Haushalt steht, wer gekauft hat und warum nicht.
     env.DB.prepare(
       `select id as haushalt, plus, plus_test_bis, coalesce(plus_test_bis <= datetime('now'), 0) as vorbei
-         from couples where id in (select haushalt from einladungen where haushalt is not null)`
+         from couples where id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
     ).all(),
     env.DB.prepare(
       `select couple_id as haushalt, plan, ehrlich from testkaeufe
-        where couple_id in (select haushalt from einladungen where haushalt is not null)`
+        where couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
     ).all(),
     env.DB.prepare(
       `select gruende from plus_absagen
-        where couple_id in (select haushalt from einladungen where haushalt is not null)`
+        where couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
     ).all()
   ]);
   const plusJe = new Map(plusRoh.results.map((p) => [p.haushalt, p]));
@@ -113,7 +118,8 @@ async function lage(env) {
   }
   const aktivZwischen = (haushalt, von, bis) => (aktivTage.get(haushalt) || []).some((d) => d >= von && d < bis);
 
-  const haushalte = einladungen.results
+  const gezaehlt = einladungen.results.filter((e) => !istPruefung(e.name));
+  const haushalte = gezaehlt
     .filter((e) => e.haushalt && e.gegruendet_am)
     .map((e) => {
       const gegruendet = tagVon(e.gegruendet_am);
@@ -156,7 +162,7 @@ async function lage(env) {
   const gruende = absagen.results.flatMap((a) => { try { return JSON.parse(a.gruende); } catch { return []; } });
   const allein = haushalte.filter((h) => h.personen === 1);
   const fehlerListe = fehler.results.map((f) => ({ ...f, kritisch: f.quelle === "server" || f.personen > 1 }));
-  const zaehl = (f) => einladungen.results.filter(f).length;
+  const zaehl = (f) => gezaehlt.filter(f).length;
 
   return {
     stand: jetzt.toISOString(),
@@ -185,7 +191,7 @@ async function lage(env) {
       familien: haushalte.filter((h) => h.kinder > 0).length,
       vorher: vorher?.n ?? 0,
       einladungen: {
-        angelegt: einladungen.results.length,
+        angelegt: gezaehlt.length,
         eingeloest: zaehl((e) => e.gegruendet_am),
         offen: zaehl((e) => !e.gegruendet_am && !e.zurueckgezogen_am),
         zurueckgezogen: zaehl((e) => e.zurueckgezogen_am && !e.gegruendet_am)

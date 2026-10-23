@@ -1420,3 +1420,19 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .kv-pause-zeichen { font-size: 38px; line-height: 1; }
 .kv-pause b { font-family: var(--font-display); font-size: 19px; font-weight: 800; }
 .kv-pause p { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+/* ---------- Als App installieren ---------- */
+/* Das Band auf der Anmeldung — auf der Startseite ist es eine Hinweiszeile. */
+.installband {
+  display: flex; align-items: center; gap: 10px; width: 100%; max-width: 360px; margin-bottom: 14px; text-align: left;
+  background: var(--kontrast-bg); color: var(--kontrast-ink); border-radius: 14px; padding: 10px 6px 10px 12px;
+}
+.installband img { width: 36px; height: 36px; border-radius: 10px; background: #fff; flex: none; }
+.installband span { flex: 1; min-width: 0; }
+.installband b { display: block; font-size: 13.5px; }
+.installband small { display: block; font-size: 11.5px; opacity: .75; }
+.installband .los {
+  flex: none; border: 0; border-radius: 99px; background: var(--akzent-flaeche); color: #fff; font: inherit;
+  font-weight: 700; font-size: 12.5px; padding: 7px 12px; cursor: pointer;
+}
+.installband .zu { flex: none; border: 0; background: none; color: inherit; opacity: .7; font: inherit; font-size: 17px; padding: 4px 8px; cursor: pointer; }

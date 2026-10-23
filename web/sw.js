@@ -2,7 +2,7 @@
 // Hält die Hülle der App offline verfügbar. Daten kommen immer frisch aus dem Netz;
 // gemeldete Quests werden vom Worker nachgereicht, wenn wieder Empfang da ist.
 
-const CACHE = "hq-shell-v23";
+const CACHE = "hq-shell-v24";
 const HUELLE = ["/", "/app/", "/app/app.css", "/app/app.js", "/app/feier.js", "/logo.webp", "/cleanie.webp",
                 "/manifest.webmanifest", "/icons/icon-192.png", "/icons/startbild.webp"];
 
@@ -40,7 +40,8 @@ self.addEventListener("push", (ev) => {
   ev.waitUntil(self.registration.showNotification(daten.titel || "Homi Point", {
     body: daten.text || "",
     icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    // Das kleine Zeichen in der Android-Leiste: einfarbig, sonst zeigt Android einen weißen Fleck.
+    badge: "/icons/badge-96.png",
     data: { url: daten.url || "/app" },
     tag: daten.tag
   }));

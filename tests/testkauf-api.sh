@@ -24,15 +24,15 @@ enthaelt() { case "$2" in *"$3"*) echo "  ok   $1";; *) echo "  FEHL $1: „$3�
 aufraeumen() {
   roh "delete from couples where id in (select couple_id from members where user_id like 'u-tk%');
        delete from users where id like 'u-tk%' or (id like 'kind-%' and id not in (select user_id from members));
-       delete from einladungen where name like 'Testkauf %';"
+       delete from einladungen where name like 'Testkauf %' or name = 'Google-Prüfung';"
 }
 aufraeumen
-for n in tk1 tk2 tk3 tk4; do
+for n in tk1 tk2 tk3 tk4 tk5; do
   roh "insert into users (id, email, name) values ('u-$n', '$n@test', 'Konto $n') on conflict(id) do nothing"
 done
 node -e '
 const c=require("crypto");
-for (const t of ["tok-tk1","tok-tk2","tok-tk3","tok-tk4"]) console.log(t.slice(4)+" "+c.createHash("sha256").update(t).digest("hex"));
+for (const t of ["tok-tk1","tok-tk2","tok-tk3","tok-tk4","tok-tk5"]) console.log(t.slice(4)+" "+c.createHash("sha256").update(t).digest("hex"));
 ' | while read n h; do
   roh "insert into sessions (token_hash, user_id, expires_at) values ('$h', 'u-$n', datetime('now','+1 day')) on conflict(token_hash) do update set user_id = 'u-$n', expires_at = datetime('now','+1 day')"
 done
@@ -162,6 +162,18 @@ roh "update couples set plus_test_bis = datetime('now', '+5 days') where id = '$
 L=$(get tok-ramon betrieb)
 pruefe "Im Test zählt nicht in den Nenner" "$(echo "$L" | rech 'd.tore.testkauf.anzahl + "/" + d.tore.testkauf.von')" "1/1"
 pruefe "Je Haushalt: Test" "$(echo "$L" | rech 'd.haushalte.find(h => h.name === "Testkauf Paar").plus')" "Test"
+
+echo "== Der Haushalt für Googles Prüfung zählt nicht mit"
+VOR=$(get tok-ramon betrieb | rech '[d.zahlen.haushalte, d.zahlen.einladungen.angelegt, d.tore.testkauf.von].join(",")')
+EP=$(post tok-ramon betrieb/einladung '{"name":"Google-Prüfung"}' | rech 'd.code')
+post tok-tk5 pilot/annehmen "{\"code\":\"$EP\"}" > /dev/null
+post tok-tk5 haushalt/einrichten '{"art":"familie","erwachsene":1,"kinder":1,"raeume":["Küche"]}' > /dev/null
+roh "update couples set plus_test_bis = datetime('now', '-1 day') where id = (select couple_id from members where user_id = 'u-tk5')"
+L=$(get tok-ramon betrieb)
+pruefe "Gegründet" "$(sql "select count(*) from einladungen where name = 'Google-Prüfung' and haushalt is not null")" 1
+pruefe "Zahlen unverändert (Haushalte, Einladungen, Testkauf-Nenner)" "$(echo "$L" | rech '[d.zahlen.haushalte, d.zahlen.einladungen.angelegt, d.tore.testkauf.von].join(",")')" "$VOR"
+pruefe "Nicht unter den Haushalten" "$(echo "$L" | rech 'd.haushalte.some(h => h.name === "Google-Prüfung")')" false
+pruefe "Die Einladung steht trotzdem in der Liste" "$(echo "$L" | rech 'd.einladungen.some(e => e.name === "Google-Prüfung")')" true
 
 echo "== Haushalte von vor dem Pilot behalten Plus"
 S=$(get tok-ramon state)

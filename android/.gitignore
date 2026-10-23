@@ -1,0 +1,13 @@
+# Der Upload-Schlüssel gehört nie ins Projekt — er liegt nur beim Betreiber.
+*.jks
+*.keystore
+upload-passwort.txt
+# Gebaute Pakete und Zwischenstände
+*.aab
+*.apk
+*.idsig
+app/build/
+build/
+.gradle/
+local.properties
+manifest-checksum.txt

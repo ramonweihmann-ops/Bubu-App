@@ -1,0 +1,52 @@
+{
+  "packageId": "com.homipoint.app",
+  "host": "haus-quest.com",
+  "name": "Homi Point",
+  "launcherName": "Homi Point",
+  "display": "standalone",
+  "themeColor": "#152C4F",
+  "themeColorDark": "#152C4F",
+  "navigationColor": "#FFFFFF",
+  "navigationColorDark": "#0F1C31",
+  "navigationDividerColor": "#FFFFFF",
+  "navigationDividerColorDark": "#0F1C31",
+  "backgroundColor": "#FFFFFF",
+  "enableNotifications": true,
+  "startUrl": "/app",
+  "iconUrl": "https://haus-quest.com/icons/icon-512.png",
+  "maskableIconUrl": "https://haus-quest.com/icons/icon-maskable-512.png",
+  "monochromeIconUrl": "https://haus-quest.com/icons/badge-96.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./upload-schluessel.jks",
+    "alias": "upload"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://haus-quest.com/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://haus-quest.com/",
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [
+    {
+      "name": "play-app-signatur",
+      "value": "E6:DD:03:25:39:0D:48:D8:56:50:BE:AC:05:D7:05:40:45:B0:1D:8B:5B:70:86:04:A8:59:D2:9E:39:33:36:36"
+    },
+    {
+      "name": "upload",
+      "value": "A8:A5:14:C1:77:77:EE:93:57:E9:18:E1:69:3A:06:D2:80:B7:E1:27:64:E7:67:66:90:92:50:58:74:10:0C:85"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}
