@@ -30,7 +30,6 @@ import {
 import { fairBericht, fairSollVorschlagen, fairSollUebernehmen } from "./fair.js";
 import { plusTesten, plusNoetig, plusFuerMich, plusKaufen, plusEhrlich, plusNicht, testBeimGruenden, eventGrenze } from "./plus.js";
 import { kontoVorschau, kontoLoeschen, haushaltVerlassen } from "./konto.js";
-import { umzugsLage } from "./umzug.js";
 import { EINLADUNG, einladungPruefen, einladungAnnehmen, pilotPflicht, gruendenErlaubt, einloesen } from "./pilot.js";
 import { betrieb } from "./betrieb.js";
 import { fehlerMerken, ortOhneKennung } from "./fehler.js";
@@ -57,13 +56,15 @@ export async function handleApi(request, env, url) {
   let ich = await angemeldet(request, env);
 
   if (pfad === "health") {
+    // D1 sagt bei jeder Abfrage, aus welcher Region sie beantwortet wurde — EEUR oder WEUR heißt EU.
+    const probe = await env.DB.prepare("select 1").run().catch(() => null);
     // Zeigt nur, OB etwas hinterlegt ist — nie den Wert selbst.
     return json({
       ok: true,
       zeit: new Date().toISOString(),
       clientId: env.GOOGLE_CLIENT_ID ? env.GOOGLE_CLIENT_ID.split("-")[0] + "-…" : null,
       clientSchluesselHinterlegt: Boolean(env.GOOGLE_CLIENT_SECRET),
-      ...(await umzugsLage(env))
+      region: probe?.meta?.served_by_region ?? null
     });
   }
   // Das Gerät eines Kindes meldet sich mit einem Code an — ohne Google.

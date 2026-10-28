@@ -4,26 +4,11 @@ import { handleAuth } from "./auth.js";
 import { handleApi } from "./api.js";
 import { planNachziehen } from "./plan.js";
 import { eventsNachziehen } from "./events.js";
-import { umziehen } from "./umzug.js";
 import { fehlerMerken, fehlerAufraeumen, ortOhneKennung } from "./fehler.js";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-
-    // Solange die alte Datenbank noch daneben hängt: erst umziehen, dann antworten.
-    // /api/health stößt den Umzug selbst an und meldet, woran er scheitert.
-    if (url.pathname.startsWith("/api/") && url.pathname !== "/api/health") {
-      let fertig = false;
-      try {
-        fertig = await umziehen(env);
-      } catch (fehler) {
-        console.log(`Umzug: ${fehler.message}`);
-      }
-      if (!fertig) {
-        return Response.json({ fehler: "Homi Point zieht gerade um — bitte gleich noch einmal versuchen" }, { status: 503 });
-      }
-    }
 
     if (url.pathname.startsWith("/api/auth/")) {
       try {
@@ -56,7 +41,6 @@ export default {
 };
 
 async function alleHaushalteNachziehen(env) {
-  if (!(await umziehen(env))) return; // erst wenn der Umzug durch ist
   await fehlerAufraeumen(env).catch((e) => console.log(`Wecker: Fehler aufräumen — ${e.message}`));
   const haushalte = await env.DB.prepare(
     "select id from couples where eingerichtet = 1"
