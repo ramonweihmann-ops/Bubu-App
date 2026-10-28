@@ -276,7 +276,7 @@ function haushaltZeile(h) {
 
 function einladungZeile(e) {
   const rechts = e.status === "offen"
-    ? `<button class="minibtn" data-teilen="${esc(e.code)}">Link teilen</button><button class="minibtn" data-zurueckziehen="${esc(e.code)}">Zurückziehen</button>`
+    ? `<button class="minibtn" data-teilen="${esc(e.code)}">Einladung teilen</button><button class="minibtn" data-zurueckziehen="${esc(e.code)}">Zurückziehen</button>`
     : e.status === "angenommen" ? chip("knapp", "angenommen")
     : e.status === "eingelöst" ? chip("erreicht", "eingelöst")
     : chip("offen", e.status);
@@ -368,15 +368,26 @@ function blatt(inhalt) {
 }
 const blattZu = () => document.getElementById("blatt").removeAttribute("data-offen");
 function blattEinladung(code, name) {
-  blatt(`<h2 id="blatt-titel">Einladung für ${esc(name)}</h2><p>Schick den Link — oder sag den Code durch. Den Namen sehen die Eingeladenen nicht.</p>
+  blatt(`<h2 id="blatt-titel">Einladung für ${esc(name)}</h2><p>„Einladung teilen“ schickt eine kurze Nachricht mit dem
+    Link. Die Seite dahinter zeigt die Schritte für Android und iPhone. Den Namen sehen die Eingeladenen nicht.</p>
     <div class="ergebnis"><div class="gross">${esc(code)}</div><div class="link">${esc(einladungsLink(code))}</div></div>
-    <button class="btn rot" data-link-teilen="${esc(code)}">Link teilen</button>
-    <button class="btn rand" data-link-kopieren="${esc(code)}">Kopieren</button>
+    <button class="btn rot" data-link-teilen="${esc(code)}">Einladung teilen</button>
+    <button class="btn rand" data-link-kopieren="${esc(code)}">Nur Link kopieren</button>
     <button class="btn text" data-zu>Fertig</button>`);
 }
 
+// Kurz gehalten: Was auf Android und iPhone zu tun ist, steht auf der Seite hinter dem Link.
+// So stimmt auch eine alte Nachricht noch, wenn sich die Schritte einmal ändern.
+const einladungsText = (code) => `Hallo! 👋
+Du bist zum Pilot von Homi Point eingeladen – unserer App für den Haushalt: Wer etwas erledigt, bekommt Cleanies, sobald jemand anderes es bestätigt, und Cleanies tauscht ihr gegen Belohnungen.
+
+Öffne deinen Einladungslink auf dem Handy – dort steht, wie es auf Android und iPhone weitergeht:
+${einladungsLink(code)}
+
+Der Pilot läuft 8 Wochen und ist kostenlos. Fragen, Ideen, Fehler: einfach hier antworten. Danke, dass ihr mitmacht!`;
+
 async function teilen(code) {
-  const text = `Du bist zum Pilot von Homi Point eingeladen. Öffne den Link und melde dich an: ${einladungsLink(code)}`;
+  const text = einladungsText(code);
   if (navigator.share) { try { await navigator.share({ text }); return; } catch { /* abgebrochen — dann kopieren */ } }
   await navigator.clipboard.writeText(text);
   toast("Einladung kopiert.");

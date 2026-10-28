@@ -427,9 +427,11 @@ const PILOT = { pflicht: null, gueltig: null, fehler: "", eingabe: "" };
 
 async function pilotLaden() {
   try { PILOT.pflicht = (await api("pilot")).pflicht; } catch { PILOT.pflicht = false; }
-  const suche = new URLSearchParams(location.search);
-  const ausLink = suche.get("pilot") || suche.get("einladung");
-  if (ausLink && PILOT.pflicht) await einladungPruefen(ausLink, true);
+  // Ein Einladungslink wird immer geprüft — auch ohne Pilot: Die Seite zeigt dann die
+  // Schritte fürs Handy, und der Code eines Haushalts ist nach der Anmeldung schon drin.
+  const link = linkEinladung();
+  if (link) await einladungPruefen(link.code, true);
+  if (link && geraet() === "android") PILOT.appDa = await storeAppDa();
 }
 
 async function einladungPruefen(roh, ausLink = false) {
@@ -473,6 +475,116 @@ function einladungsTeil() {
         ${PILOT.fehler ? `<div class="pilotfehler" id="pilot-fehler" role="alert">${esc(PILOT.fehler)}</div>`
           : ohne ? "" : `<div class="pilothinweis">Homi Point ist gerade im Pilot — mit Einladung geht's los.</div>`}
       </div>`;
+}
+
+/* ------------------------------------------------------------------ Einladung per Link: Schritte je Handy */
+//
+// Eine Einladung kommt als kurzer Link — vom Dashboard (?pilot=…) oder aus einem
+// Haushalt (?einladung=…). Wer ihn antippt, sieht hier die Schritte für sein Handy:
+// auf Android erst die App aus dem Play-Store-Test, dann den Link noch einmal; auf dem
+// iPhone anmelden und Homi Point auf den Home-Bildschirm legen. Am Rechner steht ein
+// QR-Code fürs Handy. In der App selbst steht nur die Anmeldung.
+const TESTGRUPPE = "https://groups.google.com/g/homi-point-pilot";
+const PLAY_TEST = "https://play.google.com/apps/testing/com.homipoint.app";
+
+function geraet() {
+  const ua = navigator.userAgent || "";
+  if (/Android/i.test(ua)) return "android";
+  // Ein iPad meldet sich wie ein Mac — nur mit Touch.
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iphone";
+  return "rechner";
+}
+
+function linkEinladung() {
+  const s = new URLSearchParams(location.search);
+  if (s.get("pilot")) return { param: "pilot", code: s.get("pilot") };
+  if (s.get("einladung")) return { param: "einladung", code: s.get("einladung") };
+  return null;
+}
+
+const einladungsAdresse = (l) => `${location.origin}/app/?${l.param}=${encodeURIComponent(l.code)}`;
+let BROWSER_WEITER = false;
+const imBrowserWeiter = () => {
+  try { return BROWSER_WEITER || sessionStorage.getItem("hq-browser-weiter") === "1"; } catch { return BROWSER_WEITER; }
+};
+
+/** Welche Schritte die Anmeldung zeigt: keine, „android“, „iphone“ oder „rechner“ (QR-Code). */
+function einladungsWeg() {
+  if (!PILOT.gueltig?.ausLink || !linkEinladung() || alsApp()) return "";
+  const g = geraet();
+  return g === "android" && imBrowserWeiter() ? "" : g;
+}
+
+function anmeldenAndroid() {
+  const adresse = new URL(einladungsAdresse(linkEinladung()));
+  const intent = `intent://${adresse.host}${adresse.pathname}${adresse.search}#Intent;scheme=https;package=com.homipoint.app;end`;
+  app.innerHTML = `
+    <div class="mitte mit-schritten" data-schritte="android">
+      <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
+      <h1>Homi Point</h1>
+      ${einladungsTeil()}
+      ${PILOT.appDa ? `
+      <p class="schritte-lead">Homi Point ist schon auf deinem Handy.</p>
+      <a class="btn primary" href="${esc(intent)}" data-in-app>In der App öffnen</a>` : `
+      <p class="schritte-lead">Auf Android holst du dir zuerst die App:</p>
+      <ol class="schritte">
+        <li><b>Der Testgruppe beitreten</b><span>ein Tipp auf „Gruppe beitreten“</span>
+          <a class="knopf-mini" href="${TESTGRUPPE}" target="_blank" rel="noopener" data-testgruppe>Zur Gruppe</a>
+          <small data-nicht-berechtigt>Steht dort „nicht berechtigt“? Oben rechts „Anmelden“ tippen.</small></li>
+        <li><b>Tester werden und App laden</b><span>„Tester werden“, dann im Play Store installieren</span>
+          <a class="knopf-mini" href="${PLAY_TEST}" target="_blank" rel="noopener" data-play-test>Zur App</a></li>
+        <li><b>Diesen Link noch einmal antippen</b><span>dann öffnet er die App — die Einladung ist schon drin</span></li>
+      </ol>`}
+      <button class="btn text" data-browser-weiter>Lieber im Browser weiter</button>
+    </div>`;
+}
+
+function iphoneSchritte() {
+  const beitreten = PILOT.gueltig?.art === "haushalt";
+  return `
+      <p class="schritte-lead">Auf dem iPhone geht es hier im Browser:</p>
+      <ol class="schritte" data-schritte="iphone">
+        <li><b>Mit Google anmelden</b><span>${beitreten ? "und dem Haushalt beitreten" : "und euren Haushalt einrichten"}</span></li>
+        <li><b>Auf den Home-Bildschirm legen</b><span>Teilen ${icon("i-ios-teilen", 14)} → „Zum Home-Bildschirm“ —
+          die App erinnert dich</span></li>
+        <li><b>Vom Home-Bildschirm öffnen</b><span>und einmal neu anmelden</span></li>
+      </ol>`;
+}
+
+function qrKarte() {
+  const link = einladungsAdresse(linkEinladung());
+  return `
+      <div class="qrkarte" data-qr-karte>
+        <div class="kv-qr" data-qr="${esc(link)}">${QR_FERTIG.get(link) || ""}</div>
+        <div><b>Am Handy weiter</b><span>Homi Point ist fürs Handy gemacht. Scanne den Code mit der Kamera — dort
+          steht, wie es auf Android und iPhone weitergeht.</span><small>Oder gleich hier am Rechner anmelden:</small></div>
+      </div>`;
+}
+
+/** Ein QR-Code als SVG — für die Geräte der Kinder und für Einladungen am Rechner. */
+const QR_FERTIG = new Map();
+async function qrSvg(link, beschreibung) {
+  if (QR_FERTIG.has(link)) return QR_FERTIG.get(link);
+  try {
+    const { default: qrcode } = await import("./qr.js");
+    const q = qrcode(0, "M");
+    q.addData(link);
+    q.make();
+    const n = q.getModuleCount();
+    let felder = "";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      if (q.isDark(r, c)) felder += `M${c} ${r}h1v1h-1z`;
+    }
+    const svg = `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="${esc(beschreibung)}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${felder}" fill="#152c4f"/></svg>`;
+    QR_FERTIG.set(link, svg);
+    return svg;
+  } catch { return ""; }
+}
+
+async function qrFuellen() {
+  for (const el of app.querySelectorAll("[data-qr]")) {
+    if (!el.firstElementChild) el.innerHTML = await qrSvg(el.dataset.qr, "QR-Code für dein Handy");
+  }
 }
 
 /* ------------------------------------------------------------------ Als App installieren */
@@ -538,8 +650,11 @@ function anmelden() {
   // Solange unklar ist, ob der Pilot läuft, steht das Tor — sicher ist sicher.
   const tor = PILOT.pflicht !== false;
   const frei = !tor || Boolean(PILOT.gueltig);
+  // Kam ein Einladungslink, stehen die Schritte für dieses Gerät da.
+  const weg = einladungsWeg();
+  if (weg === "android") return anmeldenAndroid();
   app.innerHTML = `
-    <div class="mitte">
+    <div class="mitte ${weg ? "mit-schritten" : ""}">
       ${installBand()}
       <img class="logo" src="/logo.webp" alt="Ein Fuchs und ein Wolf">
       <h1>Homi Point</h1>
@@ -547,8 +662,10 @@ function anmelden() {
       <div class="card flat geloescht" data-geloescht><b>Dein Konto ist gelöscht.</b>
         <span>Danke, dass du dabei warst. Dein Google-Konto bleibt; die Verbindung zu Homi Point trennst du bei
           Google unter „Drittanbieter-Apps“.</span></div>` : ""}
-      <p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>
-      ${tor ? einladungsTeil() : ""}
+      ${weg ? "" : `<p>Cleanies für erledigte Aufgaben.<br>Freigegeben nur zu zweit.</p>`}
+      ${tor || linkEinladung() ? einladungsTeil() : ""}
+      ${weg === "iphone" ? iphoneSchritte() : ""}
+      ${weg === "rechner" ? qrKarte() : ""}
       ${frei
         ? `<a class="btn ghost" href="/api/auth/start" style="gap:10px" data-google>${icon("i-google", 20)}Mit Google anmelden</a>`
         : `<button class="btn ghost" disabled style="gap:10px" data-google>${icon("i-google", 20)}Mit Google anmelden</button>`}
@@ -561,6 +678,7 @@ function anmelden() {
           <a href="/impressum/" target="_blank" rel="noopener">Impressum</a></span>
       </p>
     </div>`;
+  if (weg === "rechner") qrFuellen();
 }
 
 /* ------------------------------------------------------------------ Einrichtung */
@@ -1594,6 +1712,15 @@ function hinweisZeilen() {
       <button class="los" data-installieren>${icon("i-plus", 15)}<span>Homi Point als App installieren</span>
         <span class="mehr">›</span></button>
       <button class="zu" data-hinweis-weg="installieren" aria-label="Hinweis ausblenden">×</button>
+    </div>`);
+  }
+  // Safari auf dem iPhone legt Homi Point nur von Hand auf den Home-Bildschirm.
+  if (geraet() === "iphone" && !alsApp() && !hinweisWeg("homescreen")) {
+    z.push(`
+    <div class="zuletzt hinweis" data-homescreen>
+      <div class="los">${icon("i-ios-teilen", 15)}<span><b>Homi Point auf den Home-Bildschirm:</b> unten auf Teilen
+        tippen, dann „Zum Home-Bildschirm“.</span></div>
+      <button class="zu" data-hinweis-weg="homescreen" aria-label="Hinweis ausblenden">×</button>
     </div>`);
   }
   if (pushOffen() && !hinweisWeg("push")) {
@@ -4625,19 +4752,8 @@ function kindFormLesen() {
  *  direkt in die App; dort meldet sich das Gerät von selbst an. */
 async function sheetKindCode(k, code) {
   const link = `${location.origin}/app/?kind=${code.replace("-", "")}`;
-  let qr = "";
-  try {
-    const { default: qrcode } = await import("./qr.js");
-    const q = qrcode(0, "M");
-    q.addData(link);
-    q.make();
-    const n = q.getModuleCount();
-    let felder = "";
-    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
-      if (q.isDark(r, c)) felder += `M${c} ${r}h1v1h-1z`;
-    }
-    qr = `<svg viewBox="-2 -2 ${n + 4} ${n + 4}" role="img" aria-label="QR-Code zum Anmelden"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${felder}" fill="#152c4f"/></svg>`;
-  } catch { /* dann eben nur zum Abtippen */ }
+  // Ohne QR-Code (Datei nicht geladen) bleibt der Code zum Abtippen.
+  const qr = await qrSvg(link, "QR-Code zum Anmelden");
   sheet(`
     <div class="grabber"></div>
     <h3>${esc(vorname(k.name))}s Gerät anmelden</h3>
@@ -5847,9 +5963,13 @@ document.addEventListener("click", async (ev) => {
     }
 
     if (el.hasAttribute("data-teilen")) {
-      const text = `Mein Homi-Point-Code: ${S.code}\nApp: https://haus-quest.com`;
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); toast("Code kopiert."); }
+      // Kurz: Die Seite hinter dem Link zeigt die Schritte für Android und iPhone.
+      const text = "Komm in unseren Haushalt bei Homi Point! 🏠\n"
+        + "Tippe auf den Link – dort steht, wie es auf deinem Handy weitergeht. Der Code ist schon drin:\n"
+        + `${location.origin}/app/?einladung=${S.code}\n\nGilt 24 Stunden.`;
+      if (navigator.share) {
+        try { await navigator.share({ text }); } catch (f) { if (f?.name !== "AbortError") throw f; }
+      } else { await navigator.clipboard.writeText(text); toast("Einladung kopiert."); }
       return;
     }
 
@@ -6878,7 +6998,7 @@ async function plusKlick(el) {
 // sofort und endgültig — dafür tippt man „löschen“ ein.
 
 const KONTO_KLICKS = "[data-konto-loeschen],[data-konto-weiter],[data-konto-endgueltig],[data-haushalt-verlassen],[data-verlassen-ok]";
-const PILOT_KLICKS = "[data-pilot-pruefen],[data-pilot-anders]";
+const PILOT_KLICKS = "[data-pilot-pruefen],[data-pilot-anders],[data-browser-weiter]";
 
 async function pilotKlick(el) {
   if (!el.matches(PILOT_KLICKS)) return false;
@@ -6888,6 +7008,13 @@ async function pilotKlick(el) {
     anmelden();
     if (PILOT.gueltig) app.querySelector("[data-google]")?.focus();
     else document.getElementById("pilot-code")?.focus();
+    return true;
+  }
+  if (el.hasAttribute("data-browser-weiter")) {
+    // Nur für diesen Tab: Kommt der Link später noch einmal, stehen die Schritte wieder da.
+    try { sessionStorage.setItem("hq-browser-weiter", "1"); } catch { /* dann gilt es bis zum Neuladen */ }
+    BROWSER_WEITER = true;
+    anmelden();
     return true;
   }
   if (el.hasAttribute("data-pilot-anders")) {
@@ -7141,6 +7268,11 @@ window.addEventListener("popstate", () => {
 waechterSetzen();
 // Ein QR-Code vom Handy der Eltern bringt den Code für das Gerät eines Kindes mit.
 const kindLink = new URLSearchParams(location.search).get("kind");
+// Ein Haushalt lädt mit ?einladung=123456 ein: Der Code gilt nach der Anmeldung — auch ohne Pilot.
+const haushaltAusLink = new URLSearchParams(location.search).get("einladung") || "";
+if (/^\d{6}$/.test(haushaltAusLink.replace(/\s/g, ""))) {
+  try { localStorage.setItem("hq-haushaltscode", haushaltAusLink.replace(/\s/g, "")); } catch { /* dann von Hand */ }
+}
 // Von der Löschseite auf haus-quest.com: den Wunsch über die Google-Anmeldung hinweg merken.
 if (new URLSearchParams(location.search).has("konto-loeschen")) {
   try { localStorage.setItem("hq-loeschen", "1"); } catch { /* dann eben über die Einstellungen */ }

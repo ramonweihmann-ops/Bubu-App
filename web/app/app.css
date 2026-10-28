@@ -789,7 +789,8 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .zuletzt b { color: var(--ink); }
 .zuletzt > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zuletzt .mehr { margin-left: auto; color: var(--ruhig); font-weight: 600; white-space: nowrap; flex: none; }
-.zuletzt.hinweis { padding: 0; cursor: default; }
+/* Ohne eigene Fläche: Die allgemeine .hinweis-Karte (gelb) gilt hier nicht. */
+.zuletzt.hinweis { padding: 0; cursor: default; background: none; border-radius: 0; }
 .zuletzt.hinweis .los {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font: inherit; font-size: 12px; color: var(--ink-2);
   background: var(--tint); border: none; border-radius: 12px; padding: 8px 10px; cursor: pointer; text-align: left;
@@ -1351,7 +1352,7 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
 .linkknopf { background: none; border: 0; padding: 0; color: var(--ink-2); text-decoration: underline; font: inherit; font-family: var(--font-ui); cursor: pointer; }
 .pilotinfo { width: min(340px, 100%); text-align: left; gap: 4px; font-size: 13px; color: var(--ink-2); margin: 0 0 12px; }
 .pilotinfo b { color: var(--ink); font-size: 14px; }
-.mitte a.btn.text { text-decoration: none; }
+.mitte a.btn { text-decoration: none; }
 
 /* Die Rechtstexte: klein unter Anmeldung und Einstellungen. */
 .rechtslinks { display: block; font-size: 12px; color: var(--ink-3); text-align: center; margin: 4px 0 0; }
@@ -1436,3 +1437,45 @@ details.tabelle summary { font-size: 12.5px; color: var(--ink-2); cursor: pointe
   font-weight: 700; font-size: 12.5px; padding: 7px 12px; cursor: pointer;
 }
 .installband .zu { flex: none; border: 0; background: none; color: inherit; opacity: .7; font: inherit; font-size: 17px; padding: 4px 8px; cursor: pointer; }
+
+/* ---------- Einladung per Link: Schritte je Handy ---------- */
+/* Android: erst die App, dann den Link noch einmal. iPhone: anmelden, dann auf den
+   Home-Bildschirm. Am Rechner: ein QR-Code fürs Handy. */
+.mitte.mit-schritten img.logo { width: min(132px, 38vw); }
+.mitte.mit-schritten h1 { font-size: 28px; margin: 6px 0 16px; }
+.mitte p.schritte-lead {
+  width: min(340px, 100%); max-width: none; margin: 2px 0 8px; text-align: left; font-size: 13.5px; font-weight: 600; color: var(--ink);
+}
+.schritte {
+  list-style: none; margin: 0 0 16px; padding: 0; width: min(340px, 100%); display: flex; flex-direction: column; gap: 8px;
+  counter-reset: schritt; text-align: left;
+}
+.schritte li {
+  counter-increment: schritt; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 2px 10px; align-items: start;
+  border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 12.5px; line-height: 1.4; color: var(--ink-2);
+}
+.schritte li::before {
+  content: counter(schritt); grid-row: 1 / span 3; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--kontrast-bg); color: var(--kontrast-ink); display: grid; place-items: center; font-weight: 800; font-size: 12px;
+}
+.schritte li > * { grid-column: 2; }
+.schritte li b { color: var(--ink); font-size: 14px; }
+/* Ohne Google-Anmeldung zeigt die Gruppe nur „nicht berechtigt“ — dafür die kleine Zeile unter dem Knopf. */
+.schritte li small { font-size: 11.5px; line-height: 1.35; color: var(--ink-3); margin-top: 6px; }
+.schritte li svg { vertical-align: -2px; color: var(--ruhig); }
+.knopf-mini {
+  justify-self: start; white-space: nowrap; margin-top: 6px; border-radius: 99px; padding: 6px 13px;
+  background: var(--akzent-flaeche); color: #fff; font-weight: 700; font-size: 12.5px; text-decoration: none;
+}
+.mitte a.btn.primary { margin-bottom: 4px; }
+.qrkarte {
+  width: min(340px, 100%); display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px; align-items: center;
+  text-align: left; border: 1.5px solid var(--line); border-radius: 16px; padding: 12px; margin: 0 0 14px;
+}
+.qrkarte .kv-qr { width: 116px; aspect-ratio: 1; border-radius: 10px; }
+.qrkarte b { display: block; font-size: 14.5px; color: var(--ink); }
+.qrkarte span { display: block; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); margin-top: 3px; }
+.qrkarte small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+/* Der Hinweis zum Home-Bildschirm ist nur Text — nichts zum Antippen außer dem ×. */
+.zuletzt.hinweis div.los { cursor: default; line-height: 1.4; }
+.zuletzt.hinweis div.los svg { color: var(--ruhig); }
