@@ -13,6 +13,7 @@
 
 import { pilotPflicht, pilotSetzen, einladungAnlegen, einladungZurueckziehen } from "./pilot.js";
 import { PLAENE, GRUENDE } from "./plus.js";
+import { sichern, sicherungsStand } from "./sicherung.js";
 
 const PLAN_NAMEN = Object.fromEntries(Object.entries(PLAENE).map(([k, p]) => [k, p.name]));
 
@@ -52,6 +53,11 @@ export async function betrieb(env, ich, methode, teile, daten) {
     return { ok: true };
   }
   if (was === "pilot") return pilotSetzen(env, daten.pflicht !== false);
+  // „Jetzt sichern“. Eine alte Sicherung vortäuschen (probeZeit) geht nur im Testserver.
+  if (was === "sicherung") {
+    const zeit = env.HQ_TEST === "1" && daten.probeZeit ? new Date(daten.probeZeit) : new Date();
+    return sichern(env, { zeit });
+  }
   throw new Fehler("Unbekannter Endpunkt", 404);
 }
 
@@ -167,6 +173,7 @@ async function lage(env) {
   return {
     stand: jetzt.toISOString(),
     pflicht,
+    sicherung: await sicherungsStand(env),
     pilot: start ? { start: start.toISOString(), tag: pilotTag, woche: Math.floor(pilotTag / 7) + 1, wochen: PILOT_WOCHEN,
                      ende: new Date(+start + PILOT_WOCHEN * 7 * TAG).toISOString() } : null,
     tore: {

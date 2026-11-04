@@ -239,6 +239,33 @@ gelöscht, innerhalb der 30 Tage, nach denen laut Datenschutzerklärung Sicherun
 
 `/api/health` zeigt, aus welcher Region die Datenbank antwortet (`region`, etwa `EEUR` oder `WEUR`).
 
+## Sicherung
+
+Einmal pro Woche sichert der Worker die ganze Datenbank als SQL-Datei in den R2-Speicher `homi-point-sicherung`,
+der wie die Datenbank auf die EU festgelegt ist (`worker/sicherung.js`). Der tägliche Wecker (6 Uhr UTC) sichert,
+sobald die letzte Sicherung älter als 6½ Tage ist — klappt es nicht, am nächsten Morgen wieder. Jeden Morgen löscht
+er Kopien, die älter als 28 Tage sind; die Datenschutzerklärung verspricht „spätestens nach 30 Tagen“. Den Export
+macht Cloudflare über seine Schnittstelle (`/d1/database/{id}/export`); dafür liegt ein API-Token mit dem Recht
+„D1 bearbeiten“ als Geheimnis `D1_SICHERUNG_TOKEN` beim Worker. Während des Exports beantwortet die Datenbank
+kurz keine Abfragen. Im Betriebs-Dashboard steht die Karte „Sicherung“: wann zuletzt, wie groß, wie viele Kopien,
+ob der letzte Versuch scheiterte (dann auch in der Fehlerliste) — und „Jetzt sichern“. Kostenlos: R2 schenkt 10 GB
+im Monat; eine Kopie hat ein paar MB.
+
+**Einrichten (einmal, vor dem Ausrollen):** In Cloudflare R2 aktivieren und den Speicher `homi-point-sicherung` mit
+der Standort-Festlegung „European Union (EU)“ anlegen. Unter „My Profile → API Tokens“ ein eigenes Token mit
+„Account · D1 · Edit“ für dieses Konto erstellen und beim Worker `bubu-app` als Geheimnis `D1_SICHERUNG_TOKEN`
+hinterlegen. Fehlt der Speicher, scheitert das Ausrollen; fehlt das Token, meldet das Dashboard es.
+
+**Zurückholen:** Für einen Stand der letzten 7 Tage ist Cloudflares Time Travel einfacher
+(`wrangler d1 time-travel restore haus-quest --timestamp=…`). Für ältere: die Datei in Cloudflare unter
+R2 → `homi-point-sicherung` → `sicherung/` herunterladen, eine leere Datenbank in der EU anlegen
+(`wrangler d1 create homi-point-2 --jurisdiction eu`), die Datei einspielen
+(`wrangler d1 execute homi-point-2 --remote --file=<datei>.sql`) und `database_id` sowie `DB_ID` in
+`wrangler.toml` auf die neue Datenbank umstellen.
+
+Getestet wird das mit einer nachgebauten Cloudflare-Schnittstelle (`tests/sicherung.mjs`, Port 8799); der
+Testserver bekommt dafür `SICHERUNG_API` und ein Probe-Token.
+
 ## Aufbau
 
 ```

@@ -106,8 +106,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .minibtn.voll{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
 .minibtn[disabled]{opacity:.5}
 .kopf-mit-knopf{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kopf-mit-knopf .minibtn{flex:none;white-space:nowrap}
 .fehler-zeile .name{white-space:normal;font-family:var(--font-data);font-size:12.5px;font-weight:600;word-break:break-word}
 .schiene{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.stapel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sicherung-info{font-size:12.5px;color:var(--ink-2);margin:10px 0 0;font-variant-numeric:tabular-nums}
+.sicherung-fehler{font-size:12.5px;color:var(--accent);margin:8px 0 0;overflow-wrap:anywhere}
 .drei{grid-template-columns:repeat(3,1fr);margin-top:12px}
 @media (max-width:760px){.drei{grid-template-columns:1fr}}
 .balkenzeile{display:grid;grid-template-columns:minmax(0,9.5em) 1fr 2.2em;gap:8px;align-items:center;font-size:13px;margin:7px 0}
@@ -335,13 +339,37 @@ function zeichnen() {
     <div class="raster paar">
       <div class="karte"><h2>Fehler</h2><p class="unter">Letzte 30 Tage · kritisch: Server-Fehler oder bei mehr als einer Person</p>
         ${L.fehler.length ? `<div class="liste">${L.fehler.map(fehlerZeile).join("")}</div>` : `<p class="leer">Keine. So soll es sein.</p>`}</div>
+      <div class="stapel">
       <div class="karte"><h2>Pilot</h2><p class="unter">Gilt sofort für alle neuen Besucher</p>
         <div class="schiene"><div><b style="font-size:14px">Nur mit Einladung</b><br><span style="font-size:12.5px;color:var(--ink-3)">${L.pflicht
           ? "Neue Konten brauchen eine Einladung oder den Code eines Haushalts." : "Jeder kann sich anmelden und einen Haushalt gründen."}</span></div>
           <button class="kippschalter" role="switch" aria-checked="${L.pflicht}" aria-label="Nur mit Einladung" data-pflicht></button></div>
         <p class="unter" style="margin:14px 0 0">Nach dem Pilot ausschalten — dann sieht die Anmeldung wieder aus wie vorher.</p></div>
+      ${sicherungKarte()}
+      </div>
     </div>`;
 }
+
+// Die wöchentliche Sicherung: wann zuletzt, wie groß, wie viele Kopien — und ob sie hakt.
+function sicherungKarte() {
+  const s = L.sicherung;
+  const alter = s?.am ? (Date.parse(L.stand) - Date.parse(s.am)) / 864e5 : null;
+  const fehlerNeuer = Boolean(s?.fehler) && (!s.am || Date.parse(s.fehlerAm) > Date.parse(s.am));
+  const lage = !s?.am && !s?.fehler ? chip("offen", "Noch keine Sicherung — die erste kommt mit dem nächsten Morgen")
+    : fehlerNeuer ? chip("verfehlt", "Der letzte Versuch ist fehlgeschlagen")
+    : alter > 8 ? chip("knapp", `Die letzte Sicherung ist ${Math.floor(alter)} Tage alt`)
+    : chip("erreicht", "Gesichert");
+  return `<div class="karte" data-sicherung><div class="kopf-mit-knopf"><div><h2>Sicherung</h2>
+      <p class="unter">Einmal pro Woche die ganze Datenbank, in der EU · jede Kopie bleibt 28 Tage</p></div>
+      <button class="minibtn" data-sichern>Jetzt sichern</button></div>
+    <div data-sicherung-lage>${lage}</div>
+    ${s?.am ? `<p class="sicherung-info" data-sicherung-info>Zuletzt ${wann(s.am)} · ${groesse(s.groesse)} ·
+      ${s.kopien ?? "?"} ${s.kopien === 1 ? "Kopie" : "Kopien"}</p>` : ""}
+    ${fehlerNeuer ? `<p class="sicherung-fehler" data-sicherung-fehler>${wann(s.fehlerAm)}: ${esc(s.fehler)}</p>` : ""}
+  </div>`;
+}
+const wann = (iso) => new Date(iso).toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+const groesse = (b) => b >= 1e6 ? `${(b / 1e6).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round((b || 0) / 1e3))} KB`;
 
 function schirm(titel, text, knopf = "") {
   haupt.innerHTML = `<div class="mitte"><span class="marke">Betrieb · Homi Point</span><h1>${titel}</h1><p>${text}</p>${knopf}</div>`;
@@ -424,6 +452,13 @@ document.addEventListener("click", async (ev) => {
       return toast("Zurückgezogen.");
     }
     if (d.erledigt) { await api(`betrieb/fehler/${encodeURIComponent(d.erledigt)}/erledigt`, {}); await laden(); return toast("Als erledigt markiert."); }
+    if ("sichern" in d) {
+      el.disabled = true;
+      el.textContent = "Sichert …";
+      const s = await api("betrieb/sicherung", {});
+      await laden();
+      return toast(s.ok ? "Gesichert." : `Sicherung fehlgeschlagen: ${s.fehler}`, !s.ok);
+    }
     if ("pflicht" in d) {
       const an = !L.pflicht;
       if (!an && !confirm("Ohne Einladung kann sich dann jeder anmelden und einen Haushalt gründen. Ausschalten?")) return;

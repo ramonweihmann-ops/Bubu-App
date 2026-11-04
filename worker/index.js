@@ -5,6 +5,7 @@ import { handleApi } from "./api.js";
 import { planNachziehen } from "./plan.js";
 import { eventsNachziehen } from "./events.js";
 import { fehlerMerken, fehlerAufraeumen, ortOhneKennung } from "./fehler.js";
+import { sicherungNachziehen } from "./sicherung.js";
 
 export default {
   async fetch(request, env) {
@@ -34,9 +35,13 @@ export default {
    * weil jeder Schritt am Fälligkeitsdatum festhält, dass er gelaufen ist. Der
    * Wecker sorgt nur dafür, dass es auch dann passiert, wenn tagelang niemand
    * die App öffnet.
+   *
+   * Danach die wöchentliche Sicherung (worker/sicherung.js) — erst danach, weil die
+   * Datenbank während des Exports kurz keine Abfragen beantwortet.
    */
   async scheduled(ereignis, env, ctx) {
-    ctx.waitUntil(alleHaushalteNachziehen(env));
+    ctx.waitUntil(alleHaushalteNachziehen(env).finally(() =>
+      sicherungNachziehen(env).catch((e) => console.log(`Wecker: Sicherung — ${e.message}`))));
   }
 };
 

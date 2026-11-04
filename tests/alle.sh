@@ -7,11 +7,14 @@
 # In falscher Reihenfolge scheitern sie an Altlasten, nicht an der App.
 #
 # Vorher muss der Testserver laufen — mit den beiden Testschaltern:
-#   npx wrangler dev --local --port 8792 --var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com
+#   npx wrangler dev --local --port 8792 --test-scheduled --var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com \
+#     --var SICHERUNG_API:http://127.0.0.1:8799/client/v4 --var D1_SICHERUNG_TOKEN:probe-token
 # HQ_TEST erlaubt die Probe-Anmeldung ohne Google (nur auf 127.0.0.1), BETRIEB_EMAILS
-# lässt das Testkonto „ramon@example.com“ ins Betriebs-Dashboard.
+# lässt das Testkonto „ramon@example.com“ ins Betriebs-Dashboard. Die Sicherung spricht im Test mit
+# einer nachgebauten Cloudflare-Schnittstelle (tests/sicherung.mjs startet sie); --test-scheduled
+# erlaubt, den Wecker über /__scheduled auszulösen.
 set -u
-HQ_VARS="--var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com"
+HQ_VARS="--test-scheduled --var HQ_TEST:1 --var BETRIEB_EMAILS:ramon@example.com --var SICHERUNG_API:http://127.0.0.1:8799/client/v4 --var D1_SICHERUNG_TOKEN:probe-token"
 cd "$(dirname "$0")"
 APP=$(cd .. && pwd)
 HIER=$PWD
@@ -85,7 +88,7 @@ lauf "testkauf-api.sh" bash testkauf-api.sh
 
 echo
 echo "═════ Oberfläche"
-for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto ui-pilot ui-testkauf ui-android ui-einladung recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto mockup-pilot mockup-testkauf mockup-android mockup-einladung ui-stand; do
+for t in ui ui-scroll ui-plan ui-questplan ui-rueck ui-wieder ui-offen ui-abst ui-storno ui-urlaub ui-gutschrift ui-ruecktritt ui-jubel ui-event ui-start ui-bilder ui-familie ui-fair ui-startbild ui-konto ui-pilot ui-testkauf ui-android ui-einladung sicherung recht cleanie-shot mockup-anim mockup-events mockup-klang mockup-start mockup-icons mockup-familie mockup-fair mockup-startbild mockup-konto mockup-pilot mockup-testkauf mockup-android mockup-einladung ui-stand; do
   lauf "$t.mjs" node "$t.mjs"
 done
 

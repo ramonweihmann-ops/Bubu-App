@@ -23,6 +23,14 @@ database_name = "haus-quest"
 database_id = "6d3cf5e4-f2c8-4d32-a008-e93a3a1b283f"
 migrations_dir = "d1/migrations"
 
+# Die wöchentliche Sicherung (worker/sicherung.js): ein R2-Speicher, auf die EU
+# festgelegt wie die Datenbank — in Cloudflare „homi-point-sicherung“. Er muss in
+# Cloudflare angelegt sein, bevor dieser Block ausgerollt wird.
+[[r2_buckets]]
+binding = "SICHERUNG"
+bucket_name = "homi-point-sicherung"
+jurisdiction = "eu"
+
 # Der Wecker für den Haushaltsplan: jeden Morgen um 6 Uhr UTC, also 7 bzw. 8 Uhr
 # bei uns. Er zieht Vergabe, Mahnungen und Gruppenstrafe nach, damit das nicht
 # davon abhängt, dass gerade jemand die App öffnet.
@@ -31,9 +39,13 @@ crons = ["0 6 * * *"]
 
 [vars]
 BASIS_URL = "https://haus-quest.com"
+# Für den Export bei der Sicherung: Konto und Datenbank wie oben (account_id, database_id).
+CF_KONTO = "c96097fc58419e9dc3df6cc67d7aaa9c"
+DB_ID = "6d3cf5e4-f2c8-4d32-a008-e93a3a1b283f"
 GOOGLE_CLIENT_ID = "600393178714-ds40oku8g1qskci4vsngrihre3ps0hal.apps.googleusercontent.com"
 
 # Geheimnisse werden nie hier abgelegt, sondern gesetzt mit:
 #   wrangler secret put GOOGLE_CLIENT_SECRET
 #   wrangler secret put SESSION_SECRET
 #   wrangler secret put VAPID_PRIVATE_KEY
+#   wrangler secret put D1_SICHERUNG_TOKEN   (API-Token mit „D1 bearbeiten“, für die Sicherung)
