@@ -81,6 +81,8 @@ await s.waitForSelector("[data-eweiter]");
 await s.click("[data-eweiter]");
 await s.waitForSelector("text=Schön, dass du da bist");
 pruefe("Darf gründen: „Los geht's“", await s.locator("button[data-eweiter]").innerText(), "Los geht's");
+pruefe("Beitreten heißt nicht „eingeladen“", await s.locator("button[data-ecode]").innerText(), "Ich will einem bestehenden Haushalt beitreten");
+await s.screenshot({ path: `${AUS}/up-begruessung-gruenden.png` });
 await s.context().close();
 
 console.log("== Ohne Einladung angemeldet: nichts gespeichert, freundlich erklärt");

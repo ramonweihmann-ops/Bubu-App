@@ -74,6 +74,18 @@ for (let tag = 1; tag <= 150; tag++) {
     }
   }
 }
+// Dazu ein paar von eben: Der Verlauf beginnt gestern, und am Monatsanfang hätte der laufende
+// Monat sonst kaum etwas — dann gäbe es keine Waage. Minuten statt Stunden, damit nichts in
+// den Vortag (und damit womöglich in den Vormonat) rutscht.
+for (let i = 0; i < 16; i++) {
+  const wer = i < 10 ? "u-wa" : "u-wb";
+  const anderer = wer === "u-wa" ? "u-wb" : "u-wa";
+  const q = quests[i % quests.length];
+  const zeit = `datetime('now', '-${i + 1} minutes')`;
+  n++;
+  zeilen.push(`insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, status, decided_by, decided_at, created_at) values ('seed-fair-${n}', ${PAAR}, '${q.id}', '${wer}', 1, ${q.points}, 'bestaetigt', '${anderer}', ${zeit}, ${zeit});`);
+  zeilen.push(`insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id, created_at) values ('seed-fair-l${n}', ${PAAR}, '${wer}', ${q.points}, '${q.name.replace(/'/g, "''")}', 'claim', 'seed-fair-${n}', ${zeit});`);
+}
 writeFileSync(`${AUS}/fair-saat.sql`, zeilen.join("\n"));
 sqlDatei(`${AUS}/fair-saat.sql`);
 const monat = await api("tok-wa", `fair?zeitraum=monat&versatz=${120}`);

@@ -547,7 +547,7 @@ function iphoneSchritte() {
         <li><b>Mit Google anmelden</b><span>${beitreten ? "und dem Haushalt beitreten" : "und euren Haushalt einrichten"}</span></li>
         <li><b>Auf den Home-Bildschirm legen</b><span>Teilen ${icon("i-ios-teilen", 14)} → „Zum Home-Bildschirm“ —
           die App erinnert dich</span></li>
-        <li><b>Vom Home-Bildschirm öffnen</b><span>und einmal neu anmelden</span></li>
+        <li><b>Vom Home-Bildschirm öffnen</b><span>und über „Ich bin schon dabei — anmelden“ neu anmelden</span></li>
       </ol>`;
 }
 
@@ -779,7 +779,7 @@ function eBegruessung() {
     gruenden
       ? `<button class="btn primary block" data-eweiter>Los geht's</button>
          <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
-         <button class="btn text block" data-ecode>Ich wurde eingeladen — Code eingeben</button>
+         <button class="btn text block" data-ecode>Ich will einem bestehenden Haushalt beitreten</button>
          ${eCleanies()}`
       : `<button class="btn primary block" data-ecode>${haushaltscode ? "Beitreten" : "Code eingeben"}</button>
          <button class="btn text block" data-ezurueck>Name doch noch ändern</button>
@@ -6635,8 +6635,10 @@ function rueckblickZeichnen() {
 }
 
 async function rueckblickOeffnen() {
-  rueckblick.daten = rueckblick.vorschau
-    || await api(`fair?zeitraum=monat&zurueck=1&versatz=${fairVersatz()}`);
+  // Immer frisch: Die Vorschau stammt vom Öffnen der Startseite — seitdem kann sich etwa
+  // „fair heißt“ geändert haben. Nur ohne Netz bleibt es bei der Vorschau.
+  rueckblick.daten = await api(`fair?zeitraum=monat&zurueck=1&versatz=${fairVersatz()}`)
+    .catch((f) => { if (rueckblick.vorschau) return rueckblick.vorschau; throw f; });
   rueckblick.karte = 0;
   rueckblickMerken();
   rueckblickZeichnen();

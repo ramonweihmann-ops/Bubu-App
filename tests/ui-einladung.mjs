@@ -137,7 +137,7 @@ pruefe("Drei Schritte", await s.locator(".schritte li").count(), 3);
 pruefe("1. anmelden und einrichten", await text(s, ".schritte li:nth-child(1)"), "Mit Google anmelden und euren Haushalt einrichten");
 pruefe("2. Teilen → Zum Home-Bildschirm", (await text(s, ".schritte li:nth-child(2)")).includes("„Zum Home-Bildschirm“"), true);
 pruefe("… mit dem Teilen-Zeichen", await s.locator(".schritte li:nth-child(2) svg").count(), 1);
-pruefe("3. dort neu anmelden", await text(s, ".schritte li:nth-child(3)"), "Vom Home-Bildschirm öffnen und einmal neu anmelden");
+pruefe("3. dort neu anmelden — mit dem Knopf, den man dort sieht", await text(s, ".schritte li:nth-child(3)"), "Vom Home-Bildschirm öffnen und über „Ich bin schon dabei — anmelden“ neu anmelden");
 pruefe("Google-Anmeldung unter den Schritten", await s.locator("a[data-google]").getAttribute("href"), "/api/auth/start");
 pruefe("… gleich darunter", await s.evaluate(() =>
   document.querySelector("[data-google]").getBoundingClientRect().top > document.querySelector(".schritte").getBoundingClientRect().bottom), true);
