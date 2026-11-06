@@ -285,7 +285,7 @@ function einladungZeile(e) {
     : e.status === "eingelöst" ? chip("erreicht", "eingelöst")
     : chip("offen", e.status);
   return `<div class="zeile"><span class="name">${esc(e.name)}</span>
-    <span class="info"><span class="code">${esc(e.code)}</span> · ${e.status === "angenommen" ? "angenommen, noch nicht gegründet" : e.status} ${vor(e.wann)}</span><span class="rechts">${rechts}</span></div>`;
+    <span class="info"><span class="code">${esc(e.code)}</span> · ${e.status === "angenommen" ? "angenommen, noch nicht gegründet" : e.status} ${vor(e.wann)}${e.zaehlt === false ? " · zählt nicht mit" : ""}</span><span class="rechts">${rechts}</span></div>`;
 }
 
 function fehlerZeile(f) {

@@ -19,10 +19,14 @@ const PLAN_NAMEN = Object.fromEntries(Object.entries(PLAENE).map(([k, p]) => [k,
 
 const TAG = 24 * 3600e3;
 
-// Der Haushalt, mit dem Googles Prüfer die Android-App testen, kommt über eine Einladung
-// „Google-Prüfung“ — er zählt in keiner Zahl mit. Die Einladung steht trotzdem in der Liste.
-const OHNE_PRUEFUNG = "name not like 'google-pr%fung%'";
-const istPruefung = (name) => /^google-pr(ü|ue|u)fung/i.test(String(name || "").trim());
+// Zwei Arten Einladungen zählen in keiner Zahl mit, stehen aber in der Liste:
+// „Google-Prüfung“ — der Haushalt, mit dem Googles Prüfer die Android-App testen —
+// und alles, was mit dem Wort „Test“ beginnt („Test“, „Test Abend“, „Test-2“), für
+// eigene Durchläufe. „Testkauf …“ oder „Familie Testa“ zählen weiter.
+const ZAEHLT = `coalesce(name, '') not like 'google-pr%fung%'
+  and coalesce(name, '') not like 'test' and coalesce(name, '') not like 'test %'
+  and coalesce(name, '') not like 'test-%' and coalesce(name, '') not like 'test:%'`;
+const zaehltNicht = (name) => /^(google-pr(ü|ue|u)fung|test(?:$|[\s\-:]))/i.test(String(name || "").trim());
 const PILOT_WOCHEN = 8;
 
 class Fehler extends Error {
@@ -79,14 +83,14 @@ async function lage(env) {
     ).all(),
     env.DB.prepare(
       `select m.couple_id as haushalt, count(*) as personen, sum(case when m.erwachsen = 0 then 1 else 0 end) as kinder
-         from members m where m.couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})
+         from members m where m.couple_id in (select haushalt from einladungen where haushalt is not null and ${ZAEHLT})
         group by m.couple_id`
     ).all(),
     // Bestätigte Quests je Haushalt und Tag — daraus „aktiv“, „zuletzt“ und die Wochen.
     env.DB.prepare(
       `select couple_id as haushalt, date(decided_at) as tag, count(*) as n
          from claims where status = 'bestaetigt' and decided_at is not null
-          and couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})
+          and couple_id in (select haushalt from einladungen where haushalt is not null and ${ZAEHLT})
         group by couple_id, date(decided_at)`
     ).all(),
     env.DB.prepare(
@@ -102,15 +106,15 @@ async function lage(env) {
     // Der Testkauf: wie Plus je Pilot-Haushalt steht, wer gekauft hat und warum nicht.
     env.DB.prepare(
       `select id as haushalt, plus, plus_test_bis, coalesce(plus_test_bis <= datetime('now'), 0) as vorbei
-         from couples where id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
+         from couples where id in (select haushalt from einladungen where haushalt is not null and ${ZAEHLT})`
     ).all(),
     env.DB.prepare(
       `select couple_id as haushalt, plan, ehrlich from testkaeufe
-        where couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
+        where couple_id in (select haushalt from einladungen where haushalt is not null and ${ZAEHLT})`
     ).all(),
     env.DB.prepare(
       `select gruende from plus_absagen
-        where couple_id in (select haushalt from einladungen where haushalt is not null and ${OHNE_PRUEFUNG})`
+        where couple_id in (select haushalt from einladungen where haushalt is not null and ${ZAEHLT})`
     ).all()
   ]);
   const plusJe = new Map(plusRoh.results.map((p) => [p.haushalt, p]));
@@ -124,7 +128,7 @@ async function lage(env) {
   }
   const aktivZwischen = (haushalt, von, bis) => (aktivTage.get(haushalt) || []).some((d) => d >= von && d < bis);
 
-  const gezaehlt = einladungen.results.filter((e) => !istPruefung(e.name));
+  const gezaehlt = einladungen.results.filter((e) => !zaehltNicht(e.name));
   const haushalte = gezaehlt
     .filter((e) => e.haushalt && e.gegruendet_am)
     .map((e) => {
@@ -209,7 +213,7 @@ async function lage(env) {
       .sort((a, b) => (b.still ?? 999) - (a.still ?? 999) || a.name.localeCompare(b.name, "de"))
       .map(({ id, start, testkaufZaehlt, gekauft, ...rest }) => rest),
     einladungen: einladungen.results.map((e) => ({
-      code: e.code, name: e.name, angelegt: e.angelegt_am,
+      code: e.code, name: e.name, angelegt: e.angelegt_am, zaehlt: !zaehltNicht(e.name),
       status: e.gegruendet_am ? (e.haushalt ? "eingelöst" : "Haushalt gelöscht") : e.zurueckgezogen_am ? "zurückgezogen"
         : e.angenommen_am ? "angenommen" : "offen",
       wann: e.gegruendet_am || e.zurueckgezogen_am || e.angenommen_am || e.angelegt_am
