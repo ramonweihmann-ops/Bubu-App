@@ -3,6 +3,7 @@
 // Sie steht weiter in der Quest-Liste, sie lässt sich dort melden, und weder
 // die Sperre noch eine fremde Runde halten auf — beides verlangt nur eine
 // Begründung. Der Plan plant sie zusätzlich ein; gehören tut sie ihm nicht.
+// Eine Runde zählt aber einmal: Wartet schon eine Meldung, geht keine zweite.
 import { chromium } from "playwright";
 import { execSync } from "node:child_process";
 const AUS = process.env.HQ_BILDER || "/tmp";
@@ -106,38 +107,42 @@ const wieder = await zurQuest(a);
 enthaelt("In der Liste steht, dass eine wartet", await wieder.innerText(), "gemeldet");
 pruefe("Aber sie bleibt anwählbar", await wieder.isDisabled(), false);
 
-console.log("== Und noch einmal melden geht, ohne dass jemand freigegeben hat");
+console.log("== Noch einmal melden geht nicht: eine Runde zählt einmal");
 await wieder.click();
-await a.waitForSelector(`[data-senden="melden"]`, { timeout: 8000 });
-enthaelt("Das Blatt sagt, dass schon eine wartet", await a.locator(".sheet").innerText(),
-  "Eine Meldung wartet");
-await a.click(`[data-senden="melden"]`);
-await a.waitForTimeout(1600);
-await momenteWeg(a);
-pruefe("Jetzt warten zwei", await a.evaluate(async () =>
-  (await (await fetch("/api/state")).json()).meldungen.length), 2);
-enthaelt("Und die Liste zählt mit", await (await zurQuest(a)).innerText(), "2× gemeldet");
+await a.waitForSelector("[data-runde-gemeldet]", { timeout: 8000 });
+enthaelt("Das Blatt sagt, dass die Runde schon gemeldet ist", await a.locator(".sheet").innerText(),
+  "Diese Runde ist schon von dir gemeldet");
+pruefe("Kein Knopf zum Senden", await a.locator('.sheet [data-senden="melden"]').count(), 0);
+await a.waitForTimeout(3000); // Blatt fertig eingeblendet, Hinweis vom Melden verschwunden
+await a.locator(".sheet").screenshot({ path: `${AUS}/q2b-schon-gemeldet.png` });
+await a.click(".sheet [data-bleiben]");
+pruefe("Auch am Server vorbei geht es nicht", await a.evaluate(async (id) =>
+  (await (await fetch("/api/claims", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ questId: id, anzahl: 1 }) })).json()).fehler, q.id),
+  "Diese Runde ist schon gemeldet — sie wartet noch auf eine Bestätigung");
+pruefe("Es wartet weiter eine", await a.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).meldungen.length), 1);
 
-console.log("== Auch die anderen sehen beide und dürfen selbst melden");
+console.log("== Auch die anderen sehen: schon gemeldet");
 await laden(b);
 const beiB = await zurQuest(b);
-enthaelt("B sieht die Zahl", await beiB.innerText(), "2× gemeldet");
-pruefe("B ist nicht gesperrt", await beiB.isDisabled(), false);
+enthaelt("B sieht, dass sie gemeldet ist", await beiB.innerText(), "gemeldet");
+await beiB.click();
+await b.waitForSelector("[data-runde-gemeldet]", { timeout: 8000 });
+enthaelt("… und von wem", await b.locator(".sheet").innerText(), "schon von");
+await b.click(".sheet [data-bleiben]");
 
-console.log("== B entscheidet beide einzeln");
+console.log("== B bestätigt — die Runde zählt einmal");
 const vorB = await a.evaluate(async () => (await (await fetch("/api/state")).json()).ich.punkte);
 await b.click('.navbar [data-go="start"]'); await b.click('.abschnitt [data-go="pruefen"]');
-for (let i = 0; i < 2; i++) {
-  await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
-  await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
-  await b.waitForTimeout(1800);
-  await momenteWeg(b);
-}
+await b.waitForSelector('[data-entscheiden="claims"][data-status="bestaetigt"]', { timeout: 8000 });
+await b.click('[data-entscheiden="claims"][data-status="bestaetigt"]');
+await b.waitForTimeout(1800);
+await momenteWeg(b);
 pruefe("Nichts wartet mehr", await b.evaluate(async () =>
   (await (await fetch("/api/state")).json()).meldungen.length), 0);
-// Zweimal gemeldet heißt zweimal bezahlt — die Arbeit war ja auch zweimal da.
-pruefe("A hat beide Male bekommen", await a.evaluate(async () =>
-  (await (await fetch("/api/state")).json()).ich.punkte), vorB + 2 * PUNKTE);
+pruefe("A hat die Runde einmal bekommen", await a.evaluate(async () =>
+  (await (await fetch("/api/state")).json()).ich.punkte), vorB + PUNKTE);
 
 console.log("== Gesperrt heißt: mit Begründung geht es trotzdem");
 await laden(a);

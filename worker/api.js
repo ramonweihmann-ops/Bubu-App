@@ -982,7 +982,6 @@ async function zustand(env, ich, versatz = 0) {
 async function melden(env, ich, daten, { still = false } = {}) {
   const { questId, anzahl = 1, notiz = "" } = daten;
   if (!questId) throw new Fehler("Welche Quest? Es fehlt, was gemeldet werden soll.");
-  const menge = Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   const quest = await env.DB.prepare(
     `select id, name, points, category, wiederkehrend, tage, rhythmus, faellig_am, zugewiesen, event_id, fuer
@@ -990,6 +989,8 @@ async function melden(env, ich, daten, { still = false } = {}) {
   ).bind(questId, ich.couple_id).first();
   if (!quest) throw new Fehler("Diese Quest gibt es nicht");
   if (quest.fuer === "erwachsene" && istKindProfil(ich)) throw new Fehler("Diese Quest ist für die Großen");
+  // Eine Aufgabe aus dem Haushaltsplan ist immer genau eine Runde — ohne Zähler.
+  const menge = quest.wiederkehrend ? 1 : Math.max(1, Math.min(50, Number(anzahl) || 1));
 
   // Hängt sie an einem Event, gelten dessen Fenster, Kreis und Deckel.
   if (quest.event_id) await eventPruefen(env, ich, quest.event_id, menge);
@@ -1002,6 +1003,11 @@ async function melden(env, ich, daten, { still = false } = {}) {
   // Tag auf, und niemand sitzt daneben und gibt jedes Mal sofort frei — die
   // Arbeit soll nicht warten müssen, bis jemand Zeit zum Bestätigen hatte.
   // Jede Meldung wird einzeln entschieden, das Vier-Augen-Prinzip bleibt.
+  //
+  // Ausnahme: eine Aufgabe aus dem Haushaltsplan. Eine Runde zählt einmal, auch
+  // wenn sie mehrere Runden liegen blieb. Wartet schon eine Meldung, gilt die
+  // Runde als gemeldet — egal von wem. Die Fälligkeit springt erst mit der
+  // Bestätigung weiter; bis dahin hielte sonst nichts eine zweite Meldung auf.
 
   // Der Wert friert jetzt ein — inklusive einer gerade laufenden Aktion.
   const { wert } = questWert(quest, await laufendeAktionen(env, ich.couple_id));
@@ -1016,10 +1022,15 @@ async function melden(env, ich, daten, { still = false } = {}) {
     : String(notiz).slice(0, 300);
 
   const meldung = id();
-  await env.DB.prepare(
+  // Prüfen und Eintragen in einer Anweisung — so kommt auch bei zwei gleichzeitigen
+  // Tipps nur eine Meldung je Runde durch.
+  const eingetragen = await env.DB.prepare(
     `insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, note, uebernommen_von)
-     values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
-  ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung, besonders?.fremd || null).run();
+     select ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8
+      where ?9 = 0 or not exists (select 1 from claims where quest_id = ?3 and couple_id = ?2 and status = 'offen')`
+  ).bind(meldung, ich.couple_id, quest.id, ich.id, menge, wert, bemerkung, besonders?.fremd || null,
+         quest.wiederkehrend ? 1 : 0).run();
+  if (!eingetragen.meta.changes) throw new Fehler("Diese Runde ist schon gemeldet — sie wartet noch auf eine Bestätigung");
   if (still) return { ok: true, id: meldung };
 
   // Allein unter kleinen Kindern bestätigt niemand — dann zählt es gleich.
@@ -1049,6 +1060,15 @@ async function meldungEntscheiden(env, ich, meldungId, status) {
   await entscheidenPruefen(env, ich, meldung.claimed_by);
   // Ein Kind sagt „Stimmt!“ — Nein sagen bleibt bei den Großen.
   if (istKindProfil(ich) && status !== "bestaetigt") throw new Fehler("Ablehnen machen die Großen", 403);
+  // Lagen von früher noch zwei Meldungen für dieselbe Runde offen, zählt nur eine:
+  // Wurde seit dieser Meldung schon eine bestätigt, ist die Runde erledigt.
+  if (status === "bestaetigt" && meldung.wiederkehrend) {
+    const schon = await env.DB.prepare(
+      `select 1 as da from claims where quest_id = ?1 and couple_id = ?2 and id <> ?3
+          and status = 'bestaetigt' and decided_at >= ?4 limit 1`
+    ).bind(meldung.quest_id, ich.couple_id, meldung.id, meldung.created_at).first();
+    if (schon) throw new Fehler("Diese Runde ist schon bestätigt — diese Meldung bitte ablehnen");
+  }
   await meldungBuchen(env, ich.couple_id, meldung, status, ich.id);
 
   const punkte = meldung.quantity * meldung.points_each;

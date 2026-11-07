@@ -108,6 +108,40 @@ get tok-a state > /dev/null
 pruefe "Keine Strafe mehr" "$(sql "select count(*) as n from ledger where source_type='strafe'" | feld "[0].n")" "0"
 post tok-a haushalt '{"strafe":true}' > /dev/null
 
+echo "== Eine Runde zählt einmal — auch wenn sie drei Runden liegen blieb"
+P="(select couple_id from members where user_id='u-a')"
+sql "delete from claims where quest_id='$AUF'; delete from ledger where source_type='claim'" > /dev/null
+sql "update quests set faellig_am = date('now','-21 days'), mahnung_runde = date('now','-21 days'), strafe_runde = date('now','-21 days'), zugewiesen = null, dran = null where id='$AUF'" > /dev/null
+pruefe "B meldet (mit „3×“ — zählt als eine Runde)" "$(post tok-b claims "{\"questId\":\"$AUF\",\"anzahl\":3}" | feld ".ok")" "true"
+pruefe "Gemeldet als eine Runde" "$(sql "select quantity as q from claims where quest_id='$AUF'" | feld "[0].q")" "1"
+pruefe "B noch einmal: abgelehnt" "$(post tok-b claims "{\"questId\":\"$AUF\"}" | feld ".fehler")" "Diese Runde ist schon gemeldet — sie wartet noch auf eine Bestätigung"
+pruefe "C auch: abgelehnt" "$(post tok-c claims "{\"questId\":\"$AUF\",\"trotzdem\":true,\"grund\":\"Hab ich auch gemacht\"}" | feld ".fehler")" "Diese Runde ist schon gemeldet — sie wartet noch auf eine Bestätigung"
+pruefe "Nur eine Meldung wartet" "$(sql "select count(*) as n from claims where quest_id='$AUF' and status='offen'" | feld "[0].n")" "1"
+M1=$(sql "select id from claims where quest_id='$AUF'" | feld "[0].id")
+pruefe "A bestätigt" "$(post tok-a "claims/$M1/decide" '{"status":"bestaetigt"}' | feld ".ok")" "true"
+pruefe "B bekommt die Cleanies einmal" "$(sql "select count(*) || ':' || sum(delta) as n from ledger where source_type='claim'" | feld "[0].n")" "1:6"
+pruefe "Danach die nächste Runde: gesperrt" "$(post tok-b claims "{\"questId\":\"$AUF\"}" | feld ".fehler.startsWith('Gesperrt bis')")" "true"
+echo "== Abgelehnt: dann darf neu gemeldet werden"
+sql "update quests set faellig_am = date('now','-1 day') where id='$AUF'" > /dev/null
+M2=$(post tok-c claims "{\"questId\":\"$AUF\"}" | feld ".id")
+pruefe "A lehnt ab" "$(post tok-a "claims/$M2/decide" '{"status":"abgelehnt"}' | feld ".ok")" "true"
+pruefe "C darf neu melden" "$(post tok-c claims "{\"questId\":\"$AUF\"}" | feld ".ok")" "true"
+sql "delete from claims where quest_id='$AUF' and status='offen'" > /dev/null
+echo "== Altlast: zwei offene Meldungen für dieselbe Runde — nur eine zählt"
+sql "update claims set decided_at = datetime('now','-10 minutes') where quest_id='$AUF' and status <> 'offen'" > /dev/null
+for n in 1 2; do
+  sql "insert into claims (id, couple_id, quest_id, claimed_by, quantity, points_each, status, created_at) values ('alt-$n', $P, '$AUF', 'u-b', 1, 6, 'offen', datetime('now','-5 minutes'))" > /dev/null
+done
+pruefe "Die erste zählt" "$(post tok-a claims/alt-1/decide '{"status":"bestaetigt"}' | feld ".ok")" "true"
+pruefe "Die zweite nicht" "$(post tok-a claims/alt-2/decide '{"status":"bestaetigt"}' | feld ".fehler")" "Diese Runde ist schon bestätigt — diese Meldung bitte ablehnen"
+pruefe "Ablehnen geht" "$(post tok-a claims/alt-2/decide '{"status":"abgelehnt"}' | feld ".ok")" "true"
+pruefe "Insgesamt zwei Runden gebucht" "$(sql "select count(*) as n from ledger where source_type='claim'" | feld "[0].n")" "2"
+echo "== Normale Quests: mehrmals melden geht weiter"
+NORMAL=$(get tok-a state | feld ".quests.find(q => !q.wiederkehrend && !q.event_id && q.fuer !== 'kinder').id")
+pruefe "Erste Meldung" "$(post tok-b claims "{\"questId\":\"$NORMAL\"}" | feld ".ok")" "true"
+pruefe "Zweite Meldung" "$(post tok-b claims "{\"questId\":\"$NORMAL\"}" | feld ".ok")" "true"
+sql "delete from claims where quest_id='$NORMAL' and status='offen'" > /dev/null
+
 echo "== Rhythmus ändern und zurückstellen laufen über die Abstimmung"
 post tok-a proposals "{\"art\":\"aufgabe_aendern\",\"zielId\":\"$AUF\",\"rhythmus\":\"1× im Monat\"}" > /dev/null
 VOR2=$(get tok-a state | feld ".abstimmungen.find(v=>v.status==='offen').id")

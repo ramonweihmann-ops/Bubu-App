@@ -3238,6 +3238,17 @@ function sheetRhythmus(quest) {
 /** Dasselbe wie „Erledigt melden“ in der Quest-Liste, nur vom Aufgaben-Schirm
  *  aus. Auch hier hält eine fremde Runde nicht auf: sie verlangt einen Satz. */
 function sheetErledigt(a) {
+  if (rundeGemeldet(a.id)) {
+    sheet(`
+    <div class="grabber"></div>
+    <h3>Schon gemeldet</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(a.name)}</span>
+      <span class="pts-pill">+${cl(a.punkte)}</span>
+    </div>
+    ${rundeSchonGemeldet(a.id)}`);
+    return;
+  }
   const gesperrt = a.offen > 0;
   const fremd = a.zugewiesen && a.zugewiesen !== S.ich.id ? a.zugewiesen : null;
   const besonders = !!(gesperrt || fremd);
@@ -3604,9 +3615,33 @@ function wartendeMeldungen(questId) {
     Eine weitere geht trotzdem — jede wird einzeln entschieden.</span></div>`;
 }
 
+/** Eine Runde aus dem Haushaltsplan zählt einmal: Wartet schon eine Meldung, geht keine zweite. */
+const rundeGemeldet = (questId) => S.meldungen.some((m) => m.quest_id === questId);
+function rundeSchonGemeldet(questId) {
+  const m = S.meldungen.find((x) => x.quest_id === questId);
+  const wer = !m ? "" : m.claimed_by === S.ich.id ? " von dir" : ` von ${esc(nameVon(m.claimed_by))}`;
+  return `
+    <div class="note" data-runde-gemeldet>${icon("i-clock", 16)}<span><b>Diese Runde ist schon${wer} gemeldet</b>
+      und wartet auf eine Bestätigung. Eine Aufgabe aus dem Haushaltsplan zählt pro Runde einmal — auch wenn
+      sie länger liegen blieb.</span></div>
+    <button class="btn ghost block" data-bleiben>Schließen</button>`;
+}
+
 function sheetMelden(quest) {
   const punkte = quest.punkte_jetzt ?? quest.points;
   const a = quest.wiederkehrend ? plan().find((p) => p.id === quest.id) : null;
+  if (a && rundeGemeldet(quest.id)) {
+    sheet(`
+    <div class="grabber"></div>
+    <h3>Schon gemeldet</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      ${symbolKachel(questSymbol(quest), questFarbe(quest))}
+      <span style="flex:1;font-size:14px;font-weight:600">${esc(quest.name)}</span>
+      <span class="pts-pill">${cl(punkte)}</span>
+    </div>
+    ${rundeSchonGemeldet(quest.id)}`);
+    return;
+  }
   const fremd = a && a.zugewiesen && a.zugewiesen !== S.ich.id ? a.zugewiesen : null;
   const gesperrt = !!a && a.offen > 0;
   const besonders = !!(fremd || gesperrt);
