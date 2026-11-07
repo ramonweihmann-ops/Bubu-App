@@ -1312,6 +1312,22 @@ function alleKarten() {
         nein: { text: "Später", spaeter: true },
         lohn: `+${cl(e.amount)} für dich`
       });
+    } else if (e.art === "abstimmung" && e.vorschlag === "zweifel") {
+      const fuer = e.wem === S.ich.id ? "für dich" : `für ${esc(nameVon(e.wem))}`;
+      const ja = (e.stimmen || []).filter((x) => x.antwort === true).map((x) => x.id === S.ich.id ? "du" : vorname(x.name));
+      k.push({
+        schluessel: `vote:${e.id}`, art: "vote", name: "Abstimmung", stufe: 4,
+        av: bild(mitglied(e.von), "xs"),
+        wer: `${esc(nameVon(e.von))} zweifelt eine Buchung an`,
+        was: esc(e.titel || "Buchung zurücksetzen"),
+        betrag: `−${cl(e.neu)} <span class="fuer">${fuer}</span>`, neutral: true,
+        notiz: `<b>${esc(ZWEIFEL_GRUENDE[e.zweifel] || "Angezweifelt")}</b>${e.grund ? ` — „${esc(e.grund)}“` : ""}`,
+        notizKurz: true,
+        stimmen: `${esc(ja.join(", ") || "noch niemand")}: Ja · ${e.noetig - ja.length <= 1
+          ? "deine Stimme entscheidet" : `noch ${e.noetig - ja.length} Stimmen bis zur Mehrheit`}`,
+        ja: { text: "Zurücksetzen", tun: { stimme: e.id, antwort: true } },
+        nein: { text: "Bleibt", tun: { stimme: e.id, antwort: false } }
+      });
     } else if (e.art === "abstimmung") {
       const a = { ...e, art: e.vorschlag };
       const mehrheit = (e.noetig || 0) < (e.koepfe || 0);
@@ -1433,10 +1449,11 @@ function karteHtml(k, platz, nr, gesamt) {
       <div class="oben"><span class="art ${k.art}">${k.name}</span>
         <span class="zaehler">${nr} von ${gesamt}</span></div>
       <div class="wer">${k.av}<span>${k.wer}</span></div>
-      <div class="was">${k.was}</div>
+      <div class="was${k.notizKurz ? " kurz" : ""}">${k.was}</div>
       ${k.betrag ? `<div class="betrag ${k.neutral ? "neutral" : ""}">${k.betrag}</div>` : ""}
       ${k.wandel ? `<div class="change">${k.wandel}</div>` : ""}
-      ${k.notiz ? `<div class="notiz">${k.notiz}</div>` : ""}
+      ${k.notiz ? `<div class="notiz${k.notizKurz ? " kurz" : ""}">${k.notiz}</div>` : ""}
+      ${k.stimmen ? `<div class="stimmen">${k.stimmen}</div>` : ""}
       <div class="knoepfe">
         <button data-kartentun="nein">${k.nein.text}</button>
         <button class="ja" data-kartentun="ja">${k.ja.text}</button>
@@ -1529,8 +1546,10 @@ async function karteTun(schluessel, richtung, dom = null) {
     const t = wahl.tun;
     if (t.entscheiden) await api(`${t.entscheiden}/${t.id}/decide`, { status: "bestaetigt" });
     else if (t.stimme) {
+      const vorher = S.abstimmungen.find((a) => a.id === t.stimme);
       const e = await api(`proposals/${t.stimme}/vote`, { antwort: t.antwort });
-      if (e.status === "bestaetigt") toast("Angenommen — gilt ab sofort.");
+      if (vorher?.art === "zweifel") { if (e.status !== "offen") toast(zweifelToast(vorher, e.status)); }
+      else if (e.status === "bestaetigt") toast("Angenommen — gilt ab sofort.");
       else if (e.status === "abgelehnt") toast("Abgelehnt — der alte Stand gilt weiter.");
     }
     else if (t.empfang) await api(`requests/${t.empfang}/empfang`, { erhalten: true });
@@ -2468,6 +2487,7 @@ function abstimmungWorum(a) {
     case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
+    case "zweifel": return `Buchung angezweifelt — ${ZWEIFEL_GRUENDE[a.zweifel] || "die Cleanies sollen zurück"}`;
     case "kurs": return "Taschengeld — der Kurs soll sich ändern";
     case "fair_soll": return "Fair-Bericht — daran misst die Waage";
     default: return "Vorschlag";
@@ -2498,6 +2518,9 @@ function abstimmungWandel(a) {
   if (a.art === "ruecktritt") {
     return `<span class="old">gehört ${esc(nameVon(a.von))}</span>→<span class="new" style="color:var(--urlaub)">für alle offen</span>
             <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
+  }
+  if (a.art === "zweifel") {
+    return `<span class="old">+${cl(a.neu)} für ${esc(a.wem === S.ich.id ? "dich" : nameVon(a.wem))}</span>→<span class="new">zurückgesetzt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
   if (a.art === "fair_soll") {
@@ -2547,16 +2570,17 @@ function abstimmungKarte(a) {
   const noetig = a.noetig || koepfe;
   const mehrheitsSache = noetig < koepfe;
   const jaZahl = (a.stimmen || []).filter((s) => s.antwort === true).length;
+  const zweifel = a.art === "zweifel";
 
   return `
-    <div class="card vote">
+    <div class="card vote" ${zweifel ? 'data-zweifelkarte' : ""}>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="flex:1;min-width:0">
           <span style="font-size:14.5px;font-weight:700;display:block">${esc(a.titel || "Vorschlag")}</span>
           <span style="font-size:11.5px;color:var(--ink-3);display:block">${esc(abstimmungWorum(a))}</span>
         </span>
         <span class="chip ${entschieden ? (angenommen ? "done" : "open") : "wait"}">
-          ${entschieden ? (angenommen ? "Übernommen" : "Abgelehnt") : "Offen"}</span>
+          ${entschieden ? (angenommen ? (zweifel ? "Zurückgesetzt" : "Übernommen") : (zweifel ? "Bleibt" : "Abgelehnt")) : "Offen"}</span>
       </div>
       <div class="change">${abstimmungWandel(a)}</div>
       ${a.event?.beschreibung ? `<div style="font-size:12.5px;color:var(--ink-2)">
@@ -2580,13 +2604,16 @@ function abstimmungKarte(a) {
              Vorschlag erst, wenn alle ${koepfe} zugestimmt haben.</div>`) : ""}
       ${!entschieden && (a.meine === undefined || a.meine === null) ? `
       <div class="btnrow">
+        ${zweifel ? `<button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zurücksetzen</button>
+        <button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Bleibt</button>` : `
         <button class="btn dark" data-stimme="${a.id}" data-antwort="ja">Zustimmen</button>
         ${mehrheitsSache
           ? `<button class="btn ghost" data-sheet="ablehnen" data-id="${a.id}"
                data-titel="${esc(a.titel || "")}">Ablehnen</button>`
-          : `<button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>`}
+          : `<button class="btn ghost" data-stimme="${a.id}" data-antwort="nein">Ablehnen</button>`}`}
       </div>` : ""}
-      ${entschieden && !angenommen ? '<div style="font-size:12px;color:var(--ink-3)">Der alte Stand gilt weiter.</div>' : ""}
+      ${entschieden && !angenommen ? `<div style="font-size:12px;color:var(--ink-3)">${zweifel
+        ? "Die Buchung bleibt, wie sie war." : "Der alte Stand gilt weiter."}</div>` : ""}
     </div>`;
 }
 
@@ -3549,10 +3576,39 @@ function schirmUrlaub() {
 
 /* ------------------------------------------------------------------ Verlauf */
 
+/** Was an einer Buchung nicht stimmt — dieselben Schlüssel wie im Server. */
+const ZWEIFEL_GRUENDE = {
+  doppelt: "Doppelt gezählt",
+  versehen: "Aus Versehen gemeldet",
+  nicht_erledigt: "Nicht erledigt",
+  anders: "Anderer Grund"
+};
+
 function schirmVerlauf() {
   const meins = S.verlauf.filter((b) => b.member_id === S.ich.id);
-  const gesammelt = meins.filter((b) => b.delta > 0).reduce((s, b) => s + b.delta, 0);
-  const eingeloest = meins.filter((b) => b.delta < 0).reduce((s, b) => s - b.delta, 0);
+  // Was zurückgesetzt wurde, hebt sich mit seiner Gegenbuchung auf — es zählt
+  // weder als gesammelt noch als eingelöst.
+  const zaehlt = (b) => !b.zurueckgesetzt && b.art !== "zurueck";
+  const gesammelt = meins.filter((b) => zaehlt(b) && b.delta > 0).reduce((s, b) => s + b.delta, 0);
+  const eingeloest = meins.filter((b) => zaehlt(b) && b.delta < 0).reduce((s, b) => s - b.delta, 0);
+  const antippbar = S.verlauf.some((b) => b.anzweifelbar);
+
+  const zeile = (b) => {
+    const etikett = b.zurueckgesetzt ? '<span class="etikett zurueck">zurückgesetzt</span>'
+      : b.angezweifelt ? '<span class="etikett zweifel">angezweifelt</span>' : "";
+    const innen = `
+            ${bild(mitglied(b.member_id), "sm")}
+            <span style="flex:1;min-width:0">
+              <span style="font-size:13.5px;font-weight:600;display:block">${esc(b.reason)}${etikett ? ` ${etikett}` : ""}</span>
+              <span style="font-size:11px;color:var(--ink-3);font-family:var(--font-data)">
+                ${esc(nameVon(b.member_id))} · ${zeitpunkt(b.created_at)}${b.art === "zurueck" ? " · Abstimmung" : ""}</span>
+            </span>
+            <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${cl(b.delta)}</span>`;
+    return b.anzweifelbar
+      ? `<li class="waehlbar"><button type="button" data-zweifeln="${esc(b.id)}"
+            aria-label="${esc(b.reason)} anzweifeln">${innen}<span class="pfeil" aria-hidden="true">›</span></button></li>`
+      : `<li class="${b.zurueckgesetzt ? "weg" : ""}">${innen}</li>`;
+  };
 
   return `
     <div class="appbar">
@@ -3564,21 +3620,74 @@ function schirmVerlauf() {
         <span style="font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6">Dein Cleanies-Stand</span>
         <span style="font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1">${cl(S.ich.punkte)}</span>
         <span style="font-size:12.5px;opacity:.75">${gesammelt} gesammelt · ${eingeloest} eingelöst (letzte 40 Buchungen)</span>
+        ${antippbar ? `<span style="font-size:12px;opacity:.75" data-zweifel-hinweis>Antippen: Erledigte Quests der letzten
+          14 Tage lassen sich anzweifeln.</span>` : ""}
       </div>
       ${S.verlauf.length ? `
       <ul class="card ledger">
-        ${S.verlauf.map((b) => `
-          <li>
-            ${bild(mitglied(b.member_id), "sm")}
-            <span style="flex:1">
-              <span style="font-size:13.5px;font-weight:600;display:block">${esc(b.reason)}</span>
-              <span style="font-size:11px;color:var(--ink-3);font-family:var(--font-data)">
-                ${esc(nameVon(b.member_id))} · ${zeitpunkt(b.created_at)}</span>
-            </span>
-            <span class="amt ${b.delta > 0 ? "plus" : "minus"}">${b.delta > 0 ? "+" : ""}${cl(b.delta)}</span>
-          </li>`).join("")}
-      </ul>` : `<div class="card flat leer"><div class="t">Noch keine Buchungen.</div></div>`}
+        ${S.verlauf.map(zeile).join("")}
+      </ul>
+      ${S.verlauf.some((b) => b.angezweifelt) ? `<p class="feinhinweis">Solange abgestimmt wird, steht an der Zeile
+        „angezweifelt“. Die Abstimmung liegt bei „Wir“.</p>` : ""}` : `<div class="card flat leer"><div class="t">Noch keine Buchungen.</div></div>`}
     </div>`;
+}
+
+/** Wochentag und Uhrzeit, so wie man sich an einen Abend erinnert: „Do 18:42“. */
+function tagUhr(iso) {
+  if (!iso) return "";
+  const d = new Date(iso.replace(" ", "T") + (iso.endsWith("Z") ? "" : "Z"));
+  return `${d.toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "")} ${
+    d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+/** Wer über einen Zweifel entscheidet, in einem Satz für das Blatt. */
+function zweifelWerEntscheidet(wem) {
+  const koepfe = S.mitglieder.filter((m) => !istKindProfilM(m)).length;
+  const fehlen = Math.floor(koepfe / 2);
+  if (fehlen <= 0) return "Du entscheidest allein — die Buchung wird sofort zurückgesetzt.";
+  const wen = wem === S.ich.id ? "dir" : esc(nameVon(wem));
+  const andereGrosse = S.mitglieder.filter((m) => !istKindProfilM(m) && m.id !== S.ich.id);
+  const wer = koepfe === 2 && andereGrosse[0] ? `Stimmt ${esc(vorname(andereGrosse[0].name))} zu`
+    : `Stimmen ${fehlen === 1 ? "eine weitere Person" : `${fehlen} weitere`} zu`;
+  return `${wer}, gehen die Cleanies von ${wen} zurück.`;
+}
+
+let zweifelGrund = null;
+
+function sheetZweifeln(b) {
+  zweifelGrund = null;
+  const bestaetigt = b.bestaetigt_von
+    ? ` · bestätigt ${b.bestaetigt_von === S.ich.id ? "von dir" : `von ${esc(nameVon(b.bestaetigt_von))}`} ${tagUhr(b.bestaetigt_am)}`
+    : "";
+  sheet(`
+    <div class="grabber"></div>
+    <h3>Buchung anzweifeln</h3>
+    <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
+      ${bild(mitglied(b.member_id), "sm")}
+      <span style="flex:1;min-width:0"><span style="font-size:14px;font-weight:600;display:block">${esc(b.reason)}</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">${esc(nameVon(b.member_id))} · gemeldet ${tagUhr(b.gemeldet_am)}${bestaetigt}</span></span>
+      <span class="pts-pill">+${cl(b.delta)}</span>
+    </div>
+    <div class="field"><label>Was stimmt nicht? <span style="color:var(--accent)">· nötig</span></label>
+      <div class="zweifelwahl" role="group" aria-label="Grund">
+        ${Object.entries(ZWEIFEL_GRUENDE).map(([k, t]) =>
+          `<button type="button" data-zgrund="${k}" aria-pressed="false">${t}</button>`).join("")}
+      </div></div>
+    <div class="field"><label>Notiz</label>
+      <textarea id="zwnotiz" maxlength="300" placeholder="optional, z. B. „Einmal geputzt, zweimal gebucht“"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>${zweifelWerEntscheidet(b.member_id)}
+      Es ${b.delta === 1 ? "ist" : "sind"} <b>${b.delta} ${b.delta === 1 ? "Cleanie" : "Cleanies"}</b>. Die Zeile bleibt durchgestrichen im Verlauf, und im Fair-Bericht zählt sie nicht mehr.</span></div>
+    ${b.plan ? `<div class="note" data-zweifel-runde>${icon("i-kalender", 16)}<span>Aus dem Haushaltsplan: Bei „Aus Versehen
+      gemeldet“ oder „Nicht erledigt“ ist die Runde danach wieder offen. Bei „Doppelt gezählt“ bleibt sie erledigt.</span></div>` : ""}
+    <button class="btn primary block" data-senden="zweifel" data-id="${esc(b.id)}">Zur Abstimmung geben</button>`);
+}
+
+/** Der Satz nach einer Entscheidung über einen Zweifel. */
+function zweifelToast(a, status) {
+  const wen = a.wem === S.ich.id ? "dir" : nameVon(a.wem);
+  if (status === "bestaetigt") return `Zurückgesetzt — ${a.neu} ${a.neu === 1 ? "Cleanie geht" : "Cleanies gehen"} von ${wen} zurück.`;
+  if (status === "abgelehnt") return `Die Buchung bleibt — ${a.aufgabe || "die Quest"} ist weiter gebucht.`;
+  return "Deine Stimme zählt. Es fehlen noch Stimmen.";
 }
 
 /* ------------------------------------------------------------------ Sheets */
@@ -5132,7 +5241,7 @@ async function kindLinkPruefen(code) {
 /* ------------------------------------------------------------------ Bedienung */
 
 document.addEventListener("click", async (ev) => {
-  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS + "," + PLUS_KLICKS + ",[data-installieren]");
+  const el = ev.target.closest("[data-go],[data-filter],[data-sheet],[data-menge],[data-betrag],[data-senden],[data-entscheiden],[data-stimme],[data-paar-anlegen],[data-paar-beitreten],[data-teilen],[data-neuladen],[data-abmelden],[data-export],[data-bleiben],[data-schliessen-app],[data-push],[data-art-wahl],[data-dauer-wahl],[data-sort],[data-suche-leeren],[data-thema],[data-eweiter],[data-ezurueck],[data-ecode],[data-ebild],[data-eart],[data-ezaehl],[data-eraum],[data-eneuerraum],[data-foto],[data-eanlegen],[data-bildwahl],[data-empfaenger],[data-questraum],[data-neuer-raum],[data-raum-umbenennen],[data-raum-schalten],[data-hart],[data-hzaehl],[data-wiederkehrend],[data-plan],[data-plansicht],[data-rhythmus],[data-bewerbung],[data-vergabe],[data-strafe],[data-empfang],[data-nachhol],[data-nachholen],[data-bestaetigen],[data-urlaubsart],[data-urlaub-beenden],[data-gutschrift],[data-gutempfaenger],[data-ruecktritt],[data-zweifeln],[data-zgrund],[data-gif],[data-gifphase],[data-gif-weg],[data-evrichtung],[data-oftwahl],[data-zeitart],[data-evlaenge],[data-evrhythmus],[data-evstarttag],[data-evwer],[data-dauerevent],[data-proper],[data-eventtun],[data-eventmenue],[data-eventaendern],[data-eventende],[data-kartentun],[data-nochmal],[data-woche],[data-zielschritt],[data-ziel-setzen],[data-ziel-weg],[data-wartet],[data-plus],[data-melden-aus],[data-hinweis-weg],[data-bearbeiten],[data-symbol],[data-hintergrund],[data-symfarbe],[data-symkat],[data-emoji],[data-motiv],[data-symbolfoto],[data-hintergrundfoto],[data-bild-ohne],[data-bild-ok],[data-kind],[data-kind-neu],[data-mitglied],[data-kurs],[data-auszahlen],[data-kv-kind],[data-kv-ansicht],[data-kv-schloss],[data-kv-quest],[data-kv-wunsch],[data-kv-zu],[data-kv-fertig],[data-kv-antwort],[data-kv-wunschwahl],[data-kv-einloesen],[data-kv-ziffer],[data-fuer-kind],[data-kv-oeffnen],[data-kind-code],[data-kind-abmelden],[data-kind-bearbeiten],[data-kind-weg],[data-kind-weg-ok],[data-jugendlich],[data-kv-tier],[data-kv-stufe],[data-kv-tg],[data-kind-speichern],[data-auszahl-betrag],[data-auszahlen-ok],[data-kurs-schritt],[data-kurs-ok],[data-pin-ok],[data-plus-wer],[data-fuer-wahl],[data-kind-code-eingeben],[data-kind-anmelden],[data-kind-zurueck],[data-kind-link]," + FAIR_KLICKS + "," + KONTO_KLICKS + "," + PILOT_KLICKS + "," + PLUS_KLICKS + ",[data-installieren]");
   if (!el) return;
   if (el.hasAttribute("data-installieren")) { await installieren(); return; }
   // Ohne Plus geht der Familienmodus gar nicht erst los — das Plus-Blatt sagt, warum.
@@ -5167,6 +5276,19 @@ document.addEventListener("click", async (ev) => {
     return;
   }
   if (el.dataset.filter) { filter = el.dataset.filter; zeichne(); return; }
+
+  /* ---------- Buchung anzweifeln ---------- */
+  if (el.dataset.zweifeln) {
+    const b = S.verlauf.find((x) => x.id === el.dataset.zweifeln);
+    if (b?.anzweifelbar) sheetZweifeln(b);
+    return;
+  }
+  if (el.dataset.zgrund) {
+    zweifelGrund = el.dataset.zgrund;
+    el.parentElement.querySelectorAll("[data-zgrund]").forEach((k) =>
+      k.setAttribute("aria-pressed", String(k === el)));
+    return;
+  }
 
   /* ---------- Bilder für Quests und Belohnungen ---------- */
   if (el.dataset.bearbeiten) {
@@ -5693,6 +5815,21 @@ document.addEventListener("click", async (ev) => {
       return;
     }
 
+    if (el.dataset.senden === "zweifel") {
+      const b = S.verlauf.find((x) => x.id === el.dataset.id);
+      if (!b) { sheetZu(); return; }
+      if (!zweifelGrund) { toast("Was stimmt nicht? Bitte einen Grund wählen.", true); return; }
+      const ergebnis = await api("proposals", {
+        art: "zweifel", zielId: b.meldung, grund: zweifelGrund, notiz: wert("zwnotiz")
+      });
+      sheetZu(); await laden();
+      const weitere = ergebnis.noetig - 1;
+      toast(ergebnis.status === "bestaetigt"
+        ? `Zurückgesetzt — ${b.delta} ${b.delta === 1 ? "Cleanie geht" : "Cleanies gehen"} von ${b.member_id === S.ich.id ? "dir" : nameVon(b.member_id)} zurück.`
+        : `Steht zur Abstimmung — ${weitere === 1 ? "eine Stimme fehlt" : `${weitere} Stimmen fehlen`} noch.`);
+      return;
+    }
+
     if (el.dataset.senden === "ruecktritt") {
       const ergebnis = await api("proposals", {
         art: "ruecktritt", zielId: el.dataset.id, grund: wert("rtgrund")
@@ -5966,9 +6103,11 @@ document.addEventListener("click", async (ev) => {
     }
 
     if (el.dataset.stimme) {
+      const vorher = S.abstimmungen.find((a) => a.id === el.dataset.stimme);
       const ergebnis = await api(`proposals/${el.dataset.stimme}/vote`, { antwort: el.dataset.antwort === "ja" });
       await laden();
-      if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Cleanies.`);
+      if (vorher?.art === "zweifel") toast(zweifelToast(vorher, ergebnis.status));
+      else if (ergebnis.status === "bestaetigt") toast(`Beide einverstanden — neuer Wert: ${ergebnis.wert} Cleanies.`);
       else if (ergebnis.status === "abgelehnt") toast("Abgelehnt — der alte Wert gilt weiter.");
       else toast(`Deine Stimme zählt. ${beugung("Es fehlt noch eine.", "Es fehlen noch Stimmen.")}`);
       return;

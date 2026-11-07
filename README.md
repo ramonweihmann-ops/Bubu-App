@@ -54,6 +54,9 @@ Eigenes Projekt mit eigener Datenbasis — bewusst getrennt von allen anderen Pr
   `haus-quest.com/mockup-konto/`. Konto löschen und Haushalt verlassen: drei Arten zu bestätigen, was mit Haushalt,
   Kindern und Cleanies passiert, was die anderen danach sehen, und die Löschseite im Web für Google Play.
   Gebaut wurde A: „löschen“ eintippen, sofort und endgültig, dazu „Haushalt verlassen“.
+- **Mockup „Buchung anzweifeln":** [`web/mockup-zweifel/`](./web/mockup-zweifel) — live unter
+  `haus-quest.com/mockup-zweifel/`. Eine bestätigte Quest im Verlauf anzweifeln und per Abstimmung zurücksetzen;
+  gebaut mit allen fünf Empfehlungen.
 - **Tests:** [`tests/`](./tests) — alle Regressionssuiten, `bash tests/alle.sh` spielt sie durch.
 - **Einrichtung:** [`docs/SETUP.md`](./docs/SETUP.md) — Schritt für Schritt, was zu klicken ist.
 - **Google-Login:** [`docs/google-login.md`](./docs/google-login.md) — die neue Google Auth Platform, Klick für Klick.
@@ -132,6 +135,25 @@ Grenze — ohne Plus gehen drei zugleich (`worker/plus.js`, `d1/migrations/0027_
 - **Haushalte von vor dem Pilot** behalten Plus (`couples.plus` steht dort auf 1).
 - Im **Betriebs-Dashboard** zählt die Kachel „Testkauf für Plus“: gekauft je Haushalt, dessen Test vorbei ist (oder
   der vorher gekauft hat). Daneben welcher Plan, wie ehrlich und was gegen Plus spricht.
+
+## Buchung anzweifeln
+
+Im Verlauf hat jede bestätigte Quest der letzten 14 Tage ein „›“. Antippen, einen Grund wählen (Doppelt gezählt,
+Aus Versehen gemeldet, Nicht erledigt, Anderer Grund), eine Notiz ist freiwillig — daraus wird eine Abstimmung
+der Art `zweifel` (`worker/api.js`, `d1/migrations/0028_zweifel.sql`).
+
+- **Mehrheit statt Einstimmigkeit**, wie beim Rücktritt: Wer anzweifelt, zählt als Ja; zu zweit muss die andere
+  Person zustimmen, zu dritt reicht eine weitere Stimme. Wer allein abstimmt, hat damit schon entschieden.
+- **Auch die eigene Buchung** geht über die Abstimmung — jede Rücknahme ist für alle sichtbar.
+- **Einmal je Buchung.** Abgelehnt heißt: sie bleibt. Nur bestätigte Quests; Belohnungen, Geschenke, Strafen nicht.
+- **Kinder:** Buchungen von Kindern zweifeln nur Erwachsene an; Kinderprofile stimmen nicht ab.
+- **Zurückgesetzt wird nichts gelöscht:** Eine Gegenbuchung „Zurückgesetzt: …“ (`ledger.source_type = 'zurueck'`)
+  kommt oben in den Verlauf, die alte Zeile bleibt durchgestrichen stehen. Die Meldung bekommt
+  `claims.zurueckgesetzt_am` und gilt nicht mehr als bestätigt — sie zählt weder im Fair-Bericht noch in der
+  Wochenkachel, der Auswertung oder im „12× erledigt“. Der Stand darf dabei ins Minus.
+- **Haushaltsplan:** Bei „Aus Versehen gemeldet“ oder „Nicht erledigt“ ist die Runde wieder offen (fällig heute),
+  außer sie wurde in dieser Runde noch einmal bestätigt. Bei „Doppelt gezählt“ bleibt sie erledigt.
+- **Benachrichtigt** werden alle, wenn angezweifelt wird und wenn entschieden ist.
 
 ## Konto löschen und Haushalt verlassen
 

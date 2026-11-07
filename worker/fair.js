@@ -216,7 +216,7 @@ export async function fairBericht(env, ich, frage = {}) {
        from ledger l
        left join claims c on c.id = l.source_id
        left join quests q on q.id = c.quest_id
-      where l.couple_id = ?1 and l.source_type = 'claim' and l.delta > 0
+      where l.couple_id = ?1 and l.source_type = 'claim' and l.delta > 0 and c.zurueckgesetzt_am is null
         and l.created_at >= datetime(?3, '-1 day') and l.created_at < datetime(?4, '+2 days')
         and date(l.created_at, ?2) between ?3 and ?4
       group by tag, wer, raum, quest`
