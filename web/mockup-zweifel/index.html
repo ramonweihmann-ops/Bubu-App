@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Homi Point Buchung anzweifeln</title>
+<meta name="robots" content="noindex">
+<style>
+/* Eine Lesespalte mit vier Telefonen, darunter die Entscheidungen. Farben und Schrift wie
+ * in der App, hell und dunkel als zwei Sätze derselben Marken. */
+:root{
+  --bg:#fff; --tint:#f4f7fc; --tint-2:#e9eff8; --line:#dde5f2;
+  --ink:#152c4f; --ink-2:#56698b; --ink-3:#8b9ab4;
+  --accent:#ec0f06; --accent-tint:#fdecea; --akzent-flaeche:#ec0f06; --auf-akzent:#fff;
+  --kontrast-bg:#152c4f; --kontrast-ink:#fff; --kontrast-ink-2:#c9d6ea;
+  --frei:#0f8a6a; --frei-tint:#e4f5ef; --bald:#a86800; --bald-tint:#fdf1dc;
+  --ruhig:#2f6fd0; --ruhig-tint:#eaf1fb; --balken:#2f6fd0;
+  --rahmen:#152c4f; --schleier:rgba(21,44,79,.45);
+  --font-display:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,"SF Mono","DejaVu Sans Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+    --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+    --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+    --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+    --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+    --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+    --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1c31; --tint:#17263e; --tint-2:#1f3252; --line:#27395a;
+  --ink:#e8eef8; --ink-2:#a9bad4; --ink-3:#7d8ea9;
+  --accent:#ff5a52; --accent-tint:#3a1613; --akzent-flaeche:#d8271f;
+  --kontrast-bg:#e8eef8; --kontrast-ink:#0f1c31; --kontrast-ink-2:#3b4f70;
+  --frei:#4fc7a1; --frei-tint:#16352c; --bald:#e0a53a; --bald-tint:#3a2d14;
+  --ruhig:#6ba4ff; --ruhig-tint:#16274a; --balken:#4f86e0;
+  --rahmen:#3a5280; --schleier:rgba(4,9,18,.66);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--tint);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ruhig);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-block:26px 80px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--font-display);font-weight:800;font-size:30px;letter-spacing:-.03em;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.02em;margin:46px 0 10px;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);margin:0 0 16px;max-width:72ch}
+.lead b{color:var(--ink)}
+.marke{font-family:var(--font-data);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.reihe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:26px;align-items:start}
+.spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.kopfzeile{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vorbild{font-size:12.5px;color:var(--ink-3)}
+.bu{color:var(--ink-2);font-size:14px;margin:0;max-width:60ch}
+.bu b{color:var(--ink)}
+
+/* Regler über den Telefonen */
+.regler{position:sticky;top:0;z-index:5;background:var(--tint);padding:10px 0 14px;margin-bottom:6px;
+  display:flex;gap:18px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+@media (max-width:720px){.regler{position:static}}
+.gruppe{display:flex;flex-direction:column;gap:6px;min-width:0}
+.schalter{display:flex;flex-wrap:wrap;gap:6px}
+.schalter button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.schalter button[aria-pressed="true"]{background:var(--kontrast-bg);border-color:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* Telefon */
+.phone{width:100%;max-width:360px;aspect-ratio:375/760;border:9px solid var(--rahmen);border-radius:40px;background:var(--bg);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 18px 40px -22px rgba(21,44,79,.5)}
+.screen{flex:1;display:flex;flex-direction:column;padding:26px 20px 18px;min-height:0;overflow:auto}
+.screen.mitte{justify-content:center;text-align:center}
+.logo{width:150px;height:auto;margin:0 auto 12px;display:block}
+.app-h{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:-.03em;margin:0 0 6px;line-height:1.12}
+.app-sub{color:var(--ink-2);margin:0 0 16px;font-size:14.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:14px;padding:13px 16px;font-weight:700;font-size:15px;border:0}
+.btn.rot{background:var(--akzent-flaeche);color:var(--auf-akzent)}
+.btn.rot[disabled]{opacity:.38;cursor:not-allowed}
+.btn.rand{background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.btn.text{background:none;color:var(--ink-2);padding:9px}
+.btn+.btn{margin-top:8px}
+.g{width:18px;height:18px;flex:none}
+.fuss{margin-top:auto;padding-top:14px}
+.klein{font-size:12px;color:var(--ink-3);text-align:center;margin:12px 0 0}
+.klein u{color:var(--ink-2)}
+.feld{display:flex;flex-direction:column;gap:6px;text-align:left;margin:4px 0 12px}
+.feld label{font-family:var(--font-data);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.feld input{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);font-family:var(--font-data);
+  font-size:17px;letter-spacing:.12em;text-transform:uppercase;width:100%}
+.feld input.gut{border-color:var(--frei)}
+.feld input.schlecht{border-color:var(--accent)}
+.meldung{display:flex;gap:9px;align-items:flex-start;border-radius:12px;padding:10px 12px;font-size:13.5px;text-align:left;margin:0 0 12px}
+.meldung b{display:block}
+.meldung.gut{background:var(--frei-tint);color:var(--ink)}
+.meldung.schlecht{background:var(--accent-tint);color:var(--ink)}
+.meldung.info{background:var(--tint);color:var(--ink-2)}
+.meldung .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.meldung.gut .ic{background:var(--frei)} .meldung.schlecht .ic{background:var(--accent)} .meldung.info .ic{background:var(--ink-3)}
+.einladung{border:1.5px solid var(--frei);background:var(--frei-tint);border-radius:16px;padding:12px 14px;text-align:left;margin:0 0 16px}
+.einladung .marke{color:var(--frei)}
+.einladung strong{display:block;font-family:var(--font-display);font-size:17px;margin:2px 0}
+.einladung span{font-size:13px;color:var(--ink-2)}
+.punkte{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.punkte i{width:7px;height:7px;border-radius:50%;background:var(--line)} .punkte i.an{background:var(--accent)}
+.schritt{font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);text-align:center;
+  padding:7px 0;border-top:1px solid var(--line);background:var(--tint)}
+
+/* Entscheidungen */
+.fragen{counter-reset:f;display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.frage{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px 16px;counter-increment:f}
+.frage h3{display:flex;gap:10px;align-items:baseline}
+.frage h3::before{content:counter(f);flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:12.5px}
+.frage p{margin:6px 0 0;color:var(--ink-2);font-size:14px;max-width:80ch}
+.frage .empf{margin-top:8px;font-size:14px;color:var(--ink)}
+.frage .empf b{color:var(--frei)}
+.kosten{background:var(--kontrast-bg);color:var(--kontrast-ink-2);border-radius:18px;padding:16px 18px;margin-top:14px}
+.kosten b{color:var(--kontrast-ink)}
+.kosten p{margin:4px 0}
+.themawahl{position:fixed;right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));opacity:.92;z-index:30;display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:4px}
+.themawahl button{border:0;background:none;border-radius:99px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.themawahl button[aria-pressed="true"]{background:var(--kontrast-bg);color:var(--kontrast-ink)}
+
+/* ---------- Android drumherum ---------- */
+/* Das Telefon bekommt eine Android-Statusleiste und die Gestenleiste unten. */
+.phone.android{border-radius:34px}
+.sb{flex:none;height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 22px;
+  font-size:12.5px;font-weight:600;background:var(--sb-bg,var(--bg));color:var(--sb-ink,var(--ink))}
+.sb.navy{--sb-bg:#152c4f;--sb-ink:#fff}
+.sb.durch{--sb-bg:transparent;--sb-ink:#fff}
+.sb .rechts{display:flex;gap:6px;align-items:center}
+.sb .netz{width:14px;height:10px;background:linear-gradient(135deg,transparent 50%,currentColor 50%);opacity:.9}
+.sb .akku{width:20px;height:10px;border:1.5px solid currentColor;border-radius:3px;position:relative}
+.sb .akku::after{content:"";position:absolute;inset:1.5px 5px 1.5px 1.5px;background:currentColor;border-radius:1px}
+.gb{flex:none;height:22px;display:flex;align-items:center;justify-content:center;background:var(--gb-bg,var(--bg))}
+.gb i{width:96px;height:4px;border-radius:99px;background:var(--ink);opacity:.55}
+.gb.durch{--gb-bg:transparent} .gb.durch i{background:#fff}
+.inhalt{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+
+/* ---------- App-Bausteine ---------- */
+.ab{display:flex;align-items:center;gap:10px;padding:12px 16px 8px}
+.ab .zur{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2);flex:none}
+.ab b{display:block;font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.ab small{font-size:12px;color:var(--ink-3)}
+.koerper{flex:1;min-height:0;overflow:hidden;padding:4px 14px 12px;display:flex;flex-direction:column;gap:10px;position:relative}
+.stand{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stand .marke{color:var(--kontrast-ink-2)}
+.stand b{font-family:var(--font-display);font-weight:800;font-size:32px;letter-spacing:-.04em;line-height:1}
+.stand small{font-size:11.5px;color:var(--kontrast-ink-2)}
+.cl{width:.9em;height:.9em;vertical-align:-.08em;margin-left:2px}
+.liste{list-style:none;margin:0;padding:2px 12px;border:1px solid var(--line);border-radius:18px;background:var(--bg)}
+.liste li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);min-width:0}
+.liste li:last-child{border:0}
+.av{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:none;background:var(--tint)}
+.av img{width:100%;height:100%;object-fit:cover}
+.liste .t{flex:1;min-width:0}
+.liste .t b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.liste .t small{font-family:var(--font-data);font-size:10.5px;color:var(--ink-3)}
+.amt{font-family:var(--font-data);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.amt.minus{color:var(--accent)}
+.liste li.waehlbar{position:relative}
+.liste li.waehlbar .pfeil{color:var(--ink-3);font-size:15px;margin-left:-4px}
+.liste li.angetippt{background:var(--ruhig-tint);margin:0 -12px;padding-inline:12px;border-radius:12px}
+.liste li.weg .t b,.liste li.weg .amt{text-decoration:line-through;color:var(--ink-3)}
+.etikett{display:inline-block;font-family:var(--font-data);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;border-radius:99px;padding:1px 7px;margin-left:4px;vertical-align:1px}
+.etikett.zweifel{background:var(--bald-tint);color:var(--bald)}
+.etikett.zurueck{background:var(--accent-tint);color:var(--accent)}
+.tipphinweis{font-size:11.5px;color:var(--ink-3);text-align:center}
+/* Blatt von unten */
+.schleier{position:absolute;inset:0;background:var(--schleier);display:flex;align-items:flex-end}
+.blatt{background:var(--bg);border-radius:22px 22px 0 0;padding:8px 16px 14px;width:100%;display:flex;flex-direction:column;gap:9px}
+.blatt .greif{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 2px}
+.blatt h4{margin:0;font-family:var(--font-display);font-size:19px;font-weight:800;letter-spacing:-.02em}
+.zeile{display:flex;align-items:center;gap:10px;background:var(--tint);border-radius:14px;padding:9px 11px}
+.zeile .t{flex:1;min-width:0}
+.zeile .t b{display:block;font-size:13.5px}
+.zeile .t small{font-size:11.5px;color:var(--ink-2)}
+.pille{background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:99px;padding:3px 9px;font-weight:800;font-size:13px;white-space:nowrap}
+.wahl{display:flex;flex-wrap:wrap;gap:6px}
+.wahl span{border:1.5px solid var(--line);border-radius:99px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.wahl span.an{border-color:var(--kontrast-bg);background:var(--kontrast-bg);color:var(--kontrast-ink)}
+.notizfeld{border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12.5px;color:var(--ink-3);min-height:38px}
+.hinweis{display:flex;gap:8px;background:var(--tint);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--ink-2);line-height:1.4}
+.hinweis b{color:var(--ink)}
+.hinweis .i{flex:none;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--ink-3);display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--ink-3);margin-top:1px}
+/* Karte im Stapel */
+.abschnitt{display:flex;align-items:baseline;justify-content:space-between}
+.abschnitt b{font-family:var(--font-display);font-size:17px;font-weight:800}
+.abschnitt small{color:var(--ruhig);font-weight:600;font-size:12.5px}
+.karte{border:1px solid var(--line);border-radius:22px;background:var(--bg);box-shadow:0 16px 26px -20px rgba(21,44,79,.55);
+  padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.karte .oben{display:flex;align-items:center;gap:8px}
+.karte .art{font-family:var(--font-data);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;border-radius:99px;padding:2px 8px;background:var(--tint-2);color:var(--ink-2)}
+.karte .zaehler{margin-left:auto;font-family:var(--font-data);font-size:11px;color:var(--ink-3)}
+.karte .wer{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
+.karte .wer .av{width:24px;height:24px}
+.karte .was{font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.15}
+.karte .betrag{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:-.03em;color:var(--accent);line-height:1}
+.karte .notiz{font-size:12.5px;color:var(--ink-2);background:var(--tint);border-radius:11px;padding:6px 9px}
+.karte .stimmen{font-size:11.5px;color:var(--ink-3)}
+.karte .knoepfe{display:flex;gap:8px;margin-top:4px}
+.karte .knoepfe span{flex:1;text-align:center;font-size:13.5px;font-weight:700;border-radius:13px;padding:9px;border:1px solid var(--line)}
+.karte .knoepfe span.ja{background:var(--kontrast-bg);color:var(--kontrast-ink);border-color:var(--kontrast-bg)}
+.toast{position:absolute;left:12px;right:12px;bottom:12px;background:var(--kontrast-bg);color:var(--kontrast-ink);border-radius:14px;padding:10px 12px;font-size:12.5px;font-weight:600}
+.leiste-unten{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:6px 0 4px;font-size:10px;color:var(--ink-3)}
+.leiste-unten span.an{color:var(--accent);font-weight:700}
+.regeln{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px;margin-top:10px}
+.regel{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:12px 14px;font-size:14px;color:var(--ink-2)}
+.regel b{display:block;color:var(--ink);margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="marke">Homi Point · Mockup</span>
+  <h1>Buchung anzweifeln — und per Abstimmung zurücksetzen</h1>
+  <p class="lead">Nach einer Bestätigung gibt es heute keinen Weg zurück. Neu: Im <b>Verlauf</b> lässt sich eine
+    Buchung antippen und <b>anzweifeln</b>. Daraus wird eine <b>Abstimmung</b>. Wird sie angenommen, gehen die
+    Cleanies zurück; die Zeile bleibt durchgestrichen stehen, damit nachvollziehbar ist, was passiert ist.
+    Das Beispiel ist euer Abend: „Bad reinigen“ wurde bei Bibi zweimal gebucht.</p>
+
+  <div class="reihe" id="telefone">
+    <div class="spalte">
+      <div class="kopfzeile"><h3>1 · Im Verlauf antippen</h3><span class="vorbild">Ramon</span></div>
+      <div class="phone android" id="p1">
+        <div class="sb"><span>11:30</span><span class="rechts"><span class="netz"></span><span class="akku"></span></span></div>
+        <div class="inhalt">
+          <div class="ab"><span class="zur">‹</span><div><b>Verlauf</b><small>Alle Buchungen</small></div></div>
+          <div class="koerper">
+            <div class="stand"><span class="marke">Dein Cleanies-Stand</span><b>212<img class="cl" src="/cleanie.webp" alt=""></b>
+              <small>Antippen: Buchungen der letzten 14 Tage lassen sich anzweifeln</small></div>
+            <ul class="liste">
+              <li class="waehlbar"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Küche reinigen nach Kochen</b><small>Bibi · vor 23 Std.</small></span><span class="amt">+3</span><span class="pfeil">›</span></li>
+              <li class="waehlbar angetippt"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Bad reinigen</b><small>Bibi · vor 23 Std.</small></span><span class="amt">+5</span><span class="pfeil">›</span></li>
+              <li class="waehlbar"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Bad reinigen</b><small>Bibi · vor 24 Std.</small></span><span class="amt">+5</span><span class="pfeil">›</span></li>
+              <li class="waehlbar"><span class="av"><img src="/fox.webp" alt=""></span><span class="t"><b>Altglas entsorgen</b><small>Du · gestern</small></span><span class="amt">+4</span><span class="pfeil">›</span></li>
+              <li><span class="av"><img src="/fox.webp" alt=""></span><span class="t"><b>Kinoabend eingelöst</b><small>Du · vor 3 Wochen</small></span><span class="amt minus">−20</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="gb"><i></i></div>
+      </div>
+      <p class="bu">Erledigte Quests der letzten 14 Tage bekommen ein „›“. Ältere Zeilen und Belohnungen bleiben, wie sie sind.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="kopfzeile"><h3>2 · Anzweifeln</h3><span class="vorbild">Ramon</span></div>
+      <div class="phone android" id="p2">
+        <div class="sb"><span>11:31</span><span class="rechts"><span class="netz"></span><span class="akku"></span></span></div>
+        <div class="inhalt">
+          <div class="ab"><span class="zur">‹</span><div><b>Verlauf</b><small>Alle Buchungen</small></div></div>
+          <div class="koerper"><div class="stand"><span class="marke">Dein Cleanies-Stand</span><b>212</b></div></div>
+          <div class="schleier"><div class="blatt">
+            <span class="greif"></span>
+            <h4>Buchung anzweifeln</h4>
+            <div class="zeile"><span class="av"><img src="/wolf.webp" alt=""></span>
+              <span class="t"><b>Bad reinigen</b><small>Bibi · gemeldet Do 18:42 · bestätigt von dir Do 19:10</small></span>
+              <span class="pille">+5</span></div>
+            <span class="marke">Was stimmt nicht?</span>
+            <div class="wahl"><span class="an">Doppelt gezählt</span><span>Aus Versehen gemeldet</span><span>Nicht erledigt</span><span>Anderer Grund</span></div>
+            <div class="notizfeld">Einmal geputzt, zweimal gebucht</div>
+            <div class="hinweis"><span class="i">i</span><span>Stimmt Bibi zu, gehen <b>5 Cleanies</b> von Bibi zurück. Die Zeile bleibt
+              durchgestrichen im Verlauf, und im Fair-Bericht zählt sie nicht mehr.</span></div>
+            <button class="btn rot" type="button">Zur Abstimmung geben</button>
+          </div></div>
+        </div>
+        <div class="gb"><i></i></div>
+      </div>
+      <p class="bu">Ein Grund ist Pflicht, die Notiz nicht. Wer anzweifelt, stimmt damit schon mit Ja.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="kopfzeile"><h3>3 · Die Abstimmung</h3><span class="vorbild">Bibi, Start</span></div>
+      <div class="phone android" id="p3">
+        <div class="sb"><span>11:34</span><span class="rechts"><span class="netz"></span><span class="akku"></span></span></div>
+        <div class="inhalt">
+          <div class="ab"><div><b>Hallo Bibi</b><small>Samstag, 7. November</small></div></div>
+          <div class="koerper">
+            <div class="abschnitt"><b>Für dich</b><small>Alle ›</small></div>
+            <div class="karte">
+              <div class="oben"><span class="art">Abstimmung</span><span class="zaehler">1 von 1</span></div>
+              <div class="wer"><span class="av"><img src="/fox.webp" alt=""></span><span>Ramon zweifelt eine Buchung an</span></div>
+              <div class="was">Bad reinigen zurücksetzen</div>
+              <div class="betrag">−5<img class="cl" src="/cleanie.webp" alt=""> <span style="font-size:13px;color:var(--ink-2);font-weight:600;letter-spacing:0">für dich</span></div>
+              <div class="notiz"><b>Doppelt gezählt</b> — „Einmal geputzt, zweimal gebucht“</div>
+              <div class="stimmen">Ramon: Ja · fehlt noch: du</div>
+              <div class="knoepfe"><span>Bleibt</span><span class="ja">Zurücksetzen</span></div>
+            </div>
+          </div>
+          <div class="leiste-unten"><span class="an">Start</span><span>Quests</span><span>Erledigt</span><span>Belohnung</span><span>Wir</span></div>
+        </div>
+        <div class="gb"><i></i></div>
+      </div>
+      <p class="bu">Die Karte liegt im Stapel wie jede Abstimmung, mit Grund und Stand der Stimmen. „Bleibt“ lehnt ab.</p>
+    </div>
+
+    <div class="spalte">
+      <div class="kopfzeile"><h3>4 · Zurückgesetzt</h3><span class="vorbild">beide, Verlauf</span></div>
+      <div class="phone android" id="p4">
+        <div class="sb"><span>11:35</span><span class="rechts"><span class="netz"></span><span class="akku"></span></span></div>
+        <div class="inhalt">
+          <div class="ab"><span class="zur">‹</span><div><b>Verlauf</b><small>Alle Buchungen</small></div></div>
+          <div class="koerper">
+            <ul class="liste">
+              <li><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Zurückgesetzt: Bad reinigen</b><small>Bibi · gerade · Abstimmung</small></span><span class="amt minus">−5</span></li>
+              <li class="waehlbar"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Küche reinigen nach Kochen</b><small>Bibi · vor 23 Std.</small></span><span class="amt">+3</span><span class="pfeil">›</span></li>
+              <li class="weg"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Bad reinigen <span class="etikett zurueck">zurückgesetzt</span></b><small>Bibi · vor 23 Std.</small></span><span class="amt">+5</span></li>
+              <li class="waehlbar"><span class="av"><img src="/wolf.webp" alt=""></span><span class="t"><b>Bad reinigen</b><small>Bibi · vor 24 Std.</small></span><span class="amt">+5</span><span class="pfeil">›</span></li>
+              <li class="waehlbar"><span class="av"><img src="/fox.webp" alt=""></span><span class="t"><b>Altglas entsorgen</b><small>Du · gestern</small></span><span class="amt">+4</span><span class="pfeil">›</span></li>
+            </ul>
+            <p class="tipphinweis">Solange abgestimmt wird, steht an der Zeile „angezweifelt“.</p>
+          </div>
+          <div class="toast">Angenommen — 5 Cleanies gehen von Bibi zurück.</div>
+        </div>
+        <div class="gb"><i></i></div>
+      </div>
+      <p class="bu">Nichts wird gelöscht: eine Gegenbuchung oben, die alte Zeile durchgestrichen. Beide sehen dasselbe.</p>
+    </div>
+  </div>
+
+  <h2>Was immer gilt</h2>
+  <div class="regeln">
+    <div class="regel"><b>Nur bestätigte Quests</b>Offene Meldungen zieht man wie bisher selbst zurück oder lehnt sie ab.
+      Belohnungen, Geschenke und Strafen haben eigene Wege.</div>
+    <div class="regel"><b>Einmal je Buchung</b>Eine Buchung kann nur einmal angezweifelt werden. Abgelehnt heißt: sie bleibt.</div>
+    <div class="regel"><b>Konto darf ins Minus</b>Sind die Cleanies schon ausgegeben, steht der Stand danach eben im Minus — wie bei einer Gruppenstrafe.</div>
+    <div class="regel"><b>Kinder</b>Buchungen von Kindern zweifeln nur die Eltern an. Kinder stimmen nicht ab.</div>
+  </div>
+
+  <h2>Fünf Entscheidungen</h2>
+  <div class="fragen">
+    <div class="frage" data-frage="zustimmung"><h3>Wer muss zustimmen?</h3>
+      <p><b>A</b> Alle anderen Erwachsenen, wie wenn ein Wert geändert wird. <b>B</b> Die Mehrheit der Erwachsenen, wie beim
+        Rücktritt von einer Aufgabe; wer anzweifelt, zählt als Ja.</p>
+      <p class="empf"><b>Empfehlung: B.</b> Sonst könnte die betroffene Person in einer WG jede Rücknahme allein blockieren.
+        In eurem Zweier-Haushalt ist es dasselbe: Der oder die andere muss zustimmen.</p></div>
+    <div class="frage" data-frage="zeitraum"><h3>Wie weit zurück?</h3>
+      <p><b>A</b> 7 Tage. <b>B</b> 14 Tage. <b>C</b> 30 Tage.</p>
+      <p class="empf"><b>Empfehlung: B, 14 Tage.</b> Lang genug, um einen Fehler zu bemerken; kurz genug, dass nicht alte
+        Geschichten wieder aufkommen.</p></div>
+    <div class="frage" data-frage="eigene"><h3>Die eigene Buchung zurücksetzen</h3>
+      <p><b>A</b> Auch über eine Abstimmung, wie du es beschrieben hast. <b>B</b> Sofort, ohne Abstimmung — wer sich selbst
+        etwas abzieht, schadet niemandem.</p>
+      <p class="empf"><b>Empfehlung: A.</b> Dann ist jede Rücknahme für alle sichtbar und gleich geregelt.</p></div>
+    <div class="frage" data-frage="runde"><h3>Aufgabe aus dem Haushaltsplan</h3>
+      <p>Wird eine Plan-Aufgabe zurückgesetzt: <b>A</b> Die Runde bleibt erledigt. <b>B</b> Die Runde wird wieder offen,
+        wenn der Grund „Aus Versehen gemeldet“ oder „Nicht erledigt“ ist; bei „Doppelt gezählt“ bleibt sie erledigt.</p>
+      <p class="empf"><b>Empfehlung: B.</b> Was nicht gemacht wurde, muss noch gemacht werden — was doppelt gezählt war, ist erledigt.</p></div>
+    <div class="frage" data-frage="benachrichtigung"><h3>Wer erfährt davon?</h3>
+      <p><b>A</b> Alle Erwachsenen bekommen eine Benachrichtigung, wenn angezweifelt wird, und wenn entschieden ist.
+        <b>B</b> Nur die betroffene Person.</p>
+      <p class="empf"><b>Empfehlung: A</b> — es ist eine Abstimmung, alle sollen sie sehen.</p></div>
+  </div>
+  <div class="kosten"><p><b>Und der Fehler vom Abend?</b> Ist behoben: Eine Aufgabe aus dem Haushaltsplan nimmt pro Runde nur
+    noch eine Meldung an, auch wenn sie überfällig ist. Die doppelte Buchung von Bibi lässt sich mit dieser Funktion
+    zurücksetzen, sobald sie live ist.</p></div>
+</div>
+<div class="themawahl" role="group" aria-label="Darstellung">
+  <button type="button" data-thema="auto" aria-pressed="true">Auto</button>
+  <button type="button" data-thema="light" aria-pressed="false">Hell</button>
+  <button type="button" data-thema="dark" aria-pressed="false">Dunkel</button>
+</div>
+<script>
+// Hell, dunkel oder wie das Gerät — nur für diese Seite gemerkt.
+const knoepfe = document.querySelectorAll("[data-thema]");
+function thema(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  knoepfe.forEach((k) => k.setAttribute("aria-pressed", String(k.dataset.thema === t)));
+  try { localStorage.setItem("mockup-thema", t); } catch {}
+}
+knoepfe.forEach((k) => k.addEventListener("click", () => thema(k.dataset.thema)));
+try { const t = localStorage.getItem("mockup-thema"); if (t) thema(t); } catch {}
+</script>
+</body>
+</html>
