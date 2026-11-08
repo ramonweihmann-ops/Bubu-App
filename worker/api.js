@@ -850,15 +850,26 @@ async function zustand(env, ich, versatz = 0) {
                        where p.couple_id = ?1 order by p.status = 'offen' desc, p.created_at desc limit 20`).bind(paar).all(),
       env.DB.prepare(`select v.* from proposal_votes v join proposals p on p.id = v.proposal_id
                        where p.couple_id = ?1`).bind(paar).all(),
-      // Zu jeder Buchung aus einer Quest die Meldung dahinter: Ob sie sich
-      // anzweifeln lässt, hängt an ihr.
+      // Zu jeder Buchung die Meldung oder der Antrag dahinter: Ob sie sich
+      // anzweifeln lässt, hängt daran. An einer Einlösung hängen auch die
+      // Gutschrift an jemand anderen („:gut“) und Strafe oder Nachholung.
       env.DB.prepare(`select l.id, l.member_id, l.delta, l.reason, l.source_type, l.source_id, l.created_at,
                              c.status as meldung, c.zurueckgesetzt_am, c.created_at as gemeldet_am,
                              c.decided_at as bestaetigt_am, c.decided_by as bestaetigt_von,
                              c.decided_at >= datetime('now', '-${ZWEIFEL_TAGE} days') as frisch,
-                             q.wiederkehrend as plan
+                             q.wiederkehrend as plan,
+                             r.id as antrag_id, r.status as antrag, r.zurueckgesetzt_am as antrag_zurueck,
+                             r.created_at as antrag_gestellt, r.decided_at as antrag_am, r.decided_by as antrag_von,
+                             r.gutschrift_an, r.erfuellt as antrag_erfuellt,
+                             r.decided_at >= datetime('now', '-${ZWEIFEL_TAGE} days') as antrag_frisch
                         from ledger l left join claims c on l.source_type = 'claim' and c.id = l.source_id
                         left join quests q on q.id = c.quest_id
+                        left join requests r on l.source_type in ('request', 'strafe', 'nachholung') and r.id = case
+                               when l.source_type = 'request' and l.source_id like '%:gut'
+                                 then substr(l.source_id, 1, length(l.source_id) - 4)
+                               when l.source_type = 'request' then l.source_id
+                               when l.source_id like 'strafe:%' then substr(l.source_id, 8)
+                               when l.source_id like 'nachhol:%' then substr(l.source_id, 9) end
                        where l.couple_id = ?1 order by l.created_at desc limit 40`).bind(paar).all(),
       env.DB.prepare(`select id, art, titel, text, punkte, created_at from ereignisse
                        where user_id = ?1 and gelesen = 0 order by created_at limit 5`).bind(ich.id).all(),
@@ -955,9 +966,12 @@ async function zustand(env, ich, versatz = 0) {
            : p.kind === "zweifel" ? `${p.name} zurücksetzen`
            : p.name,
       aufgabe: p.kind === "ruecktritt" || p.kind === "zweifel" ? p.name : null,
-      // Beim Zweifel: wessen Buchung es ist und was nicht stimmt.
+      // Beim Zweifel: wessen Buchung es ist, was nicht stimmt, ob Quest oder
+      // Belohnung — und bei einer Belohnung, wem sie gutgeschrieben war.
       wem: p.kind === "zweifel" ? anhang(p).wem || null : null,
       zweifel: p.kind === "zweifel" ? anhang(p).grund || null : null,
+      zweifel_art: p.kind === "zweifel" ? anhang(p).art || "quest" : null,
+      gut: p.kind === "zweifel" ? anhang(p).gut || null : null,
       // Beim Soll: wessen Anteil sich ändert.
       ziel: p.kind === "fair_soll" ? p.target_id : null,
       alt: p.old_value,
@@ -994,31 +1008,60 @@ async function zustand(env, ich, versatz = 0) {
   };
 }
 
-/** Eine Zeile im Verlauf. Zu einer bestätigten Quest steht dabei, ob sie
- *  zurückgesetzt ist, gerade angezweifelt wird — oder ob ich sie anzweifeln
- *  darf: bestätigt, höchstens 14 Tage alt, noch nie angezweifelt; bei Kindern
- *  nur durch die Eltern, und Kinder ohne eigenes Konto gar nicht. */
+/** Eine Zeile im Verlauf. Zu einer bestätigten Quest oder einer genehmigten
+ *  Einlösung steht dabei, ob sie zurückgesetzt ist, gerade angezweifelt wird —
+ *  oder ob ich sie anzweifeln darf: höchstens 14 Tage alt, noch nie
+ *  angezweifelt; bei Kindern nur durch Erwachsene, und Kinderprofile gar nicht.
+ *  „ziel“ ist, was beim Anzweifeln mitgeschickt wird. */
 function verlaufZeile(b, zweifelJe, ich, mit) {
   const zeile = { id: b.id, member_id: b.member_id, delta: b.delta, reason: b.reason,
                   art: b.source_type, created_at: b.created_at };
   if (b.source_type === "zurueck") return { ...zeile, meldung: b.source_id };
-  if (b.source_type !== "claim" || !b.meldung) return zeile;
 
-  const zweifel = zweifelJe[b.source_id] || null;
-  const wem = mit.find((m) => m.id === b.member_id);
-  const darf = !istKindProfil(ich) && (!istKind(wem) || istErwachsen(ich));
-  return {
-    ...zeile,
-    meldung: b.source_id,
-    gemeldet_am: b.gemeldet_am,
-    bestaetigt_am: b.bestaetigt_am,
-    bestaetigt_von: b.bestaetigt_von,
-    plan: !!b.plan,
-    zurueckgesetzt: !!b.zurueckgesetzt_am,
-    angezweifelt: zweifel === "offen",
-    anzweifelbar: darf && b.meldung === "bestaetigt" && !b.zurueckgesetzt_am && !zweifel
-                  && !!b.frisch && b.delta > 0
+  const darfBei = (wer) => {
+    const wem = mit.find((m) => m.id === wer);
+    return !istKindProfil(ich) && (!istKind(wem) || istErwachsen(ich));
   };
+
+  if (b.source_type === "claim" && b.meldung) {
+    const zweifel = zweifelJe[b.source_id] || null;
+    return {
+      ...zeile,
+      ziel: b.source_id, zielart: "quest",
+      meldung: b.source_id,
+      gemeldet_am: b.gemeldet_am,
+      bestaetigt_am: b.bestaetigt_am,
+      bestaetigt_von: b.bestaetigt_von,
+      plan: !!b.plan,
+      zurueckgesetzt: !!b.zurueckgesetzt_am,
+      angezweifelt: zweifel === "offen",
+      anzweifelbar: darfBei(b.member_id) && b.meldung === "bestaetigt" && !b.zurueckgesetzt_am && !zweifel
+                    && !!b.frisch && b.delta > 0
+    };
+  }
+
+  if (b.antrag_id) {
+    // Nur die Abbuchung selbst lässt sich anzweifeln; Gutschrift, Strafe und
+    // Nachholung gehen mit ihr zurück und werden mit durchgestrichen.
+    const haupt = b.source_type === "request" && b.source_id === b.antrag_id && b.delta < 0;
+    const zweifel = zweifelJe[b.antrag_id] || null;
+    if (!haupt) return { ...zeile, zurueckgesetzt: !!b.antrag_zurueck };
+    return {
+      ...zeile,
+      ziel: b.antrag_id, zielart: "belohnung",
+      gemeldet_am: b.antrag_gestellt,
+      bestaetigt_am: b.antrag_am,
+      bestaetigt_von: b.antrag_von,
+      gutschrift_an: b.gutschrift_an || null,
+      // Noch etwas zu liefern oder nachzuholen? Dann entfällt das mit.
+      zusage_offen: ["offen", "nicht_erhalten", "nachgeholt"].includes(b.antrag_erfuellt),
+      zurueckgesetzt: !!b.antrag_zurueck,
+      angezweifelt: zweifel === "offen",
+      anzweifelbar: darfBei(b.member_id) && b.antrag === "bestaetigt" && !b.antrag_zurueck && !zweifel
+                    && !!b.antrag_frisch
+    };
+  }
+  return zeile;
 }
 
 /* ------------------------------------------------------------------ Melden */
@@ -1646,47 +1689,76 @@ async function ruecktrittVorschlagen(env, ich, { zielId, grund = "" }) {
 
 /** „1 Cleanie“, „5 Cleanies“. */
 const cleanies = (n) => `${n} ${Math.abs(n) === 1 ? "Cleanie" : "Cleanies"}`;
+/** „1 Cleanie geht“, „5 Cleanies gehen“. */
+const cleaniesGehen = (n) => `${cleanies(n)} ${Math.abs(n) === 1 ? "geht" : "gehen"}`;
 
-/** Was an einer Buchung nicht stimmt. Der Schlüssel reist im Anhang mit, der
+/** Was an einer Buchung nicht stimmt — je nachdem, ob es eine erledigte Quest
+ *  oder eine eingelöste Belohnung ist. Der Schlüssel reist im Anhang mit, der
  *  Text steht auf der Karte. */
 export const ZWEIFEL_GRUENDE = {
-  doppelt: "Doppelt gezählt",
-  versehen: "Aus Versehen gemeldet",
-  nicht_erledigt: "Nicht erledigt",
-  anders: "Anderer Grund"
+  quest: {
+    doppelt: "Doppelt gezählt",
+    versehen: "Aus Versehen gemeldet",
+    nicht_erledigt: "Nicht erledigt",
+    anders: "Anderer Grund"
+  },
+  belohnung: {
+    doppelt: "Doppelt abgebucht",
+    versehen: "Aus Versehen eingelöst",
+    nicht_bekommen: "Nicht bekommen",
+    anders: "Anderer Grund"
+  }
 };
 /** So weit zurück lässt sich anzweifeln — lang genug, um einen Fehler zu
  *  bemerken, kurz genug, dass keine alten Geschichten wieder aufkommen. */
 export const ZWEIFEL_TAGE = 14;
 
-/** Eine bestätigte Quest anzweifeln. Daraus wird eine Abstimmung: Es reicht
- *  eine Mehrheit, wer anzweifelt, stimmt mit Ja — auch bei der eigenen Buchung.
- *  Jede Buchung kann nur einmal angezweifelt werden. */
-async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) {
-  if (!ZWEIFEL_GRUENDE[grund]) throw new Fehler("Was stimmt nicht? Bitte einen Grund wählen");
-  const text = String(notiz || "").trim().slice(0, 300);
-
-  const c = await env.DB.prepare(
-    `select c.id, c.claimed_by, c.status, c.zurueckgesetzt_am, q.name as quest, q.category,
-            c.decided_at >= datetime('now', '-${ZWEIFEL_TAGE} days') as frisch,
-            (select coalesce(sum(delta), 0) from ledger
-              where source_type = 'claim' and source_id = c.id) as betrag
+/** Was angezweifelt wird: eine bestätigte Quest (claims) oder eine genehmigte
+ *  Einlösung (requests). Der Betrag ist, was damals gebucht wurde. */
+async function zweifelZiel(env, paar, zielId) {
+  const quest = await env.DB.prepare(
+    `select 'quest' as art, c.id, c.claimed_by as wem, c.status, c.zurueckgesetzt_am, q.name, q.category,
+            null as gut, c.decided_at >= datetime('now', '-${ZWEIFEL_TAGE} days') as frisch,
+            (select coalesce(sum(delta), 0) from ledger where source_id = c.id and source_type = 'claim') as betrag
        from claims c join quests q on q.id = c.quest_id
       where c.id = ?1 and c.couple_id = ?2`
-  ).bind(zielId || "", ich.couple_id).first();
-  if (!c) throw new Fehler("Diese Buchung gibt es nicht", 404);
-  if (c.zurueckgesetzt_am) throw new Fehler("Diese Buchung ist schon zurückgesetzt");
-  if (c.status !== "bestaetigt" || !(c.betrag > 0)) throw new Fehler("Anzweifeln lassen sich nur bestätigte Quests");
-  if (!c.frisch) throw new Fehler(`Anzweifeln geht nur in den ersten ${ZWEIFEL_TAGE} Tagen`);
+  ).bind(zielId, paar).first();
+  if (quest) return quest;
+  return env.DB.prepare(
+    `select 'belohnung' as art, r.id, r.requested_by as wem, r.status, r.zurueckgesetzt_am, b.name, null as category,
+            r.gutschrift_an as gut, r.decided_at >= datetime('now', '-${ZWEIFEL_TAGE} days') as frisch,
+            -(select coalesce(sum(delta), 0) from ledger where source_id = r.id and source_type = 'request') as betrag
+       from requests r join rewards b on b.id = r.reward_id
+      where r.id = ?1 and r.couple_id = ?2`
+  ).bind(zielId, paar).first();
+}
+
+/** Eine bestätigte Quest oder eine eingelöste Belohnung anzweifeln. Daraus
+ *  wird eine Abstimmung: Es reicht eine Mehrheit, wer anzweifelt, stimmt mit
+ *  Ja — auch bei der eigenen Buchung. Jede Buchung nur einmal. */
+async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) {
+  const text = String(notiz || "").trim().slice(0, 300);
+
+  const z = await zweifelZiel(env, ich.couple_id, String(zielId || ""));
+  if (!z) throw new Fehler("Diese Buchung gibt es nicht", 404);
+  const quest = z.art === "quest";
+  const gruende = ZWEIFEL_GRUENDE[z.art];
+  if (!gruende[grund]) throw new Fehler("Was stimmt nicht? Bitte einen Grund wählen");
+  if (z.zurueckgesetzt_am) throw new Fehler("Diese Buchung ist schon zurückgesetzt");
+  if (z.status !== "bestaetigt" || !(z.betrag > 0)) {
+    throw new Fehler(quest ? "Anzweifeln lassen sich nur bestätigte Quests"
+                           : "Anzweifeln lassen sich nur genehmigte Belohnungen");
+  }
+  if (!z.frisch) throw new Fehler(`Anzweifeln geht nur in den ersten ${ZWEIFEL_TAGE} Tagen`);
 
   const [wem, selbst] = await Promise.all([
-    mitgliedVon(env, ich.couple_id, c.claimed_by), mitgliedVon(env, ich.couple_id, ich.id)
+    mitgliedVon(env, ich.couple_id, z.wem), mitgliedVon(env, ich.couple_id, ich.id)
   ]);
   if (istKind(wem) && !istErwachsen(selbst)) throw new Fehler("Buchungen von Kindern zweifeln nur die Eltern an", 403);
 
   const schon = await env.DB.prepare(
     "select status from proposals where couple_id = ?1 and kind = 'zweifel' and target_id = ?2 limit 1"
-  ).bind(ich.couple_id, c.id).first();
+  ).bind(ich.couple_id, z.id).first();
   if (schon) throw new Fehler(schon.status === "offen" ? "Dazu läuft schon eine Abstimmung"
                                                      : "Diese Buchung wurde schon einmal angezweifelt");
 
@@ -1697,8 +1769,8 @@ async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) 
       `insert into proposals (id, couple_id, kind, target_id, new_value, name, category, reason, payload, created_by)
        select ?1, ?2, 'zweifel', ?3, ?4, ?5, ?6, ?7, ?8, ?9
         where not exists (select 1 from proposals where couple_id = ?2 and kind = 'zweifel' and target_id = ?3)`
-    ).bind(vorschlag, ich.couple_id, c.id, c.betrag, c.quest, c.category, text || null,
-           JSON.stringify({ grund, wem: c.claimed_by }), ich.id),
+    ).bind(vorschlag, ich.couple_id, z.id, z.betrag, z.name, z.category, text || null,
+           JSON.stringify({ grund, wem: z.wem, art: z.art, gut: z.gut || null }), ich.id),
     env.DB.prepare(
       `insert into proposal_votes (proposal_id, member_id, answer)
        select ?1, ?2, 1 where exists (select 1 from proposals where id = ?1)`
@@ -1709,7 +1781,7 @@ async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) 
   const koepfe = await env.DB.prepare(`select count(*) as n from members where couple_id = ?1 and ${STIMMRECHT}`)
     .bind(ich.couple_id).first();
   const noetig = mehrheit(koepfe.n);
-  const wemName = c.claimed_by === ich.id ? "sich selbst" : vorname(wem?.name || "");
+  const wemName = z.wem === ich.id ? "sich selbst" : vorname(wem?.name || "");
 
   // Wer allein abstimmt, hat mit dem Anzweifeln schon entschieden.
   const zeile = await env.DB.prepare("select * from proposals where id = ?1").bind(vorschlag).first();
@@ -1722,7 +1794,7 @@ async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) 
   await meldeAllen(env, ich, {
     art: "info", quelle: vorschlag,
     titel: `${vorname(ich.name)} zweifelt eine Buchung an`,
-    text: `${c.quest} (+${c.betrag} für ${wemName}) — ${ZWEIFEL_GRUENDE[grund]}${text ? `: „${text}“` : ""}. ` +
+    text: `${z.name} (${quest ? "+" : "−"}${z.betrag} für ${wemName}) — ${gruende[grund]}${text ? `: „${text}“` : ""}. ` +
           `Eine Mehrheit entscheidet: ${noetig} von ${koepfe.n}.`
   });
   return { ok: true, status, noetig, koepfe: koepfe.n };
@@ -1731,24 +1803,37 @@ async function zweifelVorschlagen(env, ich, { zielId, grund = "", notiz = "" }) 
 /** Alle erfahren, wie es ausgegangen ist — außer der Person, die gerade
  *  entschieden hat. */
 async function zweifelEntschiedenMelden(env, paar, ausser, vorschlag, status) {
-  const wem = anhang(vorschlag).wem;
+  const { wem, art } = anhang(vorschlag);
   const name = vorname((await mitgliedVon(env, paar, wem))?.name || "");
-  await meldeAlle(env, paar, ausser, status === "bestaetigt"
-    ? { art: "info", quelle: vorschlag.id, titel: `Zurückgesetzt: ${vorschlag.name}`,
-        text: `${cleanies(vorschlag.new_value)} gehen von ${name} zurück.` }
-    : { art: "info", quelle: vorschlag.id, titel: `${vorschlag.name} bleibt gebucht`,
-        text: `Die Abstimmung ist abgelehnt — ${name} behält ${vorschlag.new_value === 1 ? "das Cleanie" : `die ${cleanies(vorschlag.new_value)}`}.` });
+  const n = vorschlag.new_value;
+  const ereignis = art === "belohnung"
+    ? (status === "bestaetigt"
+        ? { titel: `Zurückgesetzt: ${vorschlag.name}`, text: `${cleaniesGehen(n)} an ${name} zurück.` }
+        : { titel: `${vorschlag.name} bleibt eingelöst`, text: "Die Abstimmung ist abgelehnt — die Einlösung bleibt." })
+    : (status === "bestaetigt"
+        ? { titel: `Zurückgesetzt: ${vorschlag.name}`, text: `${cleaniesGehen(n)} von ${name} zurück.` }
+        : { titel: `${vorschlag.name} bleibt gebucht`,
+            text: `Die Abstimmung ist abgelehnt — ${name} behält ${n === 1 ? "das Cleanie" : `die ${cleanies(n)}`}.` });
+  await meldeAlle(env, paar, ausser, { art: "info", quelle: vorschlag.id, ...ereignis });
 }
 
-/** Zurücksetzen, wenn die Mehrheit steht: eine Gegenbuchung, die Meldung gilt
- *  nicht mehr als bestätigt. Nichts wird gelöscht.
+/** Zurücksetzen, wenn die Mehrheit steht. Nichts wird gelöscht: Es gibt
+ *  Gegenbuchungen, und die Meldung oder der Antrag gilt nicht mehr als
+ *  bestätigt. */
+function zweifelUebernehmen(env, vorschlag) {
+  return anhang(vorschlag).art === "belohnung"
+    ? belohnungZurueck(env, vorschlag)
+    : questZurueck(env, vorschlag);
+}
+
+/** Eine Quest: eine Gegenbuchung über das, was gebucht wurde.
  *
  *  Bei einer Aufgabe aus dem Haushaltsplan geht die Runde wieder auf, wenn sie
  *  nicht gemacht wurde („Aus Versehen gemeldet“, „Nicht erledigt“) — es sei
  *  denn, sie ist in dieser Runde noch einmal bestätigt worden: danach, oder
  *  kurz davor (innerhalb des halben Rhythmus, bei einer Woche also 3½ Tage).
  *  Was doppelt gezählt war, ist trotzdem erledigt. */
-function zweifelUebernehmen(env, vorschlag) {
+function questZurueck(env, vorschlag) {
   const { grund } = anhang(vorschlag);
   const oeffnen = grund === "versehen" || grund === "nicht_erledigt" ? 1 : 0;
   const meldung = vorschlag.target_id;
@@ -1776,6 +1861,32 @@ function zweifelUebernehmen(env, vorschlag) {
       `update claims set status = 'abgelehnt', zurueckgesetzt_am = datetime('now')
         where id = ?1 and couple_id = ?2 and status = 'bestaetigt' and zurueckgesetzt_am is null`
     ).bind(meldung, vorschlag.couple_id)
+  ];
+}
+
+/** Eine Einlösung gilt danach als nie passiert. Jede Buchung, die an ihr
+ *  hängt, bekommt ihre Gegenbuchung: die Abbuchung bei der Person, die
+ *  eingelöst hat, die Gutschrift an jemand anderen („:gut“), die Strafe wegen
+ *  „nicht bekommen“ und deren Nachholung. Der Antrag gilt nicht mehr als
+ *  genehmigt — eine offene Zusage verschwindet damit, und „Bekommen?“ lässt
+ *  sich nicht mehr melden. */
+function belohnungZurueck(env, vorschlag) {
+  const antrag = vorschlag.target_id;
+  return [
+    env.DB.prepare(
+      `insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id)
+       select lower(hex(randomblob(16))), l.couple_id, l.member_id, -l.delta,
+              'Zurückgesetzt: ' || l.reason, 'zurueck', l.source_id
+         from requests r join ledger l
+           on l.source_id in (r.id, r.id || ':gut', 'strafe:' || r.id, 'nachhol:' || r.id)
+        where r.id = ?1 and r.couple_id = ?2 and r.status = 'bestaetigt' and r.zurueckgesetzt_am is null
+          and l.couple_id = r.couple_id and l.source_type <> 'zurueck'
+          and not exists (select 1 from ledger z where z.source_id = l.source_id and z.source_type = 'zurueck')`
+    ).bind(antrag, vorschlag.couple_id),
+    env.DB.prepare(
+      `update requests set status = 'abgelehnt', zurueckgesetzt_am = datetime('now')
+        where id = ?1 and couple_id = ?2 and status = 'bestaetigt' and zurueckgesetzt_am is null`
+    ).bind(antrag, vorschlag.couple_id)
   ];
 }
 

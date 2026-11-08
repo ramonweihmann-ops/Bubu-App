@@ -192,6 +192,50 @@ await c.click('[data-zweifelkarte] [data-stimme][data-antwort="nein"]');
 enthaelt("Mit dem zweiten Nein bleibt sie", await toastText(c, `Die Buchung bleibt — ${Q.name} ist weiter gebucht`), `Die Buchung bleibt — ${Q.name} ist weiter gebucht`);
 pruefe("Stand unverändert", lies("select points from balances where member_id = 'u-a'")[0].points, 100 + Q.points);
 
+console.log("== Eine Belohnung: Bibis Ausnahmeantrag von gestern");
+sql(`insert into rewards (id, couple_id, name, cost, bestaetigen) values ('rw-zw-ui', '${PAAR}', 'Veto-Ausnahmeantrag', 15, 0) on conflict(id) do update set active = 1`);
+sql(`insert into requests (id, couple_id, reward_id, requested_by, cost, status, decided_by, decided_at, created_at, erfuellt) values ('rq-zw-ui', '${PAAR}', 'rw-zw-ui', 'u-a', 15, 'bestaetigt', 'u-b', datetime('now','-20 hours'), datetime('now','-20 hours','-10 minutes'), 'erhalten')`);
+sql(`insert into ledger (id, couple_id, member_id, delta, reason, source_type, source_id, created_at) values ('rq-zw-ui-l', '${PAAR}', 'u-a', -15, 'Veto-Ausnahmeantrag', 'request', 'rq-zw-ui', datetime('now','-20 hours'))`);
+const vorher = lies("select points from balances where member_id = 'u-a'")[0].points;
+await zumVerlauf(b);
+const bz = b.locator(".ledger li.waehlbar", { hasText: "Veto-Ausnahmeantrag" });
+pruefe("Die Abbuchung hat ein ›", await bz.count(), 1);
+enthaelt("Hinweis nennt Belohnungen", await b.locator("[data-zweifel-hinweis]").innerText(), "eingelöste Belohnungen");
+await bz.locator("[data-zweifeln]").click();
+await b.waitForSelector(".sheet [data-zgrund]");
+const bblatt = (await b.locator(".sheet").innerText()).replace(/\s+/g, " ");
+enthaelt("Eingelöst und genehmigt", bblatt, "eingelöst");
+enthaelt("… genehmigt von dir", bblatt, "genehmigt von dir");
+enthaelt("Gründe einer Belohnung", bblatt, "Doppelt abgebucht");
+enthaelt("Nicht bekommen", bblatt, "Nicht bekommen");
+enthaelt("Cleanies gehen an Bibi zurück", bblatt, "gehen die Cleanies an Bibi zurück");
+pruefe("Ausnahmeantrag: keine Zusage zu erwähnen", bblatt.includes("Zusage"), false);
+pruefe("Kein Hinweis zum Haushaltsplan", await b.locator(".sheet [data-zweifel-runde]").count(), 0);
+await b.click('[data-zgrund="versehen"]');
+await b.fill("#zwnotiz", "Aus Versehen getippt");
+await b.waitForTimeout(300);
+await b.screenshot({ path: `${AUS}/zw7-blatt-belohnung.png` });
+await b.click('[data-senden="zweifel"]');
+enthaelt("Steht zur Abstimmung", await toastText(b, "Steht zur Abstimmung"), "Steht zur Abstimmung");
+await laden(a);
+await a.waitForSelector('.karte[data-platz="0"] .stimmen', { timeout: 8000 });
+const bk = (await a.locator('.karte[data-platz="0"]').innerText()).replace(/\s+/g, " ");
+enthaelt("Karte: Titel", bk, "Veto-Ausnahmeantrag zurücksetzen");
+enthaelt("Karte: Plus für dich", bk, "+15");
+enthaelt("Karte: für dich", bk, "für dich");
+enthaelt("Karte: Grund", bk, "Aus Versehen eingelöst");
+await a.waitForSelector("#toast:not([data-open])", { state: "attached", timeout: 6000 });
+await a.screenshot({ path: `${AUS}/zw8-stapel-belohnung.png` });
+await a.locator('.karte[data-platz="0"] [data-kartentun="ja"]').click();
+enthaelt("Cleanies zurück", await toastText(a, "Zurückgesetzt — 15 Cleanies gehen an dich zurück"), "Zurückgesetzt — 15 Cleanies gehen an dich zurück");
+await a.waitForTimeout(800);
+pruefe("Stand: 15 mehr", lies("select points from balances where member_id = 'u-a'")[0].points, vorher + 15);
+await zumVerlauf(a);
+enthaelt("Gegenbuchung oben", (await a.locator(".ledger li").first().innerText()).replace(/\s+/g, " "), "Zurückgesetzt: Veto-Ausnahmeantrag");
+pruefe("Abbuchung durchgestrichen", await a.locator(".ledger li.weg", { hasText: "Veto-Ausnahmeantrag" }).count(), 1);
+await a.screenshot({ path: `${AUS}/zw9-verlauf-belohnung.png` });
+pruefe("Nichts läuft über", await ueberlauf(a), false);
+
 console.log("== Handy und dunkel");
 for (const thema of ["light", "dark"]) {
   const h = await seiteFuer("tok-b", { breite: 375, thema });
@@ -203,6 +247,6 @@ for (const thema of ["light", "dark"]) {
 
 await browser.close();
 aufraeumen();
-sql("delete from quests where id = 'q-zw-bad'");
+sql("delete from quests where id = 'q-zw-bad'; delete from rewards where id = 'rw-zw-ui'");
 console.log(fehler ? `${fehler} Fehler` : "ALLES GRÜN");
 process.exit(fehler ? 1 : 0);

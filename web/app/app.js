@@ -1320,8 +1320,9 @@ function alleKarten() {
         av: bild(mitglied(e.von), "xs"),
         wer: `${esc(nameVon(e.von))} zweifelt eine Buchung an`,
         was: esc(e.titel || "Buchung zurücksetzen"),
-        betrag: `−${cl(e.neu)} <span class="fuer">${fuer}</span>`, neutral: true,
-        notiz: `<b>${esc(ZWEIFEL_GRUENDE[e.zweifel] || "Angezweifelt")}</b>${e.grund ? ` — „${esc(e.grund)}“` : ""}`,
+        // Eine Quest zurücksetzen nimmt Cleanies weg, eine Belohnung gibt sie zurück.
+        betrag: `${e.zweifel_art === "belohnung" ? "+" : "−"}${cl(e.neu)} <span class="fuer">${fuer}</span>`, neutral: true,
+        notiz: `<b>${esc(zweifelGrundText(e.zweifel_art, e.zweifel))}</b>${e.grund ? ` — „${esc(e.grund)}“` : ""}`,
         notizKurz: true,
         stimmen: `${esc(ja.join(", ") || "noch niemand")}: Ja · ${e.noetig - ja.length <= 1
           ? "deine Stimme entscheidet" : `noch ${e.noetig - ja.length} Stimmen bis zur Mehrheit`}`,
@@ -2487,7 +2488,7 @@ function abstimmungWorum(a) {
     case "urlaub_person": return "Nur eine Person — der Plan bleibt, wie er ist";
     case "urlaub_haushalt": return "Alle Fälligkeiten rücken nach hinten";
     case "ruecktritt": return `${a.aufgabe || "Wiederkehrende Aufgabe"} — die Runde wird wieder frei`;
-    case "zweifel": return `Buchung angezweifelt — ${ZWEIFEL_GRUENDE[a.zweifel] || "die Cleanies sollen zurück"}`;
+    case "zweifel": return `${a.zweifel_art === "belohnung" ? "Einlösung" : "Buchung"} angezweifelt — ${zweifelGrundText(a.zweifel_art, a.zweifel)}`;
     case "kurs": return "Taschengeld — der Kurs soll sich ändern";
     case "fair_soll": return "Fair-Bericht — daran misst die Waage";
     default: return "Vorschlag";
@@ -2520,7 +2521,7 @@ function abstimmungWandel(a) {
             <span style="color:var(--ink-2);font-weight:400">· Frist bleibt</span>`;
   }
   if (a.art === "zweifel") {
-    return `<span class="old">+${cl(a.neu)} für ${esc(a.wem === S.ich.id ? "dich" : nameVon(a.wem))}</span>→<span class="new">zurückgesetzt</span>`;
+    return `<span class="old">${a.zweifel_art === "belohnung" ? "−" : "+"}${cl(a.neu)} für ${esc(a.wem === S.ich.id ? "dich" : nameVon(a.wem))}</span>→<span class="new">zurückgesetzt</span>`;
   }
   if (a.art === "delete_aufgabe") return `<span class="old">im Plan</span>→<span class="new">löschen</span>`;
   if (a.art === "fair_soll") {
@@ -3576,13 +3577,26 @@ function schirmUrlaub() {
 
 /* ------------------------------------------------------------------ Verlauf */
 
-/** Was an einer Buchung nicht stimmt — dieselben Schlüssel wie im Server. */
+/** Was an einer Buchung nicht stimmt — je nachdem, ob es eine erledigte Quest
+ *  oder eine eingelöste Belohnung ist. Dieselben Schlüssel wie im Server. */
 const ZWEIFEL_GRUENDE = {
-  doppelt: "Doppelt gezählt",
-  versehen: "Aus Versehen gemeldet",
-  nicht_erledigt: "Nicht erledigt",
-  anders: "Anderer Grund"
+  quest: {
+    doppelt: "Doppelt gezählt",
+    versehen: "Aus Versehen gemeldet",
+    nicht_erledigt: "Nicht erledigt",
+    anders: "Anderer Grund"
+  },
+  belohnung: {
+    doppelt: "Doppelt abgebucht",
+    versehen: "Aus Versehen eingelöst",
+    nicht_bekommen: "Nicht bekommen",
+    anders: "Anderer Grund"
+  }
 };
+const zweifelGrundText = (art, grund) => ZWEIFEL_GRUENDE[art || "quest"]?.[grund] || "Angezweifelt";
+/** „1 Cleanie“, „5 Cleanies“ — mit „geht“ oder „gehen“, wenn gewünscht. */
+const cleanieZahl = (n, verb = false) =>
+  `${n} ${n === 1 ? "Cleanie" : "Cleanies"}${verb ? (n === 1 ? " geht" : " gehen") : ""}`;
 
 function schirmVerlauf() {
   const meins = S.verlauf.filter((b) => b.member_id === S.ich.id);
@@ -3620,8 +3634,8 @@ function schirmVerlauf() {
         <span style="font-family:var(--font-data);font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.6">Dein Cleanies-Stand</span>
         <span style="font-family:var(--font-display);font-weight:800;font-size:44px;letter-spacing:-.04em;line-height:1">${cl(S.ich.punkte)}</span>
         <span style="font-size:12.5px;opacity:.75">${gesammelt} gesammelt · ${eingeloest} eingelöst (letzte 40 Buchungen)</span>
-        ${antippbar ? `<span style="font-size:12px;opacity:.75" data-zweifel-hinweis>Antippen: Erledigte Quests der letzten
-          14 Tage lassen sich anzweifeln.</span>` : ""}
+        ${antippbar ? `<span style="font-size:12px;opacity:.75" data-zweifel-hinweis>Antippen: Erledigte Quests und
+          eingelöste Belohnungen der letzten 14 Tage lassen sich anzweifeln.</span>` : ""}
       </div>
       ${S.verlauf.length ? `
       <ul class="card ledger">
@@ -3640,43 +3654,52 @@ function tagUhr(iso) {
     d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-/** Wer über einen Zweifel entscheidet, in einem Satz für das Blatt. */
-function zweifelWerEntscheidet(wem) {
+/** Wer über einen Zweifel entscheidet, in einem Satz für das Blatt. Bei einer
+ *  Quest gehen die Cleanies von der Person zurück, bei einer Belohnung an sie. */
+function zweifelWerEntscheidet(wem, art) {
   const koepfe = S.mitglieder.filter((m) => !istKindProfilM(m)).length;
   const fehlen = Math.floor(koepfe / 2);
   if (fehlen <= 0) return "Du entscheidest allein — die Buchung wird sofort zurückgesetzt.";
-  const wen = wem === S.ich.id ? "dir" : esc(nameVon(wem));
+  const belohnung = art === "belohnung";
+  const wen = wem === S.ich.id ? (belohnung ? "dich" : "dir") : esc(nameVon(wem));
   const andereGrosse = S.mitglieder.filter((m) => !istKindProfilM(m) && m.id !== S.ich.id);
   const wer = koepfe === 2 && andereGrosse[0] ? `Stimmt ${esc(vorname(andereGrosse[0].name))} zu`
     : `Stimmen ${fehlen === 1 ? "eine weitere Person" : `${fehlen} weitere`} zu`;
-  return `${wer}, gehen die Cleanies von ${wen} zurück.`;
+  return `${wer}, gehen die Cleanies ${belohnung ? "an" : "von"} ${wen} zurück.`;
 }
 
 let zweifelGrund = null;
 
 function sheetZweifeln(b) {
   zweifelGrund = null;
+  const belohnung = b.zielart === "belohnung";
+  const n = Math.abs(b.delta);
+  const von = (wer) => wer === S.ich.id ? "von dir" : `von ${esc(nameVon(wer))}`;
   const bestaetigt = b.bestaetigt_von
-    ? ` · bestätigt ${b.bestaetigt_von === S.ich.id ? "von dir" : `von ${esc(nameVon(b.bestaetigt_von))}`} ${tagUhr(b.bestaetigt_am)}`
-    : "";
+    ? ` · ${belohnung ? "genehmigt" : "bestätigt"} ${von(b.bestaetigt_von)} ${tagUhr(b.bestaetigt_am)}` : "";
+  const mehr = belohnung
+    ? [b.gutschrift_an ? `Die Gutschrift an ${b.gutschrift_an === S.ich.id ? "dich" : esc(nameVon(b.gutschrift_an))} geht mit zurück.` : "",
+       b.zusage_offen ? "Die offene Zusage entfällt." : ""].filter(Boolean).join(" ")
+    : "Im Fair-Bericht zählt sie nicht mehr.";
   sheet(`
     <div class="grabber"></div>
     <h3>Buchung anzweifeln</h3>
     <div class="card flat" style="flex-direction:row;align-items:center;gap:10px">
       ${bild(mitglied(b.member_id), "sm")}
       <span style="flex:1;min-width:0"><span style="font-size:14px;font-weight:600;display:block">${esc(b.reason)}</span>
-        <span style="font-size:11.5px;color:var(--ink-3)">${esc(nameVon(b.member_id))} · gemeldet ${tagUhr(b.gemeldet_am)}${bestaetigt}</span></span>
-      <span class="pts-pill">+${cl(b.delta)}</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">${esc(nameVon(b.member_id))} · ${belohnung ? "eingelöst" : "gemeldet"} ${tagUhr(b.gemeldet_am)}${bestaetigt}</span></span>
+      <span class="pts-pill">${b.delta > 0 ? "+" : "−"}${cl(n)}</span>
     </div>
     <div class="field"><label>Was stimmt nicht? <span style="color:var(--accent)">· nötig</span></label>
       <div class="zweifelwahl" role="group" aria-label="Grund">
-        ${Object.entries(ZWEIFEL_GRUENDE).map(([k, t]) =>
+        ${Object.entries(ZWEIFEL_GRUENDE[belohnung ? "belohnung" : "quest"]).map(([k, t]) =>
           `<button type="button" data-zgrund="${k}" aria-pressed="false">${t}</button>`).join("")}
       </div></div>
     <div class="field"><label>Notiz</label>
-      <textarea id="zwnotiz" maxlength="300" placeholder="optional, z. B. „Einmal geputzt, zweimal gebucht“"></textarea></div>
-    <div class="note">${icon("i-info", 16)}<span>${zweifelWerEntscheidet(b.member_id)}
-      Es ${b.delta === 1 ? "ist" : "sind"} <b>${b.delta} ${b.delta === 1 ? "Cleanie" : "Cleanies"}</b>. Die Zeile bleibt durchgestrichen im Verlauf, und im Fair-Bericht zählt sie nicht mehr.</span></div>
+      <textarea id="zwnotiz" maxlength="300" placeholder="optional, z. B. „${belohnung
+        ? "Aus Versehen zweimal getippt" : "Einmal geputzt, zweimal gebucht"}“"></textarea></div>
+    <div class="note">${icon("i-info", 16)}<span>${zweifelWerEntscheidet(b.member_id, b.zielart)}
+      Es ${n === 1 ? "ist" : "sind"} <b>${cleanieZahl(n)}</b>. Die Zeile bleibt durchgestrichen im Verlauf. ${mehr}</span></div>
     ${b.plan ? `<div class="note" data-zweifel-runde>${icon("i-kalender", 16)}<span>Aus dem Haushaltsplan: Bei „Aus Versehen
       gemeldet“ oder „Nicht erledigt“ ist die Runde danach wieder offen. Bei „Doppelt gezählt“ bleibt sie erledigt.</span></div>` : ""}
     <button class="btn primary block" data-senden="zweifel" data-id="${esc(b.id)}">Zur Abstimmung geben</button>`);
@@ -3684,9 +3707,12 @@ function sheetZweifeln(b) {
 
 /** Der Satz nach einer Entscheidung über einen Zweifel. */
 function zweifelToast(a, status) {
-  const wen = a.wem === S.ich.id ? "dir" : nameVon(a.wem);
-  if (status === "bestaetigt") return `Zurückgesetzt — ${a.neu} ${a.neu === 1 ? "Cleanie geht" : "Cleanies gehen"} von ${wen} zurück.`;
-  if (status === "abgelehnt") return `Die Buchung bleibt — ${a.aufgabe || "die Quest"} ist weiter gebucht.`;
+  const belohnung = a.zweifel_art === "belohnung";
+  const wen = a.wem === S.ich.id ? (belohnung ? "dich" : "dir") : nameVon(a.wem);
+  if (status === "bestaetigt") return `Zurückgesetzt — ${cleanieZahl(a.neu, true)} ${belohnung ? "an" : "von"} ${wen} zurück.`;
+  if (status === "abgelehnt") return belohnung
+    ? `Die Einlösung bleibt — ${a.aufgabe || "die Belohnung"} ist weiter eingelöst.`
+    : `Die Buchung bleibt — ${a.aufgabe || "die Quest"} ist weiter gebucht.`;
   return "Deine Stimme zählt. Es fehlen noch Stimmen.";
 }
 
@@ -5820,12 +5846,14 @@ document.addEventListener("click", async (ev) => {
       if (!b) { sheetZu(); return; }
       if (!zweifelGrund) { toast("Was stimmt nicht? Bitte einen Grund wählen.", true); return; }
       const ergebnis = await api("proposals", {
-        art: "zweifel", zielId: b.meldung, grund: zweifelGrund, notiz: wert("zwnotiz")
+        art: "zweifel", zielId: b.ziel, grund: zweifelGrund, notiz: wert("zwnotiz")
       });
       sheetZu(); await laden();
       const weitere = ergebnis.noetig - 1;
+      const belohnung = b.zielart === "belohnung";
       toast(ergebnis.status === "bestaetigt"
-        ? `Zurückgesetzt — ${b.delta} ${b.delta === 1 ? "Cleanie geht" : "Cleanies gehen"} von ${b.member_id === S.ich.id ? "dir" : nameVon(b.member_id)} zurück.`
+        ? `Zurückgesetzt — ${cleanieZahl(Math.abs(b.delta), true)} ${belohnung ? "an" : "von"} ${
+            b.member_id === S.ich.id ? (belohnung ? "dich" : "dir") : nameVon(b.member_id)} zurück.`
         : `Steht zur Abstimmung — ${weitere === 1 ? "eine Stimme fehlt" : `${weitere} Stimmen fehlen`} noch.`);
       return;
     }

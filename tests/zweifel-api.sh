@@ -92,7 +92,7 @@ pruefe "Zeile: zurückgesetzt" "$(zeile tok-a "$M1" ".zurueckgesetzt")" "true"
 pruefe "Gegenzeile im Verlauf" "$(get tok-a state | feld ".verlauf.find(v=>v.art==='zurueck'&&v.meldung==='$M1').reason")" "Zurückgesetzt: $QN"
 pruefe "A und B erfahren es" "$(sql "select group_concat(user_id) as w from (select user_id from ereignisse where quelle_id='$Z1' order by user_id)" | feld "[0].w")" "u-a,u-b"
 ANNA=$(sql "select name from users where id='u-a'" | feld "[0].name.split(' ')[0]")
-pruefe "… mit dem Betrag" "$(sql "select text from ereignisse where quelle_id='$Z1' and user_id='u-a'" | feld "[0].text")" "$([ "$QP" = 1 ] && echo "1 Cleanie" || echo "$QP Cleanies") gehen von $ANNA zurück."
+pruefe "… mit dem Betrag" "$(sql "select text from ereignisse where quelle_id='$Z1' and user_id='u-a'" | feld "[0].text")" "$([ "$QP" = 1 ] && echo "1 Cleanie geht" || echo "$QP Cleanies gehen") von $ANNA zurück."
 pruefe "Nicht noch einmal" "$(anzweifeln tok-c "$M1" doppelt | feld ".fehler")" "Diese Buchung ist schon zurückgesetzt"
 pruefe "Wochenkachel ohne sie" "$(get tok-a state | feld ".woche.je.find(j=>j.id==='u-a').punkte")" "0"
 pruefe "Auswertung ohne sie" "$(get tok-a "statistik?versatz=0" | feld ".tage.reduce((s,t)=>s+t.ich,0)")" "0"
@@ -160,6 +160,86 @@ post tok-c "proposals/$(zweifelId zw-vers)/vote" '{"antwort":true}' > /dev/null
 pruefe "Zurückgesetzt" "$(sql "select zurueckgesetzt_am is not null as z from claims where id='zw-vers'" | feld "[0].z")" "1"
 pruefe "Runde bleibt erledigt" "$(sql "select faellig_am = date('now','+7 days') as j from quests where id='$Q'" | feld "[0].j")" "1"
 roh "update quests set wiederkehrend = 0, faellig_am = null, tage = null, rhythmus = null, vergabe_runde = null, dran = null, zugewiesen = null where id='$Q'"
+
+echo "== Belohnungen: eine Einlösung zurücksetzen — alles, was dran hängt, geht mit"
+roh "delete from ereignisse"
+roh "insert into ledger (id, couple_id, member_id, delta, reason, source_type) select lower(hex(randomblob(8))), couple_id, user_id, 500, 'Testguthaben', 'start' from members where user_id in ('u-a','u-b','u-c')"
+BEL=$(get tok-a state | feld ".belohnungen.find(b=>b.bestaetigen===1).id")
+BN=$(sql "select name from rewards where id='$BEL'" | feld "[0].name")
+G0=$(sql "select genutzt from rewards where id='$BEL'" | feld "[0].genutzt")
+A0=$(stand u-a); B0=$(stand u-b); C0=$(stand u-c)
+post tok-a requests "{\"rewardId\":\"$BEL\",\"gutschriftAn\":\"u-c\"}" > /dev/null
+R1=$(sql "select id from requests where requested_by='u-a' and status='offen' order by created_at desc limit 1" | feld "[0].id")
+post tok-b "requests/$R1/decide" '{"status":"bestaetigt"}' > /dev/null
+K=$(sql "select cost from requests where id='$R1'" | feld "[0].cost")
+pruefe "A hat eingelöst" "$(stand u-a)" "$((A0 - K))"
+pruefe "C hat die Gutschrift" "$(stand u-c)" "$((C0 + K))"
+post tok-a "requests/$R1/empfang" '{"erhalten":false}' > /dev/null
+pruefe "Nicht bekommen: Strafe bei B" "$(stand u-b)" "$((B0 - K))"
+pruefe "Abbuchung anzweifelbar" "$(get tok-b state | feld ".verlauf.find(v=>v.ziel==='$R1').anzweifelbar")" "true"
+pruefe "… als Belohnung" "$(get tok-b state | feld ".verlauf.find(v=>v.ziel==='$R1').zielart")" "belohnung"
+pruefe "… mit Gutschrift an C" "$(get tok-b state | feld ".verlauf.find(v=>v.ziel==='$R1').gutschrift_an")" "u-c"
+pruefe "… und offener Zusage" "$(get tok-b state | feld ".verlauf.find(v=>v.ziel==='$R1').zusage_offen")" "true"
+pruefe "Gutschrift selbst nicht" "$(get tok-b state | feld ".verlauf.filter(v=>v.member_id==='u-c'&&v.delta===$K&&v.art==='request').map(v=>!!v.anzweifelbar).join()")" "false"
+pruefe "Strafe selbst nicht" "$(get tok-b state | feld ".verlauf.filter(v=>v.art==='strafe').map(v=>!!v.anzweifelbar).join()")" "false"
+pruefe "Gründe einer Quest passen nicht" "$(anzweifeln tok-b "$R1" nicht_erledigt | feld ".fehler")" "Was stimmt nicht? Bitte einen Grund wählen"
+ANTWORT=$(anzweifeln tok-b "$R1" nicht_bekommen "Kam nie an")
+pruefe "Steht zur Abstimmung" "$(echo "$ANTWORT" | feld ".status")" "offen"
+ZB=$(zweifelId "$R1")
+pruefe "Karte: Belohnung" "$(get tok-a state | feld ".abstimmungen.find(v=>v.id==='$ZB').zweifel_art")" "belohnung"
+pruefe "Karte: Titel" "$(get tok-a state | feld ".abstimmungen.find(v=>v.id==='$ZB').titel")" "$BN zurücksetzen"
+pruefe "Karte: Betrag" "$(get tok-a state | feld ".abstimmungen.find(v=>v.id==='$ZB').neu")" "$K"
+pruefe "Karte: Gutschrift" "$(get tok-a state | feld ".abstimmungen.find(v=>v.id==='$ZB').gut")" "u-c"
+pruefe "Nachricht mit Minus" "$(sql "select text from ereignisse where quelle_id='$ZB' and user_id='u-a'" | feld "[0].text.includes('−$K für')")" "true"
+roh "delete from ereignisse"
+pruefe "C entscheidet" "$(post tok-c "proposals/$ZB/vote" '{"antwort":true}' | feld ".status")" "bestaetigt"
+pruefe "A hat alles zurück" "$(stand u-a)" "$A0"
+pruefe "B: Strafe zurück" "$(stand u-b)" "$B0"
+pruefe "C: Gutschrift zurück" "$(stand u-c)" "$C0"
+pruefe "Drei Gegenbuchungen" "$(sql "select count(*) as n from ledger where source_type='zurueck' and source_id in ('$R1','$R1:gut','strafe:$R1')" | feld "[0].n")" "3"
+pruefe "Antrag zurückgesetzt" "$(sql "select status || ':' || (zurueckgesetzt_am is not null) as s from requests where id='$R1'" | feld "[0].s")" "abgelehnt:1"
+pruefe "Zählt nicht mehr als eingelöst" "$(sql "select genutzt from rewards where id='$BEL'" | feld "[0].genutzt")" "$G0"
+pruefe "Keine offene Zusage mehr" "$(get tok-b state | feld ".belohnungenOffen.some(r=>r.id==='$R1')")" "false"
+pruefe "Bekommen geht nicht mehr" "$(post tok-a "requests/$R1/empfang" '{"erhalten":true}' | feld ".fehler")" "Dieser Antrag ist nicht genehmigt"
+pruefe "Zeile: zurückgesetzt" "$(get tok-a state | feld ".verlauf.find(v=>v.ziel==='$R1').zurueckgesetzt")" "true"
+pruefe "Gutschrift durchgestrichen" "$(get tok-a state | feld ".verlauf.filter(v=>v.member_id==='u-c'&&v.art==='request').every(v=>v.zurueckgesetzt)")" "true"
+pruefe "Strafe durchgestrichen" "$(get tok-a state | feld ".verlauf.filter(v=>v.art==='strafe').every(v=>v.zurueckgesetzt)")" "true"
+pruefe "Gegenzeile im Verlauf" "$(get tok-a state | feld ".verlauf.find(v=>v.art==='zurueck'&&v.meldung==='$R1').reason")" "Zurückgesetzt: $BN"
+pruefe "Fair-Bericht: nicht eingelöst" "$(get tok-a "fair?versatz=0&zeitraum=woche" | feld ".unsichtbar.eingeloest['u-a']")" "0"
+pruefe "A und B erfahren es" "$(sql "select group_concat(user_id) as w from (select user_id from ereignisse where quelle_id='$ZB' order by user_id)" | feld "[0].w")" "u-a,u-b"
+pruefe "… mit an statt von" "$(sql "select text from ereignisse where quelle_id='$ZB' and user_id='u-a'" | feld "[0].text")" "$([ "$K" = 1 ] && echo "1 Cleanie geht" || echo "$K Cleanies gehen") an $ANNA zurück."
+pruefe "Nicht noch einmal" "$(anzweifeln tok-c "$R1" doppelt | feld ".fehler")" "Diese Buchung ist schon zurückgesetzt"
+
+echo "== Belohnung: die Mehrheit sagt, sie bleibt"
+roh "delete from ereignisse"
+A1=$(stand u-a)
+post tok-a requests "{\"rewardId\":\"$BEL\"}" > /dev/null
+R2=$(sql "select id from requests where requested_by='u-a' and status='offen' order by created_at desc limit 1" | feld "[0].id")
+post tok-b "requests/$R2/decide" '{"status":"bestaetigt"}' > /dev/null
+K2=$(sql "select cost from requests where id='$R2'" | feld "[0].cost")
+anzweifeln tok-b "$R2" versehen > /dev/null
+ZB2=$(zweifelId "$R2")
+post tok-a "proposals/$ZB2/vote" '{"antwort":false}' > /dev/null
+pruefe "Mit dem zweiten Nein bleibt sie" "$(post tok-c "proposals/$ZB2/vote" '{"antwort":false}' | feld ".status")" "abgelehnt"
+pruefe "A hat weiter bezahlt" "$(stand u-a)" "$((A1 - K2))"
+pruefe "Antrag bleibt genehmigt" "$(sql "select status from requests where id='$R2'" | feld "[0].status")" "bestaetigt"
+pruefe "Nachricht" "$(sql "select titel from ereignisse where quelle_id='$ZB2' and user_id='u-a' and titel like '%bleibt%'" | feld "[0].titel")" "$BN bleibt eingelöst"
+
+echo "== Ausnahmeantrag: nichts zu liefern, zurücksetzen geht trotzdem"
+# Ein Ausnahmeantrag hat nichts zu liefern (bestaetigen = 0) — eigener für den Test.
+roh "insert into rewards (id, couple_id, name, cost, bestaetigen) values ('rw-zw-veto', '$PAAR', 'Ausnahmeantrag', 15, 0) on conflict(id) do update set active = 1"
+AUS=rw-zw-veto
+A2=$(stand u-a)
+post tok-a requests "{\"rewardId\":\"$AUS\"}" > /dev/null
+R3=$(sql "select id from requests where requested_by='u-a' and status='offen' order by created_at desc limit 1" | feld "[0].id")
+post tok-b "requests/$R3/decide" '{"status":"bestaetigt"}' > /dev/null
+K3=$(sql "select cost from requests where id='$R3'" | feld "[0].cost")
+pruefe "Eingelöst, gleich erhalten" "$(sql "select erfuellt from requests where id='$R3'" | feld "[0].erfuellt")" "erhalten"
+pruefe "A zweifelt selbst an" "$(anzweifeln tok-a "$R3" versehen | feld ".status")" "offen"
+pruefe "B stimmt zu" "$(post tok-b "proposals/$(zweifelId "$R3")/vote" '{"antwort":true}' | feld ".status")" "bestaetigt"
+pruefe "Cleanies wieder da" "$(stand u-a)" "$A2"
+roh "delete from proposal_votes where proposal_id in (select id from proposals where target_id in (select id from requests where reward_id='rw-zw-veto'))"
+roh "delete from proposals where target_id in (select id from requests where reward_id='rw-zw-veto'); delete from ledger where source_id in (select id from requests where reward_id='rw-zw-veto'); delete from requests where reward_id='rw-zw-veto'; delete from rewards where id='rw-zw-veto'"
 
 echo "== Kinder: nur die Eltern zweifeln an"
 roh "insert into users (id, email, name) values ('u-zj','zj@test','Jule Jugend'), ('u-zk','zk@test','Kim Kind') on conflict(id) do nothing"

@@ -138,19 +138,25 @@ Grenze — ohne Plus gehen drei zugleich (`worker/plus.js`, `d1/migrations/0027_
 
 ## Buchung anzweifeln
 
-Im Verlauf hat jede bestätigte Quest der letzten 14 Tage ein „›“. Antippen, einen Grund wählen (Doppelt gezählt,
-Aus Versehen gemeldet, Nicht erledigt, Anderer Grund), eine Notiz ist freiwillig — daraus wird eine Abstimmung
-der Art `zweifel` (`worker/api.js`, `d1/migrations/0028_zweifel.sql`).
+Im Verlauf hat jede bestätigte Quest und jede eingelöste Belohnung der letzten 14 Tage ein „›“ — auch Ausnahme-
+und Vetoanträge. Antippen, einen Grund wählen (bei Quests: Doppelt gezählt, Aus Versehen gemeldet, Nicht erledigt;
+bei Belohnungen: Doppelt abgebucht, Aus Versehen eingelöst, Nicht bekommen; immer: Anderer Grund), eine Notiz ist
+freiwillig — daraus wird eine Abstimmung der Art `zweifel` (`worker/api.js`, `d1/migrations/0028_zweifel.sql`,
+`0029_zweifel_belohnung.sql`).
 
 - **Mehrheit statt Einstimmigkeit**, wie beim Rücktritt: Wer anzweifelt, zählt als Ja; zu zweit muss die andere
   Person zustimmen, zu dritt reicht eine weitere Stimme. Wer allein abstimmt, hat damit schon entschieden.
 - **Auch die eigene Buchung** geht über die Abstimmung — jede Rücknahme ist für alle sichtbar.
-- **Einmal je Buchung.** Abgelehnt heißt: sie bleibt. Nur bestätigte Quests; Belohnungen, Geschenke, Strafen nicht.
+- **Einmal je Buchung.** Abgelehnt heißt: sie bleibt. Geschenke, Strafen und Taschengeld lassen sich nicht anzweifeln.
 - **Kinder:** Buchungen von Kindern zweifeln nur Erwachsene an; Kinderprofile stimmen nicht ab.
 - **Zurückgesetzt wird nichts gelöscht:** Eine Gegenbuchung „Zurückgesetzt: …“ (`ledger.source_type = 'zurueck'`)
   kommt oben in den Verlauf, die alte Zeile bleibt durchgestrichen stehen. Die Meldung bekommt
   `claims.zurueckgesetzt_am` und gilt nicht mehr als bestätigt — sie zählt weder im Fair-Bericht noch in der
   Wochenkachel, der Auswertung oder im „12× erledigt“. Der Stand darf dabei ins Minus.
+- **Belohnungen:** Die Einlösung gilt danach als nie passiert. Alles, was an ihr hängt, bekommt eine Gegenbuchung —
+  die Abbuchung, eine Gutschrift an jemand anderen (`<Antrag>:gut`), Strafe und Nachholung wegen „nicht bekommen“
+  (`strafe:<Antrag>`, `nachhol:<Antrag>`). Der Antrag bekommt `requests.zurueckgesetzt_am` und gilt nicht mehr als
+  genehmigt: Eine offene Zusage verschwindet, „Bekommen?“ geht nicht mehr, im Fair-Bericht zählt sie nicht als eingelöst.
 - **Haushaltsplan:** Bei „Aus Versehen gemeldet“ oder „Nicht erledigt“ ist die Runde wieder offen (fällig heute),
   außer sie wurde in dieser Runde noch einmal bestätigt. Bei „Doppelt gezählt“ bleibt sie erledigt.
 - **Benachrichtigt** werden alle, wenn angezweifelt wird und wenn entschieden ist.

@@ -55,7 +55,7 @@ genau so, wie er es soll.
 | `urlaub-api.sh` | Urlaub für eine Person und für den Haushalt |
 | `gutschrift-api.sh` | Cleanies einer Belohnung dem Empfänger gutschreiben |
 | `ruecktritt-api.sh` | Von einer zugeteilten Aufgabe zurücktreten — Mehrheit statt Einstimmigkeit |
-| `zweifel-api.sh` | Buchung anzweifeln: nur bestätigte Quests der letzten 14 Tage, einmal je Buchung, Mehrheit; Gegenbuchung, zählt nicht mehr in Woche, Auswertung und Fair-Bericht; Konto ins Minus; Plan-Runde wieder offen bei „Aus Versehen“, nicht bei „Doppelt“; Kinder nur durch Erwachsene; allein sofort |
+| `zweifel-api.sh` | Buchung anzweifeln: nur bestätigte Quests der letzten 14 Tage, einmal je Buchung, Mehrheit; Gegenbuchung, zählt nicht mehr in Woche, Auswertung und Fair-Bericht; Konto ins Minus; Plan-Runde wieder offen bei „Aus Versehen“, nicht bei „Doppelt“; Kinder nur durch Erwachsene; allein sofort; Belohnungen: Abbuchung, Gutschrift und Strafe gehen zurück, Zusage entfällt, Ausnahmeantrag |
 | `event-api.sh` | Events: anlegen, freigeben, einlösen, Deckel, Dauerevent, beenden |
 | `bilder-api.sh` | Symbole, Farben und Hintergründe: ohne Abstimmung, nur Emoji oder kleine Bilder, Auslieferung nur im eigenen Haushalt |
 | `familie-api.sh` | Familienmodus: Kinder ohne Google, Kinder bestätigen nie Kinder, Code fürs eigene Gerät, Taschengeld, Kurs-Abstimmung, Eltern-PIN, allein mit Kleinen zählt es sofort |
@@ -74,7 +74,7 @@ genau so, wie er es soll.
 | `ui-urlaub.mjs` | Urlaubsmodus auf dem Schirm |
 | `ui-gutschrift.mjs` | Der Haken „Cleanies an Empfänger senden“ |
 | `ui-ruecktritt.mjs` | Zurücktreten auf dem Schirm, zu dritt |
-| `ui-zweifel.mjs` | Buchung anzweifeln auf dem Schirm, zu dritt: › im Verlauf, Blatt mit Grund, Karte im Stapel, Gegenbuchung und durchgestrichene Zeile, „Bleibt“ bei „Wir“; 375 px hell und dunkel |
+| `ui-zweifel.mjs` | Buchung anzweifeln auf dem Schirm, zu dritt: › im Verlauf, Blatt mit Grund, Karte im Stapel, Gegenbuchung und durchgestrichene Zeile, „Bleibt“ bei „Wir“; Bibis Ausnahmeantrag zurücksetzen; 375 px hell und dunkel |
 | `jubel-api.sh` | Cleanies-Phasen verschieben, eigene GIFs hochladen und löschen |
 | `ui-jubel.mjs` | Der Jubel in der App, die Einstellungen der Verwaltung |
 | `mockup-anim.mjs` | Das Animations-Mockup: laufen wirklich alle dreißig? |
